@@ -237,50 +237,113 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm px-4 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-travel-blue-dark">Admin Dashboard</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600">
-            Logged in as: <span className="font-medium">{user.email}</span>
-          </span>
+      {/* Header with responsive design */}
+      <header className="bg-white shadow-sm sticky top-0 z-50">
+        <div className="container-custom px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold text-travel-blue-dark">Admin Dashboard</h1>
+            <span className="hidden sm:inline text-sm text-gray-600">
+              {user?.email}
+            </span>
+          </div>
           <Button 
             variant="outline"
             onClick={handleSignOut}
+            className="w-full sm:w-auto"
           >
             Sign Out
           </Button>
         </div>
       </header>
 
-      <main className="container mx-auto p-4 pt-8">
-        <Tabs defaultValue="bookings">
-          <TabsList className="mb-8">
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="messages">Messages</TabsTrigger>
+      <main className="container-custom p-4">
+        <Tabs defaultValue="bookings" className="w-full">
+          <TabsList className="mb-6 w-full flex">
+            <TabsTrigger value="bookings" className="flex-1">Bookings</TabsTrigger>
+            <TabsTrigger value="messages" className="flex-1">Messages</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="bookings" className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-travel-blue-dark">Booking Requests</h2>
-              {selectedBookings.length > 0 && (
-                <button
-                  onClick={() => deleteBookings(selectedBookings)}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-                >
-                  <TrashIcon size={16} />
-                  Delete Selected ({selectedBookings.length})
-                </button>
-              )}
-            </div>
-
-            {combinedLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-travel-blue-dark border-r-transparent"></div>
+          <TabsContent value="bookings">
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-xl font-bold text-travel-blue-dark">Booking Requests</h2>
+                {selectedBookings.length > 0 && (
+                  <button
+                    onClick={() => deleteBookings(selectedBookings)}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+                  >
+                    <TrashIcon size={16} />
+                    Delete Selected ({selectedBookings.length})
+                  </button>
+                )}
               </div>
-            ) : bookings.length === 0 ? (
-              <p className="text-center py-12 text-gray-500">No booking requests found.</p>
-            ) : (
-              <div className="overflow-x-auto">
+
+              {/* Mobile View for Bookings */}
+              <div className="block lg:hidden space-y-4">
+                {bookings.map((booking) => (
+                  <div key={booking.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <Checkbox 
+                          checked={selectedBookings.includes(booking.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedBookings([...selectedBookings, booking.id]);
+                            } else {
+                              setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
+                            }
+                          }}
+                        />
+                        <div>
+                          <h3 className="font-medium">{booking.name}</h3>
+                          <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
+                        </div>
+                      </div>
+                      <select
+                        value={booking.status || 'pending'}
+                        onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          booking.status === 'completed' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                      </select>
+                    </div>
+
+                    <div className="text-sm space-y-2">
+                      <p><span className="font-medium">Contact:</span> {booking.email} | {booking.phone}</p>
+                      <p><span className="font-medium">Service:</span> {booking.booking_type}</p>
+                      <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
+                      <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
+                      <p><span className="font-medium">Passengers:</span> {booking.passengers}</p>
+                      {booking.additional_requirements && (
+                        <p><span className="font-medium">Notes:</span> {booking.additional_requirements}</p>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleEdit(booking)}
+                        className="p-2 hover:bg-gray-200 rounded-full"
+                      >
+                        <PencilIcon size={16} className="text-blue-600" />
+                      </button>
+                      <button
+                        onClick={() => deleteBookings([booking.id])}
+                        className="p-2 hover:bg-gray-200 rounded-full"
+                      >
+                        <TrashIcon size={16} className="text-red-600" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop View for Bookings */}
+              <div className="hidden lg:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -469,40 +532,45 @@ const Admin = () => {
                   </TableBody>
                 </Table>
               </div>
-            )}
+            </div>
           </TabsContent>
 
-          <TabsContent value="messages" className="bg-white p-6 rounded-lg shadow-sm">
-            <h2 className="text-xl font-bold text-travel-blue-dark mb-6">Contact Messages</h2>
-            {combinedLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-travel-blue-dark border-r-transparent"></div>
-              </div>
-            ) : contacts.length === 0 ? (
-              <p className="text-center py-12 text-gray-500">No messages found.</p>
-            ) : (
-              <div className="space-y-6">
+          <TabsContent value="messages">
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+              <h2 className="text-xl font-bold text-travel-blue-dark mb-6">Contact Messages</h2>
+              
+              <div className="space-y-4">
                 {contacts.map((contact) => (
-                  <div key={contact.id} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-2">
+                  <div key={contact.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-3">
                       <div>
-                        <h3 className="font-medium text-travel-blue-dark">
+                        <h3 className="font-medium text-travel-blue-dark text-lg">
                           {contact.subject || "No Subject"}
                         </h3>
                         <p className="text-sm text-gray-600">
-                          From: {contact.name} ({contact.email})
+                          From: {contact.name}
                         </p>
-                        <p className="text-sm text-gray-600">Phone: {contact.phone}</p>
+                        <div className="flex flex-col sm:flex-row gap-2 text-sm text-gray-600">
+                          <a href={`mailto:${contact.email}`} className="hover:text-travel-orange">
+                            {contact.email}
+                          </a>
+                          <span className="hidden sm:inline">•</span>
+                          <a href={`tel:${contact.phone}`} className="hover:text-travel-orange">
+                            {contact.phone}
+                          </a>
+                        </div>
                       </div>
-                      <span className="text-xs text-gray-500 whitespace-nowrap">
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                         {formatFirebaseTimestamp(contact.created_at)}
                       </span>
                     </div>
-                    <p className="mt-4 text-gray-700 whitespace-pre-line">{contact.message}</p>
+                    <p className="text-gray-700 whitespace-pre-line bg-gray-50 p-3 rounded">
+                      {contact.message}
+                    </p>
                   </div>
                 ))}
               </div>
-            )}
+            </div>
           </TabsContent>
         </Tabs>
       </main>
