@@ -17,7 +17,7 @@ import AdminLogin from "./pages/AdminLogin";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import FAQ from "./pages/FAQ";
-import logo from './assets/logo.png';
+import logo from './assets/poster.png';
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import LoadingScreen from "@/components/LoadingScreen";
