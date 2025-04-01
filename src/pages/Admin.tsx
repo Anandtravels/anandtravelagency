@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -10,18 +10,23 @@ import { collection, getDocs, orderBy, query, onSnapshot, updateDoc, doc, delete
 import { db } from '@/lib/firebase';
 import { Checkbox } from "@/components/ui/checkbox";
 import { TrashIcon, PencilIcon, Check, X, Phone, Mail, MessageSquare } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import debounce from 'lodash/debounce';
 
 const Admin = () => {
-  const { user, isAdmin, signOut, loading } = useAuth();
+  const { user, signOut, loading } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // State declarations - keep all useState hooks together
   const [bookings, setBookings] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [bookingLoading, setBookingLoading] = useState(true);
   const [contactsLoading, setContactsLoading] = useState(true);
-  const { toast } = useToast();
-  const navigate = useNavigate();
   const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
   const [selectedMessages, setSelectedMessages] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [adminNotes, setAdminNotes] = useState<{ [key: string]: string }>({});
   const [editFormData, setEditFormData] = useState({
     name: '',
     email: '',
@@ -31,8 +36,67 @@ const Admin = () => {
     journey_date: '',
     passengers: '',
     additional_requirements: '',
-    booking_type: ''  // Add this field
+    booking_type: ''
   });
+
+  // Memoized functions - use useMemo for derived values
+  const combinedLoading = useMemo(() => bookingLoading || contactsLoading, [bookingLoading, contactsLoading]);
+
+  // Callbacks - use useCallback for functions passed as props or used in effects
+  const debouncedNoteUpdate = useCallback(
+    debounce(async (id: string, note: string, collectionName: string) => {
+      try {
+        await updateDoc(doc(db, collectionName, id), {
+          admin_notes: note,
+          updated_at: serverTimestamp()
+        });
+      } catch (error) {
+        console.error("Error updating note:", error);
+        toast({
+          title: "Update Failed",
+          description: "Failed to save note",
+          variant: "destructive"
+        });
+      }
+    }, 1000),
+    [toast]
+  );
+
+  const handleNoteChange = useCallback((id: string, note: string) => {
+    setAdminNotes(prev => ({
+      ...prev,
+      [id]: note
+    }));
+    debouncedNoteUpdate(id, note, 'bookings');
+  }, [debouncedNoteUpdate]);
+
+  const handleMessageNoteChange = useCallback((id: string, note: string) => {
+    setAdminNotes(prev => ({
+      ...prev,
+      [id]: note
+    }));
+    debouncedNoteUpdate(id, note, 'contact_submissions');
+  }, [debouncedNoteUpdate]);
+
+  // Effects - keep all useEffect hooks together
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (!loading) {
+        if (!user || user.email !== 'admin@anandtravels.com') {
+          navigate("/admin-login", { replace: true });
+        } else {
+          setupRealtimeListeners();
+        }
+      }
+    };
+    checkAuth();
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    return () => {
+      debouncedNoteUpdate.cancel();
+    };
+  }, [debouncedNoteUpdate]);
 
   const formatFirebaseTimestamp = (timestamp: any) => {
     if (!timestamp) return "N/A";
@@ -48,20 +112,6 @@ const Admin = () => {
     }
   };
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      if (!loading) {
-        if (!user || user.email !== 'admin@anandtravels.com') {
-          navigate("/admin-login", { replace: true });
-        } else {
-          setupRealtimeListeners();
-        }
-      }
-    };
-
-    checkAuth();
-  }, [user, loading]);
-
   const setupRealtimeListeners = () => {
     // Set up real-time listener for bookings
     const bookingsQuery = query(
@@ -71,12 +121,19 @@ const Admin = () => {
 
     const bookingsUnsubscribe = onSnapshot(bookingsQuery, 
       (snapshot) => {
-        const bookingsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          created_at: doc.data().created_at?.toDate() || new Date()
-        }));
-        console.log('Realtime bookings update:', bookingsData);
+        const bookingsData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          // Update adminNotes state with existing notes
+          setAdminNotes(prev => ({
+            ...prev,
+            [doc.id]: data.admin_notes || ''
+          }));
+          return {
+            id: doc.id,
+            ...data,
+            created_at: data.created_at?.toDate() || new Date()
+          };
+        });
         setBookings(bookingsData);
         setBookingLoading(false);
       },
@@ -98,12 +155,18 @@ const Admin = () => {
 
     const contactsUnsubscribe = onSnapshot(contactsQuery, 
       (snapshot) => {
-        const contactsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          created_at: doc.data().created_at?.toDate() || new Date()
-        }));
-        console.log('Realtime contacts update:', contactsData);
+        const contactsData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          setAdminNotes(prev => ({
+            ...prev,
+            [doc.id]: data.admin_notes || ''
+          }));
+          return {
+            id: doc.id,
+            ...data,
+            created_at: data.created_at?.toDate() || new Date()
+          };
+        });
         setContacts(contactsData);
         setContactsLoading(false);
       },
@@ -123,8 +186,6 @@ const Admin = () => {
       contactsUnsubscribe();
     };
   };
-
-  const combinedLoading = bookingLoading || contactsLoading; // overall loading flag
 
   if (!user || user.email !== 'admin@anandtravels.com') {
     return null;
@@ -450,6 +511,15 @@ const Admin = () => {
                           {booking.additional_requirements && (
                             <p><span className="font-medium">Notes:</span> {booking.additional_requirements}</p>
                           )}
+                          <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Admin Notes</label>
+                            <Textarea
+                              value={adminNotes[booking.id] || ''}
+                              onChange={(e) => handleNoteChange(booking.id, e.target.value)}
+                              placeholder="Add notes about this booking..."
+                              className="w-full min-h-[100px] text-sm"
+                            />
+                          </div>
                         </div>
 
                         <div className="flex justify-between items-center pt-2">
@@ -525,6 +595,7 @@ const Admin = () => {
                       <TableHead className="w-[120px]">Service</TableHead>
                       <TableHead className="w-[120px]">Status</TableHead>
                       <TableHead className="w-[300px]">Details</TableHead> {/* Changed from min-w-[400px] to w-[300px] */}
+                      <TableHead className="w-[200px]">Notes</TableHead>
                       <TableHead className="w-[150px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -660,6 +731,14 @@ const Admin = () => {
                           )}
                         </TableCell>
                         <TableCell>
+                          <Textarea
+                            value={adminNotes[booking.id] || ''}
+                            onChange={(e) => handleNoteChange(booking.id, e.target.value)}
+                            placeholder="Add notes..."
+                            className="w-full min-h-[80px] text-sm"
+                          />
+                        </TableCell>
+                        <TableCell>
                           <div className="flex gap-1">
                             {editingId === booking.id ? (
                               <>
@@ -791,6 +870,15 @@ const Admin = () => {
                         <p className="text-gray-700 whitespace-pre-line bg-gray-50 p-3 rounded">
                           {contact.message}
                         </p>
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Admin Notes</label>
+                          <Textarea
+                            value={adminNotes[contact.id] || ''}
+                            onChange={(e) => handleMessageNoteChange(contact.id, e.target.value)}
+                            placeholder="Add notes about this message..."
+                            className="w-full min-h-[100px] text-sm"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
