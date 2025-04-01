@@ -8,7 +8,7 @@ const LoadingScreen = () => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
     >
-      <div className="text-center w-full max-w-[350px] mx-auto">
+      <div className="text-center w-full max-w-[315px] mx-auto">
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
