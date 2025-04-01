@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { collection, getDocs, orderBy, query, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Checkbox } from "@/components/ui/checkbox";
-import { TrashIcon, PencilIcon, Check, X } from "lucide-react";
+import { TrashIcon, PencilIcon, Check, X, Phone, Mail, MessageSquare } from "lucide-react";
 
 const Admin = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
@@ -30,7 +30,8 @@ const Admin = () => {
     to: '',
     journey_date: '',
     passengers: '',
-    additional_requirements: ''
+    additional_requirements: '',
+    booking_type: ''  // Add this field
   });
 
   const formatFirebaseTimestamp = (timestamp: any) => {
@@ -200,6 +201,31 @@ const Admin = () => {
     }
   };
 
+  const deleteMessages = async (ids: string[]) => {
+    if (!window.confirm('Are you sure you want to delete the selected messages?')) return;
+
+    try {
+      if (!user || user.email !== 'admin@anandtravels.com') {
+        throw new Error('Unauthorized access');
+      }
+
+      await Promise.all(ids.map(id => deleteDoc(doc(db, 'contact_submissions', id))));
+      setSelectedMessages([]);
+      
+      toast({
+        title: "Deleted Successfully",
+        description: "Selected messages have been deleted",
+      });
+    } catch (error) {
+      console.error("Error deleting messages:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete messages. Please check your permissions.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleEdit = (booking: any) => {
     setEditingId(booking.id);
     setEditFormData({
@@ -208,9 +234,10 @@ const Admin = () => {
       phone: booking.phone,
       from: booking.from,
       to: booking.to,
-      journey_date: booking.journey_date,
-      passengers: booking.passengers,
-      additional_requirements: booking.additional_requirements || ''
+      journey_date: booking.journey_date || '',
+      passengers: booking.passengers || '',
+      additional_requirements: booking.additional_requirements || '',
+      booking_type: booking.booking_type || ''  // Add this field
     });
   };
 
@@ -233,6 +260,18 @@ const Admin = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleCall = (phone: string) => {
+    window.location.href = `tel:${phone}`;
+  };
+
+  const handleWhatsapp = (phone: string) => {
+    window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
+  };
+
+  const handleEmail = (email: string) => {
+    window.location.href = `mailto:${email}`;
   };
 
   return (
@@ -282,62 +321,183 @@ const Admin = () => {
               <div className="block lg:hidden space-y-4">
                 {bookings.map((booking) => (
                   <div key={booking.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <Checkbox 
-                          checked={selectedBookings.includes(booking.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedBookings([...selectedBookings, booking.id]);
-                            } else {
-                              setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
-                            }
-                          }}
+                    {editingId === booking.id ? (
+                      // Edit Mode
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          value={editFormData.name}
+                          onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                          className="w-full px-3 py-2 border rounded"
+                          placeholder="Name"
                         />
-                        <div>
-                          <h3 className="font-medium">{booking.name}</h3>
-                          <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
+                        <div className="grid grid-cols-1 gap-2">
+                          <input
+                            type="email"
+                            value={editFormData.email}
+                            onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                            className="w-full px-3 py-2 border rounded"
+                            placeholder="Email"
+                          />
+                          <input
+                            type="tel"
+                            value={editFormData.phone}
+                            onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
+                            className="w-full px-3 py-2 border rounded"
+                            placeholder="Phone"
+                          />
+                        </div>
+                        <input
+                          type="text"
+                          value={editFormData.booking_type}
+                          onChange={(e) => setEditFormData({...editFormData, booking_type: e.target.value})}
+                          className="w-full px-3 py-2 border rounded"
+                          placeholder="Service Type"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            value={editFormData.from}
+                            onChange={(e) => setEditFormData({...editFormData, from: e.target.value})}
+                            className="w-full px-3 py-2 border rounded"
+                            placeholder="From"
+                          />
+                          <input
+                            type="text"
+                            value={editFormData.to}
+                            onChange={(e) => setEditFormData({...editFormData, to: e.target.value})}
+                            className="w-full px-3 py-2 border rounded"
+                            placeholder="To"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="date"
+                            value={editFormData.journey_date}
+                            onChange={(e) => setEditFormData({...editFormData, journey_date: e.target.value})}
+                            className="w-full px-3 py-2 border rounded"
+                          />
+                          <input
+                            type="number"
+                            value={editFormData.passengers}
+                            onChange={(e) => setEditFormData({...editFormData, passengers: e.target.value})}
+                            className="w-full px-3 py-2 border rounded"
+                            placeholder="Passengers"
+                          />
+                        </div>
+                        <textarea
+                          value={editFormData.additional_requirements}
+                          onChange={(e) => setEditFormData({...editFormData, additional_requirements: e.target.value})}
+                          className="w-full px-3 py-2 border rounded"
+                          rows={3}
+                          placeholder="Additional Requirements"
+                        ></textarea>
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            onClick={() => handleSaveEdit(booking.id)}
+                            className="px-3 py-1 bg-green-100 text-green-700 rounded-full"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="px-3 py-1 bg-red-100 text-red-700 rounded-full"
+                          >
+                            Cancel
+                          </button>
                         </div>
                       </div>
-                      <select
-                        value={booking.status || 'pending'}
-                        onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          booking.status === 'completed' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="completed">Completed</option>
-                      </select>
-                    </div>
+                    ) : (
+                      // View Mode
+                      <>
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-3">
+                            <Checkbox 
+                              checked={selectedBookings.includes(booking.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedBookings([...selectedBookings, booking.id]);
+                                } else {
+                                  setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
+                                }
+                              }}
+                            />
+                            <div>
+                              <h3 className="font-medium">{booking.name}</h3>
+                              <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
+                            </div>
+                          </div>
+                          <select
+                            value={booking.status || 'pending'}
+                            onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
+                            className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              booking.status === 'completed' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                          </select>
+                        </div>
 
-                    <div className="text-sm space-y-2">
-                      <p><span className="font-medium">Contact:</span> {booking.email} | {booking.phone}</p>
-                      <p><span className="font-medium">Service:</span> {booking.booking_type}</p>
-                      <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
-                      <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
-                      <p><span className="font-medium">Passengers:</span> {booking.passengers}</p>
-                      {booking.additional_requirements && (
-                        <p><span className="font-medium">Notes:</span> {booking.additional_requirements}</p>
-                      )}
-                    </div>
+                        <div className="text-sm space-y-2">
+                          <p><span className="font-medium">Contact:</span> {booking.email} | {booking.phone}</p>
+                          <p><span className="font-medium">Service:</span> {booking.booking_type}</p>
+                          <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
+                          <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
+                          <p><span className="font-medium">Passengers:</span> {booking.passengers}</p>
+                          {booking.additional_requirements && (
+                            <p><span className="font-medium">Notes:</span> {booking.additional_requirements}</p>
+                          )}
+                        </div>
 
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => handleEdit(booking)}
-                        className="p-2 hover:bg-gray-200 rounded-full"
-                      >
-                        <PencilIcon size={16} className="text-blue-600" />
-                      </button>
-                      <button
-                        onClick={() => deleteBookings([booking.id])}
-                        className="p-2 hover:bg-gray-200 rounded-full"
-                      >
-                        <TrashIcon size={16} className="text-red-600" />
-                      </button>
-                    </div>
+                        <div className="flex justify-between items-center pt-2">
+                          {/* Action Buttons */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleCall(booking.phone)}
+                              className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
+                              title="Call"
+                            >
+                              <Phone size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleWhatsapp(booking.phone)}
+                              className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
+                              title="WhatsApp"
+                            >
+                              <MessageSquare size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleEmail(booking.email)}
+                              className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                              title="Email"
+                            >
+                              <Mail size={16} />
+                            </button>
+                          </div>
+
+                          {/* Edit/Delete Buttons */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(booking)}
+                              className="p-2 hover:bg-gray-200 rounded-full"
+                              title="Edit"
+                            >
+                              <PencilIcon size={16} className="text-blue-600" />
+                            </button>
+                            <button
+                              onClick={() => deleteBookings([booking.id])}
+                              className="p-2 hover:bg-gray-200 rounded-full"
+                              title="Delete"
+                            >
+                              <TrashIcon size={16} className="text-red-600" />
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -364,8 +524,8 @@ const Admin = () => {
                       <TableHead className="w-[180px]">Contact</TableHead>
                       <TableHead className="w-[120px]">Service</TableHead>
                       <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="min-w-[400px]">Details</TableHead>
-                      <TableHead className="w-[80px]">Actions</TableHead>
+                      <TableHead className="w-[300px]">Details</TableHead> {/* Changed from min-w-[400px] to w-[300px] */}
+                      <TableHead className="w-[150px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -419,7 +579,18 @@ const Admin = () => {
                             </div>
                           )}
                         </TableCell>
-                        <TableCell>{booking.booking_type || "N/A"}</TableCell>
+                        <TableCell>
+                          {editingId === booking.id ? (
+                            <input
+                              type="text"
+                              value={editFormData.booking_type}
+                              onChange={(e) => setEditFormData({...editFormData, booking_type: e.target.value})}
+                              className="w-full px-2 py-1 border rounded"
+                            />
+                          ) : (
+                            booking.booking_type || "N/A"
+                          )}
+                        </TableCell>
                         <TableCell>
                           <select
                             value={booking.status || 'pending'}
@@ -510,6 +681,27 @@ const Admin = () => {
                             ) : (
                               <>
                                 <button
+                                  onClick={() => handleCall(booking.phone)}
+                                  className="p-1 hover:bg-blue-100 rounded-full"
+                                  title="Call"
+                                >
+                                  <Phone size={16} className="text-blue-600" />
+                                </button>
+                                <button
+                                  onClick={() => handleWhatsapp(booking.phone)}
+                                  className="p-1 hover:bg-green-100 rounded-full"
+                                  title="WhatsApp"
+                                >
+                                  <MessageSquare size={16} className="text-green-600" />
+                                </button>
+                                <button
+                                  onClick={() => handleEmail(booking.email)}
+                                  className="p-1 hover:bg-red-100 rounded-full"
+                                  title="Email"
+                                >
+                                  <Mail size={16} className="text-red-600" />
+                                </button>
+                                <button
                                   onClick={() => handleEdit(booking)}
                                   className="p-1 hover:bg-gray-100 rounded-full"
                                   title="Edit"
@@ -537,36 +729,70 @@ const Admin = () => {
 
           <TabsContent value="messages">
             <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-              <h2 className="text-xl font-bold text-travel-blue-dark mb-6">Contact Messages</h2>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-xl font-bold text-travel-blue-dark">Contact Messages</h2>
+                {selectedMessages.length > 0 && (
+                  <button
+                    onClick={() => deleteMessages(selectedMessages)}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+                  >
+                    <TrashIcon size={16} />
+                    Delete Selected ({selectedMessages.length})
+                  </button>
+                )}
+              </div>
               
               <div className="space-y-4">
                 {contacts.map((contact) => (
                   <div key={contact.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                    <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-3">
-                      <div>
-                        <h3 className="font-medium text-travel-blue-dark text-lg">
-                          {contact.subject || "No Subject"}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          From: {contact.name}
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-2 text-sm text-gray-600">
-                          <a href={`mailto:${contact.email}`} className="hover:text-travel-orange">
-                            {contact.email}
-                          </a>
-                          <span className="hidden sm:inline">•</span>
-                          <a href={`tel:${contact.phone}`} className="hover:text-travel-orange">
-                            {contact.phone}
-                          </a>
+                    <div className="flex items-start gap-4">
+                      <Checkbox 
+                        checked={selectedMessages.includes(contact.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedMessages([...selectedMessages, contact.id]);
+                          } else {
+                            setSelectedMessages(selectedMessages.filter(id => id !== contact.id));
+                          }
+                        }}
+                      />
+                      <div className="flex-grow">
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-3">
+                          <div>
+                            <h3 className="font-medium text-travel-blue-dark text-lg">
+                              {contact.subject || "No Subject"}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              From: {contact.name}
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-2 text-sm text-gray-600">
+                              <a href={`mailto:${contact.email}`} className="hover:text-travel-orange">
+                                {contact.email}
+                              </a>
+                              <span className="hidden sm:inline">•</span>
+                              <a href={`tel:${contact.phone}`} className="hover:text-travel-orange">
+                                {contact.phone}
+                              </a>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                              {formatFirebaseTimestamp(contact.created_at)}
+                            </span>
+                            <button
+                              onClick={() => deleteMessages([contact.id])}
+                              className="p-1 hover:bg-red-100 rounded-full"
+                              title="Delete"
+                            >
+                              <TrashIcon size={16} className="text-red-600" />
+                            </button>
+                          </div>
                         </div>
+                        <p className="text-gray-700 whitespace-pre-line bg-gray-50 p-3 rounded">
+                          {contact.message}
+                        </p>
                       </div>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                        {formatFirebaseTimestamp(contact.created_at)}
-                      </span>
                     </div>
-                    <p className="text-gray-700 whitespace-pre-line bg-gray-50 p-3 rounded">
-                      {contact.message}
-                    </p>
                   </div>
                 ))}
               </div>
