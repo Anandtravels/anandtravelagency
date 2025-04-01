@@ -8,7 +8,7 @@ const LoadingScreen = () => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
     >
-      <div className="text-center w-full max-w-[200px] mx-auto">
+      <div className="text-center w-full max-w-[350px] mx-auto">
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -40,17 +40,10 @@ const LoadingScreen = () => {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="text-travel-blue-dark text-lg font-medium"
-          >
-         Welcome To
-          </motion.p>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.9 }}
+            transition={{ delay: 0.2 }}
             className="text-travel-blue-dark text-xl font-bold"
           >
+               Welcome To 
           Anand Travels Agency
           </motion.p>
         </div>

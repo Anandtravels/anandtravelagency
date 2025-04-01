@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   return (
-    <div className="relative h-[90vh] min-h-[600px] bg-cover bg-center flex items-center" 
+    <div className="relative h-[93vh] min-h-[600px] bg-cover bg-center flex items-center" 
          style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.pexels.com/photos/3278215/pexels-photo-3278215.jpeg')" }}>
       <div className="container-custom text-white text-center">
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
