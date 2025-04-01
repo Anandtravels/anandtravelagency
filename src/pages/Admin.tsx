@@ -337,22 +337,23 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header with responsive design */}
+      {/* Modified header for better mobile layout */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="container-custom px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-travel-blue-dark">Admin Dashboard</h1>
-            <span className="hidden sm:inline text-sm text-gray-600">
-              {user?.email}
-            </span>
+        <div className="container-custom px-4 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-bold text-travel-blue-dark">Admin Dashboard</h1>
+              <span className="hidden sm:inline text-sm text-gray-600">
+                {user?.email}
+              </span>
+            </div>
+            <Button 
+              variant="outline"
+              onClick={handleSignOut}
+            >
+              Sign Out
+            </Button>
           </div>
-          <Button 
-            variant="outline"
-            onClick={handleSignOut}
-            className="w-full sm:w-auto"
-          >
-            Sign Out
-          </Button>
         </div>
       </header>
 
@@ -576,44 +577,40 @@ const Admin = () => {
               <div className="hidden lg:block overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[40px]">
-                        <Checkbox 
-                          checked={selectedBookings.length === bookings.length}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedBookings(bookings.map(b => b.id));
-                            } else {
-                              setSelectedBookings([]);
-                            }
-                          }}
-                        />
-                      </TableHead>
+                    <TableRow>{/* Remove whitespace between cells */}
+                      <TableHead className="w-[40px]"><Checkbox 
+                        checked={selectedBookings.length === bookings.length}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedBookings(bookings.map(b => b.id));
+                          } else {
+                            setSelectedBookings([]);
+                          }
+                        }}
+                      /></TableHead>
                       <TableHead className="w-[120px]">Date</TableHead>
                       <TableHead className="w-[150px]">Name</TableHead>
                       <TableHead className="w-[180px]">Contact</TableHead>
                       <TableHead className="w-[120px]">Service</TableHead>
                       <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="w-[300px]">Details</TableHead> {/* Changed from min-w-[400px] to w-[300px] */}
+                      <TableHead className="w-[300px]">Details</TableHead>
                       <TableHead className="w-[200px]">Notes</TableHead>
                       <TableHead className="w-[150px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody>{/* Remove whitespace between rows */}
                     {bookings.map((booking) => (
-                      <TableRow key={booking.id}>
-                        <TableCell>
-                          <Checkbox 
-                            checked={selectedBookings.includes(booking.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedBookings([...selectedBookings, booking.id]);
-                              } else {
-                                setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
-                              }
-                            }}
-                          />
-                        </TableCell>
+                      <TableRow key={booking.id}>{/* Remove whitespace between cells */}
+                        <TableCell><Checkbox 
+                          checked={selectedBookings.includes(booking.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedBookings([...selectedBookings, booking.id]);
+                            } else {
+                              setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
+                            }
+                          }}
+                        /></TableCell>
                         <TableCell className="whitespace-nowrap">{formatFirebaseTimestamp(booking.created_at)}</TableCell>
                         <TableCell>
                           {editingId === booking.id ? (
