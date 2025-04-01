@@ -18,41 +18,66 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import FAQ from "./pages/FAQ";
 import logo from './assets/logo.png';
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+import { AnimatePresence } from "framer-motion";
+import LoadingScreen from "@/components/LoadingScreen";
 
 const queryClient = new QueryClient();
 
 const App = () => {
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
+    // Hide body scroll during loading
+    if (loading) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 2000);
+
     const favicon = document.querySelector('link[rel="icon"]');
     if (favicon) {
       favicon.setAttribute('href', logo);
     }
-  }, []);
+
+    return () => {
+      clearTimeout(timer);
+      document.body.style.overflow = 'auto';
+    };
+  }, [loading]);
 
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/packages" element={<Packages />} />
-              <Route path="/packages/:id" element={<PackageDetail />} />
-              <Route path="/booking" element={<Booking />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/admin-login" element={<AdminLogin />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/faq" element={<FAQ />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <AnimatePresence mode="wait">
+            {loading && <LoadingScreen />}
+          </AnimatePresence>
+          <div style={{ visibility: loading ? 'hidden' : 'visible' }}>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/services" element={<Services />} />
+                <Route path="/packages" element={<Packages />} />
+                <Route path="/packages/:id" element={<PackageDetail />} />
+                <Route path="/booking" element={<Booking />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/admin-login" element={<AdminLogin />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/faq" element={<FAQ />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </div>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
