@@ -508,7 +508,18 @@ const Admin = () => {
                           <p><span className="font-medium">Service:</span> {booking.booking_type}</p>
                           <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
                           <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
-                          <p><span className="font-medium">Passengers:</span> {booking.passengers}</p>
+                          <div>
+                            <span className="font-medium">Passengers:</span>
+                            <div className="ml-2">
+                              {Array.isArray(booking.passengers) ? booking.passengers.map((passenger, idx) => (
+                                <div key={idx} className="text-sm">
+                                  {passenger.name} ({passenger.age} years, {passenger.gender})
+                                </div>
+                              )) : (
+                                <div>{booking.passengers}</div>
+                              )}
+                            </div>
+                          </div>
                           {booking.additional_requirements && (
                             <p><span className="font-medium">Notes:</span> {booking.additional_requirements}</p>
                           )}
@@ -574,34 +585,12 @@ const Admin = () => {
               </div>
 
               {/* Desktop View for Bookings */}
-              <div className="hidden lg:block overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>{/* Remove whitespace between cells */}
-                      <TableHead className="w-[40px]"><Checkbox 
-                        checked={selectedBookings.length === bookings.length}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedBookings(bookings.map(b => b.id));
-                          } else {
-                            setSelectedBookings([]);
-                          }
-                        }}
-                      /></TableHead>
-                      <TableHead className="w-[120px]">Date</TableHead>
-                      <TableHead className="w-[150px]">Name</TableHead>
-                      <TableHead className="w-[180px]">Contact</TableHead>
-                      <TableHead className="w-[120px]">Service</TableHead>
-                      <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="w-[300px]">Details</TableHead>
-                      <TableHead className="w-[200px]">Notes</TableHead>
-                      <TableHead className="w-[150px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>{/* Remove whitespace between rows */}
-                    {bookings.map((booking) => (
-                      <TableRow key={booking.id}>{/* Remove whitespace between cells */}
-                        <TableCell><Checkbox 
+              <div className="hidden lg:grid grid-cols-3 gap-4">
+                {bookings.map((booking) => (
+                  <div key={booking.id} className="bg-white rounded-lg shadow-sm p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start gap-3">
+                        <Checkbox 
                           checked={selectedBookings.includes(booking.id)}
                           onCheckedChange={(checked) => {
                             if (checked) {
@@ -610,195 +599,107 @@ const Admin = () => {
                               setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
                             }
                           }}
-                        /></TableCell>
-                        <TableCell className="whitespace-nowrap">{formatFirebaseTimestamp(booking.created_at)}</TableCell>
-                        <TableCell>
-                          {editingId === booking.id ? (
-                            <input
-                              type="text"
-                              value={editFormData.name}
-                              onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
-                              className="w-full px-2 py-1 border rounded"
-                            />
-                          ) : (
-                            <span className="font-medium">{booking.name}</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {editingId === booking.id ? (
-                            <div className="space-y-1">
-                              <input
-                                type="email"
-                                value={editFormData.email}
-                                onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
-                                className="w-full px-2 py-1 border rounded"
-                              />
-                              <input
-                                type="tel"
-                                value={editFormData.phone}
-                                onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
-                                className="w-full px-2 py-1 border rounded"
-                              />
-                            </div>
-                          ) : (
-                            <div className="text-sm">
-                              <div>{booking.email}</div>
-                              <div>{booking.phone}</div>
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {editingId === booking.id ? (
-                            <input
-                              type="text"
-                              value={editFormData.booking_type}
-                              onChange={(e) => setEditFormData({...editFormData, booking_type: e.target.value})}
-                              className="w-full px-2 py-1 border rounded"
-                            />
-                          ) : (
-                            booking.booking_type || "N/A"
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <select
-                            value={booking.status || 'pending'}
-                            onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
-                            className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              booking.status === 'completed' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="completed">Completed</option>
-                          </select>
-                        </TableCell>
-                        <TableCell className="max-w-[400px]">
-                          {editingId === booking.id ? (
-                            <div className="space-y-2">
-                              <div className="grid grid-cols-2 gap-2">
-                                <input
-                                  type="text"
-                                  value={editFormData.from}
-                                  onChange={(e) => setEditFormData({...editFormData, from: e.target.value})}
-                                  className="w-full px-2 py-1 border rounded"
-                                  placeholder="From"
-                                />
-                                <input
-                                  type="text"
-                                  value={editFormData.to}
-                                  onChange={(e) => setEditFormData({...editFormData, to: e.target.value})}
-                                  className="w-full px-2 py-1 border rounded"
-                                  placeholder="To"
-                                />
+                        />
+                        <div>
+                          <h3 className="font-medium">{booking.name}</h3>
+                          <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
+                        </div>
+                      </div>
+                      <select
+                        value={booking.status || 'pending'}
+                        onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          booking.status === 'completed' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Phone size={16} className="text-gray-400" />
+                        <span>{booking.phone}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Mail size={16} className="text-gray-400" />
+                        <span>{booking.email}</span>
+                      </div>
+                      <div className="border-t border-gray-100 pt-3">
+                        <p><span className="font-medium">Service:</span> {booking.booking_type}</p>
+                        <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
+                        <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
+                        <div className="mt-2">
+                          <span className="font-medium">Passengers:</span>
+                          <div className="ml-2 mt-1">
+                            {Array.isArray(booking.passengers) ? booking.passengers.map((passenger, idx) => (
+                              <div key={idx} className="text-sm bg-gray-50 p-1 rounded mb-1">
+                                {passenger.name} ({passenger.age} yrs, {passenger.gender})
                               </div>
-                              <input
-                                type="date"
-                                value={editFormData.journey_date}
-                                onChange={(e) => setEditFormData({...editFormData, journey_date: e.target.value})}
-                                className="w-full px-2 py-1 border rounded"
-                              />
-                              <input
-                                type="number"
-                                value={editFormData.passengers}
-                                onChange={(e) => setEditFormData({...editFormData, passengers: e.target.value})}
-                                className="w-full px-2 py-1 border rounded"
-                                placeholder="Passengers"
-                              />
-                              <textarea
-                                value={editFormData.additional_requirements}
-                                onChange={(e) => setEditFormData({...editFormData, additional_requirements: e.target.value})}
-                                className="w-full px-2 py-1 border rounded"
-                                rows={2}
-                                placeholder="Additional Requirements"
-                              ></textarea>
-                            </div>
-                          ) : (
-                            <div className="text-sm space-y-1">
-                              <p><span className="font-medium">From:</span> {booking.from}</p>
-                              <p><span className="font-medium">To:</span> {booking.to}</p>
-                              <p><span className="font-medium">Travel Date:</span> {booking.journey_date}</p>
-                              <p><span className="font-medium">Passengers:</span> {booking.passengers}</p>
-                              {booking.additional_requirements && (
-                                <p className="text-gray-600">
-                                  <span className="font-medium">Note:</span> {booking.additional_requirements}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Textarea
-                            value={adminNotes[booking.id] || ''}
-                            onChange={(e) => handleNoteChange(booking.id, e.target.value)}
-                            placeholder="Add notes..."
-                            className="w-full min-h-[80px] text-sm"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            {editingId === booking.id ? (
-                              <>
-                                <button
-                                  onClick={() => handleSaveEdit(booking.id)}
-                                  className="p-1 hover:bg-green-100 rounded-full"
-                                  title="Save"
-                                >
-                                  <Check size={16} className="text-green-600" />
-                                </button>
-                                <button
-                                  onClick={() => setEditingId(null)}
-                                  className="p-1 hover:bg-red-100 rounded-full"
-                                  title="Cancel"
-                                >
-                                  <X size={16} className="text-red-600" />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => handleCall(booking.phone)}
-                                  className="p-1 hover:bg-blue-100 rounded-full"
-                                  title="Call"
-                                >
-                                  <Phone size={16} className="text-blue-600" />
-                                </button>
-                                <button
-                                  onClick={() => handleWhatsapp(booking.phone)}
-                                  className="p-1 hover:bg-green-100 rounded-full"
-                                  title="WhatsApp"
-                                >
-                                  <MessageSquare size={16} className="text-green-600" />
-                                </button>
-                                <button
-                                  onClick={() => handleEmail(booking.email)}
-                                  className="p-1 hover:bg-red-100 rounded-full"
-                                  title="Email"
-                                >
-                                  <Mail size={16} className="text-red-600" />
-                                </button>
-                                <button
-                                  onClick={() => handleEdit(booking)}
-                                  className="p-1 hover:bg-gray-100 rounded-full"
-                                  title="Edit"
-                                >
-                                  <PencilIcon size={16} className="text-blue-600" />
-                                </button>
-                                <button
-                                  onClick={() => deleteBookings([booking.id])}
-                                  className="p-1 hover:bg-gray-100 rounded-full"
-                                  title="Delete"
-                                >
-                                  <TrashIcon size={16} className="text-red-600" />
-                                </button>
-                              </>
+                            )) : (
+                              <div>{booking.passengers}</div>
                             )}
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-100 pt-3">
+                        <Textarea
+                          value={adminNotes[booking.id] || ''}
+                          onChange={(e) => handleNoteChange(booking.id, e.target.value)}
+                          placeholder="Add notes..."
+                          className="w-full min-h-[80px] text-sm"
+                        />
+                      </div>
+
+                      <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleCall(booking.phone)}
+                            className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
+                            title="Call"
+                          >
+                            <Phone size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleWhatsapp(booking.phone)}
+                            className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
+                            title="WhatsApp"
+                          >
+                            <MessageSquare size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleEmail(booking.email)}
+                            className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                            title="Email"
+                          >
+                            <Mail size={16} />
+                          </button>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(booking)}
+                            className="p-2 hover:bg-gray-200 rounded-full"
+                            title="Edit"
+                          >
+                            <PencilIcon size={16} className="text-blue-600" />
+                          </button>
+                          <button
+                            onClick={() => deleteBookings([booking.id])}
+                            className="p-2 hover:bg-gray-200 rounded-full"
+                            title="Delete"
+                          >
+                            <TrashIcon size={16} className="text-red-600" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </TabsContent>

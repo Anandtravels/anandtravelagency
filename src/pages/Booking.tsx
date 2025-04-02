@@ -11,12 +11,27 @@ const Booking = () => {
   const [bookingType, setBookingType] = useState("train");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const [passengerCount, setPassengerCount] = useState(1);
+  const [passengers, setPassengers] = useState([
+    { name: '', age: '', gender: 'male' }
+  ]);
+
+  const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm();
   
   const handleBookingTypeChange = (type) => {
     setBookingType(type);
     reset();
+  };
+
+  const handlePassengerCountChange = (e) => {
+    const count = parseInt(e.target.value);
+    setPassengerCount(count);
+    setPassengers(prev => {
+      if (count > prev.length) {
+        return [...prev, ...Array(count - prev.length).fill({ name: '', age: '', gender: 'male' })];
+      }
+      return prev.slice(0, count);
+    });
   };
   
   const onSubmit = async (data) => {
@@ -27,6 +42,7 @@ const Booking = () => {
       const bookingData = {
         ...data,
         booking_type: bookingType,
+        passengers: passengers, // Add passenger details to booking data
         status: "pending",
         created_at: serverTimestamp()
       };
@@ -186,26 +202,6 @@ const Booking = () => {
                           />
                         </div>
                         {errors.journey_date && <p className="text-red-500 text-sm mt-1">{String(errors.journey_date.message)}</p>}
-                      </div>
-                      
-                      <div>
-                        <label className="block text-gray-700 font-medium mb-2">Number of Passengers</label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                          <input
-                            type="number"
-                            {...register("passengers", { 
-                              required: "Number of passengers is required",
-                              min: { value: 1, message: "Minimum 1 passenger required" },
-                              max: { value: 6, message: "Maximum 6 passengers allowed" }
-                            })}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                            placeholder="E.g., 2"
-                            min="1"
-                            max="6"
-                          />
-                        </div>
-                        {errors.passengers && <p className="text-red-500 text-sm mt-1">{String(errors.passengers.message)}</p>}
                       </div>
                     </div>
                     
@@ -390,6 +386,93 @@ const Booking = () => {
                       </>
                     )}
                     
+                    {/* Passenger Details */}
+                    <div className="border-t border-gray-200 pt-6">
+                      <h3 className="text-xl font-semibold text-travel-blue-dark mb-4">Passenger Details</h3>
+                      
+                      <div className="space-y-6">
+                        <div>
+                          <label className="block text-gray-700 font-medium mb-2">
+                            Number of Passengers
+                            <span className="text-sm text-gray-500 ml-2">(Maximum 6)</span>
+                          </label>
+                          <input
+                            type="number"
+                            value={passengerCount}
+                            onChange={(e) => {
+                              const count = parseInt(e.target.value);
+                              handlePassengerCountChange(e);
+                              // Also update the form field
+                              setValue("passengers", count);
+                            }}
+                            min="1"
+                            max="6"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                          />
+                        </div>
+
+                        {passengers.map((passenger, index) => (
+                          <div key={index} className="bg-gray-50 p-4 rounded-lg space-y-4">
+                            <h4 className="font-medium text-travel-blue-dark">Passenger {index + 1}</h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <label className="block text-gray-700 font-medium mb-2">Full Name</label>
+                                <input
+                                  type="text"
+                                  value={passenger.name}
+                                  onChange={(e) => {
+                                    const newPassengers = [...passengers];
+                                    newPassengers[index].name = e.target.value;
+                                    setPassengers(newPassengers);
+                                  }}
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                                  placeholder="Enter passenger name"
+                                  required
+                                />
+                              </div>
+                              
+                              <div>
+                                <label className="block text-gray-700 font-medium mb-2">Age</label>
+                                <input
+                                  type="number"
+                                  value={passenger.age}
+                                  onChange={(e) => {
+                                    const newPassengers = [...passengers];
+                                    newPassengers[index].age = e.target.value;
+                                    setPassengers(newPassengers);
+                                  }}
+                                  min="0"
+                                  max="120"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                                  placeholder="Enter age"
+                                  required
+                                />
+                              </div>
+                              
+                              <div>
+                                <label className="block text-gray-700 font-medium mb-2">Gender</label>
+                                <select
+                                  value={passenger.gender}
+                                  onChange={(e) => {
+                                    const newPassengers = [...passengers];
+                                    newPassengers[index].gender = e.target.value;
+                                    setPassengers(newPassengers);
+                                  }}
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                                  required
+                                >
+                                  <option value="male">Male</option>
+                                  <option value="female">Female</option>
+                                  <option value="transgender">Transgender</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Contact Information */}
                     <div className="border-t border-gray-200 pt-6">
                       <h3 className="text-xl font-semibold text-travel-blue-dark mb-4">Contact Information</h3>
@@ -494,7 +577,7 @@ const Booking = () => {
                         <ul className="text-sm text-gray-600 space-y-2">
                           <li className="flex items-start gap-2">
                             <span className="text-travel-orange font-bold">✓</span>
-                            <span>General bookings open 120 days in advance</span>
+                            <span>General bookings open 60 days in advance</span>
                           </li>
                           <li className="flex items-start gap-2">
                             <span className="text-travel-orange font-bold">✓</span>
@@ -515,12 +598,12 @@ const Booking = () => {
                         <h4 className="font-medium text-travel-blue-dark mb-2">Our Tatkal Success Rate</h4>
                         <div className="flex items-center gap-2">
                           <div className="w-full bg-gray-200 rounded-full h-2.5">
-                            <div className="bg-travel-orange h-2.5 rounded-full" style={{ width: "90%" }}></div>
+                            <div className="bg-travel-orange h-2.5 rounded-full" style={{ width: "95%" }}></div>
                           </div>
-                          <span className="text-sm font-medium">90%</span>
+                          <span className="text-sm font-medium">95%</span>
                         </div>
                         <p className="text-xs text-gray-600 mt-2">
-                          Based on our last 10,000 Tatkal booking attempts
+                          Based on our last 500+ Tatkal booking attempts
                         </p>
                       </div>
                     </div>
@@ -649,14 +732,14 @@ const Booking = () => {
                     <h4 className="font-medium text-travel-blue-dark mb-3">Need Assistance?</h4>
                     <div className="flex items-center gap-3 mb-2">
                       <Phone size={18} className="text-travel-orange" />
-                      <a href="tel:+918888888888" className="text-gray-600 hover:text-travel-orange">
-                        +91 88888 88888
+                      <a href="tel:+918985816481" className="text-gray-600 hover:text-travel-orange">
+                      +91 8985816481
                       </a>
                     </div>
                     <div className="flex items-center gap-3">
                       <Mail size={18} className="text-travel-orange" />
-                      <a href="mailto:bookings@anandtravels.com" className="text-gray-600 hover:text-travel-orange">
-                        bookings@anandtravels.com
+                      <a href="mailto:anandtravelsguide@gmail.com" className="text-gray-600 hover:text-travel-orange">
+                        anandtravelsguide@gmail.com
                       </a>
                     </div>
                   </div>
