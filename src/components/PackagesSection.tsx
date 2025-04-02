@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Clock, Calendar, MapPin } from "lucide-react";
@@ -9,8 +8,8 @@ const PackagesSection = () => {
   const domesticPackages = [
     {
       id: 1,
-      title: "Magical Kashmir",
-      image: "https://images.pexels.com/photos/5708072/pexels-photo-5708072.jpeg",
+      title: "Jammu & Kashmir",
+      image: "https://media.istockphoto.com/id/1323846766/photo/a-beautiful-view-of-dal-lake-in-winter-srinagar-kashmir-india.jpg?s=612x612&w=0&k=20&c=Dp3peie2t-jdLEmqe4W-DD09GACu2Cr-JjHHeB6rpBc=",
       days: "5N/6D",
       price: "₹35,999",
       location: "Srinagar, Gulmarg, Pahalgam",
@@ -19,7 +18,7 @@ const PackagesSection = () => {
     {
       id: 2,
       title: "Kerala Backwaters",
-      image: "https://images.pexels.com/photos/1310788/pexels-photo-1310788.jpeg",
+      image: "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/f3/1b/4a/alleppey-backwater-cruise.jpg?w=1200&h=-1&s=1",
       days: "4N/5D",
       price: "₹25,999",
       location: "Kochi, Munnar, Alleppey",
@@ -27,8 +26,17 @@ const PackagesSection = () => {
     },
     {
       id: 3,
-      title: "Goa Beach Vacation",
+      title: "Taj Mahal",
       image: "https://images.pexels.com/photos/1174732/pexels-photo-1174732.jpeg",
+      days: "3N/4D",
+      price: "₹18,999",
+      location: "North & South Goa",
+      highlights: "Beach Activities, Cruise, Old Goa Churches"
+    },
+    {
+      id: 4,
+      title: "Goa",
+      image: "https://lp-cms-production.imgix.net/2022-03/India%20Varkala%20andrijosef%20shutterstock_1902816124%20RFC.jpg?auto=format&w=1440&h=810&fit=crop&q=75",
       days: "3N/4D",
       price: "₹18,999",
       location: "North & South Goa",
@@ -39,8 +47,8 @@ const PackagesSection = () => {
   const internationalPackages = [
     {
       id: 4,
-      title: "Amazing Thailand",
-      image: "https://images.pexels.com/photos/1659438/pexels-photo-1659438.jpeg",
+      title: "Bangkok, Thailand",
+      image: "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0e/43/44/db/photo0jpg.jpg?w=900&h=500&s=1",
       days: "6N/7D",
       price: "₹65,999",
       location: "Bangkok, Pattaya, Phuket",
@@ -48,8 +56,8 @@ const PackagesSection = () => {
     },
     {
       id: 5,
-      title: "Dubai Extravaganza",
-      image: "https://images.pexels.com/photos/2044434/pexels-photo-2044434.jpeg",
+      title: "Dubai",
+      image: "https://media.tacdn.com/media/attractions-splice-spp-674x446/10/71/94/a2.jpg",
       days: "5N/6D",
       price: "₹75,999",
       location: "Dubai, Abu Dhabi",
@@ -57,12 +65,12 @@ const PackagesSection = () => {
     },
     {
       id: 6,
-      title: "Malaysia & Singapore",
-      image: "https://images.pexels.com/photos/2166553/pexels-photo-2166553.jpeg",
+      title: "Malaysia & Langkawi",
+      image: "https://cdn.pixabay.com/photo/2016/11/13/12/52/kuala-lumpur-1820944_960_720.jpg",
       days: "7N/8D",
       price: "₹85,999",
-      location: "Kuala Lumpur, Singapore",
-      highlights: "Universal Studios, Petronas Towers, Sentosa Island"
+      location: "Kuala Lumpur, Langkawi",
+      highlights: "Universal Studios, Petronas Towers, Langkawi Cable Car"
     }
   ];
   

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { MapPin, Calendar, Users, Star } from "lucide-react";
@@ -11,8 +10,8 @@ const packagesData = {
   domestic: [
     {
       id: 1,
-      title: "Magical Kashmir",
-      image: "https://images.pexels.com/photos/313782/pexels-photo-313782.jpeg",
+      title: "Jammu & Kashmir",
+      image: "https://media.istockphoto.com/id/1323846766/photo/a-beautiful-view-of-dal-lake-in-winter-srinagar-kashmir-india.jpg?s=612x612&w=0&k=20&c=Dp3peie2t-jdLEmqe4W-DD09GACu2Cr-JjHHeB6rpBc=",
       days: "5N/6D",
       price: "₹35,999",
       location: "Srinagar, Gulmarg, Pahalgam",
@@ -24,9 +23,9 @@ const packagesData = {
     {
       id: 2,
       title: "Kerala Backwaters",
-      image: "https://images.pexels.com/photos/1310788/pexels-photo-1310788.jpeg",
+      image: "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/f3/1b/4a/alleppey-backwater-cruise.jpg?w=1200&h=-1&s=1",
       days: "4N/5D",
-      price: "₹25,999",
+      price: "₹18,999",
       location: "Kochi, Munnar, Alleppey",
       rating: 4.9,
       reviews: 186,
@@ -35,11 +34,11 @@ const packagesData = {
     },
     {
       id: 3,
-      title: "Golden Triangle",
+      title: "Taj Mahal",
       image: "https://images.pexels.com/photos/1603650/pexels-photo-1603650.jpeg",
       days: "6N/7D",
-      price: "₹28,999",
-      location: "Delhi, Agra, Jaipur",
+      price: "₹18,999",
+      location: "Agra",
       rating: 4.7,
       reviews: 152,
       highlights: "Taj Mahal, Red Fort, Amber Fort, Qutub Minar, Hawa Mahal, City Palace",
@@ -47,8 +46,8 @@ const packagesData = {
     },
     {
       id: 4,
-      title: "Goa Beach Vacation",
-      image: "https://images.pexels.com/photos/1174732/pexels-photo-1174732.jpeg",
+      title: "Goa",
+      image: "https://lp-cms-production.imgix.net/2022-03/India%20Varkala%20andrijosef%20shutterstock_1902816124%20RFC.jpg?auto=format&w=1440&h=810&fit=crop&q=75",
       days: "3N/4D",
       price: "₹18,999",
       location: "North & South Goa",
@@ -60,7 +59,7 @@ const packagesData = {
     {
       id: 5,
       title: "Andaman Islands",
-      image: "https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg",
+      image: "https://static.theprint.in/wp-content/uploads/2020/08/Untitled-design-2020-08-09T193331.340.jpg",
       days: "5N/6D",
       price: "₹32,999",
       location: "Port Blair, Havelock, Neil Island",
@@ -71,10 +70,10 @@ const packagesData = {
     },
     {
       id: 6,
-      title: "Himalayan Retreat",
-      image: "https://images.pexels.com/photos/2440021/pexels-photo-2440021.jpeg",
+      title: "MANALI",
+      image: "https://s7ap1.scene7.com/is/image/incredibleindia/The-Best-Adventure-Experiences-in-Manali1-hero?qlt=82&ts=1726731002736",
       days: "7N/8D",
-      price: "₹42,999",
+      price: "₹32,999",
       location: "Manali, Shimla, Dharamshala",
       rating: 4.7,
       reviews: 78,
@@ -85,10 +84,10 @@ const packagesData = {
   international: [
     {
       id: 7,
-      title: "Amazing Thailand",
-      image: "https://images.pexels.com/photos/1659438/pexels-photo-1659438.jpeg",
+      title: "Bangkok, Thailand",
+      image: "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0e/43/44/db/photo0jpg.jpg?w=900&h=500&s=1",
       days: "6N/7D",
-      price: "₹65,999",
+      price: "₹45,999",
       location: "Bangkok, Pattaya, Phuket",
       rating: 4.8,
       reviews: 156,
@@ -97,10 +96,10 @@ const packagesData = {
     },
     {
       id: 8,
-      title: "Dubai Extravaganza",
-      image: "https://images.pexels.com/photos/2044434/pexels-photo-2044434.jpeg",
+      title: "Dubai",
+      image: "https://media.tacdn.com/media/attractions-splice-spp-674x446/10/71/94/a2.jpg",
       days: "5N/6D",
-      price: "₹75,999",
+      price: "₹65,999",
       location: "Dubai, Abu Dhabi",
       rating: 4.9,
       reviews: 143,
@@ -109,20 +108,20 @@ const packagesData = {
     },
     {
       id: 9,
-      title: "Malaysia & Singapore",
-      image: "https://images.pexels.com/photos/2166553/pexels-photo-2166553.jpeg",
+      title: "Malaysia & Langkawi",
+      image: "https://cdn.pixabay.com/photo/2016/11/13/12/52/kuala-lumpur-1820944_960_720.jpg",
       days: "7N/8D",
-      price: "₹85,999",
-      location: "Kuala Lumpur, Singapore",
+      price: "₹55,999",
+      location: "Kuala Lumpur, Langkawi",
       rating: 4.7,
       reviews: 124,
-      highlights: "Universal Studios, Petronas Towers, Sentosa Island, Gardens by the Bay",
+      highlights: "Petronas Towers, Langkawi Cable Car, Island Hopping, Night Markets",
       category: "international"
     },
     {
       id: 10,
-      title: "Bali Paradise",
-      image: "https://images.pexels.com/photos/3225531/pexels-photo-3225531.jpeg",
+      title: "Bali, Indonesia",
+      image: "https://www.outlooktravelmag.com/media/bali-tg.png",
       days: "6N/7D",
       price: "₹70,999",
       location: "Kuta, Ubud, Nusa Dua",
@@ -136,7 +135,7 @@ const packagesData = {
       title: "European Dreams",
       image: "https://images.pexels.com/photos/532826/pexels-photo-532826.jpeg",
       days: "10N/11D",
-      price: "₹1,50,999",
+      price: "₹1,25,999",
       location: "Paris, Switzerland, Rome",
       rating: 4.9,
       reviews: 86,
@@ -145,14 +144,14 @@ const packagesData = {
     },
     {
       id: 12,
-      title: "Vietnam & Cambodia",
-      image: "https://images.pexels.com/photos/5191375/pexels-photo-5191375.jpeg",
+      title: "Vietnam",
+      image: "https://images.squarespace-cdn.com/content/v1/5c3824e246d6976392372cd9/1560106931611-VVF5OJ34KV28ZNBPRQRS/Vietnam+visitor+visa.jpg?format=2500w",
       days: "8N/9D",
-      price: "₹90,999",
-      location: "Hanoi, Ho Chi Minh, Siem Reap",
+      price: "₹70,999",
+      location: "Hanoi, Ho Chi Minh",
       rating: 4.7,
       reviews: 72,
-      highlights: "Ha Long Bay, Angkor Wat, Cu Chi Tunnels, Mekong Delta, War Remnants Museum",
+      highlights: "Ha Long Bay, Cu Chi Tunnels, Mekong Delta, War Remnants Museum",
       category: "international"
     }
   ]
