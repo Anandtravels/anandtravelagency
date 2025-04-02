@@ -57,12 +57,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    // Check if user is an agent
+    // Check if agent exists using query
     const agentsRef = collection(db, 'agents');
     const q = query(agentsRef, where('email', '==', email));
-    const snapshot = await getDocs(q);
+    const querySnapshot = await getDocs(q);
 
-    if (!snapshot.empty) {
+    if (!querySnapshot.empty) {
       setIsAgent(true);
       setIsAdmin(false);
       return;
@@ -88,40 +88,52 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           throw signInError;
         }
       } else if (role === 'agent') {
-        // First check if agent exists in Firestore
+        console.log('Attempting agent login:', email); // Debug log
+        
+        // Query agents collection for the email
         const agentsRef = collection(db, 'agents');
         const q = query(agentsRef, where('email', '==', email));
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
-          return { error: { message: 'Agent not found' } };
-        }
-
-        const agent = snapshot.docs[0].data();
-        if (agent.password !== password) {
-          return { error: { message: 'Invalid password' } };
-        }
-
+        
         try {
-          // Try to sign in
-          const userCredential = await signInWithEmailAndPassword(auth, email, password);
-          await checkRole(email);
-          return { error: null };
-        } catch (signInError: any) {
-          // If agent doesn't exist in Firebase Auth, create them
-          if (signInError.code === 'auth/user-not-found') {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            await checkRole(email);
-            return { error: null };
+          const querySnapshot = await getDocs(q);
+          
+          if (querySnapshot.empty) {
+            console.log('No agent found with email:', email); // Debug log
+            return { error: { message: 'Agent not found' } };
           }
-          throw signInError;
+
+          const agentDoc = querySnapshot.docs[0];
+          const agentData = agentDoc.data();
+          
+          console.log('Agent found:', agentData.email); // Debug log
+
+          if (agentData.password !== password) {
+            return { error: { message: 'Invalid password' } };
+          }
+
+          // Try to authenticate with Firebase
+          try {
+            await signInWithEmailAndPassword(auth, email, password);
+          } catch (authError: any) {
+            if (authError.code === 'auth/user-not-found') {
+              await createUserWithEmailAndPassword(auth, email, password);
+            } else {
+              throw authError;
+            }
+          }
+
+          setIsAgent(true);
+          return { error: null };
+        } catch (error: any) {
+          console.error('Agent verification error:', error); // Debug log
+          return { error: { message: 'Error verifying agent credentials' } };
         }
       }
 
       return { error: { message: "Invalid credentials" } };
     } catch (error: any) {
-      console.error("Sign in/up error:", error);
-      return { error };
+      console.error("Sign in error:", error);
+      return { error: { message: error.message || 'Authentication failed' } };
     }
   };
 

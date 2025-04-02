@@ -379,10 +379,20 @@ const Admin = () => {
 
   const createAgent = async (data) => {
     try {
-      await addDoc(collection(db, 'agents'), {
-        ...data,
+      // Create a clean agent object with correct types
+      const agentData = {
+        name: data.name,
+        email: data.email.toLowerCase(), // Ensure email is lowercase
+        password: data.password,
+        phone: data.phone,
+        age: data.age.toString(),
+        gender: data.gender,
+        address: data.address,
         created_at: serverTimestamp()
-      });
+      };
+
+      // Add to agents collection
+      await addDoc(collection(db, 'agents'), agentData);
       
       toast({
         title: "Agent Created",
@@ -400,6 +410,7 @@ const Admin = () => {
         password: ''
       });
     } catch (error) {
+      console.error('Error creating agent:', error);
       toast({
         title: "Error",
         description: "Failed to create agent",

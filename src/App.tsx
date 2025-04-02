@@ -17,6 +17,7 @@ import AdminLogin from "./pages/AdminLogin";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import FAQ from "./pages/FAQ";
+import AgentLogin from "./pages/AgentLogin";
 import logo from './assets/poster.png';
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -74,6 +75,7 @@ const App = () => {
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/faq" element={<FAQ />} />
+                <Route path="/agent" element={<AgentLogin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

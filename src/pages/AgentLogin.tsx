@@ -1,64 +1,46 @@
-import { useState, useEffect } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
-const AdminLogin = () => {
+const AgentLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, isAdmin, user, loading } = useAuth();
+  const { signIn } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  // If already authenticated and admin, redirect to admin dashboard
-  useEffect(() => {
-    if (user && isAdmin && !loading) {
-      navigate("/admin");
-    }
-  }, [user, isAdmin, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-travel-blue-dark border-r-transparent"></div>
-      </div>
-    );
-  }
-
-  if (user && isAdmin) {
-    return <Navigate to="/admin" replace />;
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const { error } = await signIn(email, password, 'admin');
+      const { error } = await signIn(email, password, 'agent');
       
       if (error) {
         toast({
           title: "Authentication Error",
-          description: "Invalid admin credentials",
+          description: error.message || "Invalid agent credentials",
           variant: "destructive",
         });
+        setIsLoading(false);
         return;
       }
 
       toast({
         title: "Login Successful",
-        description: "Welcome to the admin dashboard",
+        description: "Welcome to the agent dashboard",
       });
       
-      navigate("/admin", { replace: true });
+      navigate("/agent-dashboard", { replace: true });
     } catch (error: any) {
       toast({
         title: "Authentication Error",
-        description: error.message || "An error occurred during login",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -71,10 +53,10 @@ const AdminLogin = () => {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl text-center text-travel-blue-dark">
-            Admin Login
+            Agent Login
           </CardTitle>
           <CardDescription className="text-center">
-            Sign in to access the admin dashboard
+            Sign in to access your agent dashboard
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -88,7 +70,6 @@ const AdminLogin = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@anandtravels.com"
                 required
               />
             </div>
@@ -127,4 +108,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin;
+export default AgentLogin;
