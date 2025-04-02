@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { collection, getDocs, orderBy, query, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Checkbox } from "@/components/ui/checkbox";
 import { TrashIcon, PencilIcon, Check, X, Phone, Mail, MessageSquare } from "lucide-react";
@@ -37,6 +37,17 @@ const Admin = () => {
     passengers: '',
     additional_requirements: '',
     booking_type: ''
+  });
+  const [agents, setAgents] = useState([]);
+  const [showAgentForm, setShowAgentForm] = useState(false);
+  const [agentFormData, setAgentFormData] = useState({
+    name: '',
+    age: '',
+    gender: 'male',
+    phone: '',
+    address: '',
+    email: '',
+    password: ''
   });
 
   // Memoized functions - use useMemo for derived values
@@ -85,7 +96,13 @@ const Admin = () => {
         if (!user || user.email !== 'admin@anandtravels.com') {
           navigate("/admin-login", { replace: true });
         } else {
-          setupRealtimeListeners();
+          const unsubscribe = setupRealtimeListeners();
+          // Store the unsubscribe function
+          return () => {
+            if (unsubscribe) {
+              unsubscribe();
+            }
+          };
         }
       }
     };
@@ -180,10 +197,35 @@ const Admin = () => {
       }
     );
 
+    // Add agents listener
+    const agentsQuery = query(
+      collection(db, 'agents'),
+      orderBy('created_at', 'desc')
+    );
+
+    const agentsUnsubscribe = onSnapshot(agentsQuery, 
+      (snapshot) => {
+        const agentsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setAgents(agentsData);
+      },
+      (error) => {
+        console.error("Error listening to agents:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load agents data",
+          variant: "destructive",
+        });
+      }
+    );
+
     // Return cleanup function
     return () => {
       bookingsUnsubscribe();
       contactsUnsubscribe();
+      agentsUnsubscribe();
     };
   };
 
@@ -335,6 +377,96 @@ const Admin = () => {
     window.location.href = `mailto:${email}`;
   };
 
+  const createAgent = async (data) => {
+    try {
+      await addDoc(collection(db, 'agents'), {
+        ...data,
+        created_at: serverTimestamp()
+      });
+      
+      toast({
+        title: "Agent Created",
+        description: "New agent has been added successfully"
+      });
+      
+      setShowAgentForm(false);
+      setAgentFormData({
+        name: '',
+        age: '',
+        gender: 'male',
+        phone: '',
+        address: '',
+        email: '',
+        password: ''
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create agent",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const assignTicket = async (bookingId: string, agentEmail: string) => {
+    try {
+      await updateDoc(doc(db, 'bookings', bookingId), {
+        assignedAgent: agentEmail,
+        assignedAt: serverTimestamp()
+      });
+
+      // Format WhatsApp message
+      const booking = bookings.find(b => b.id === bookingId);
+      const message = `New ticket assigned:\n\nBooking ID: ${bookingId}\nFrom: ${booking.from}\nTo: ${booking.to}\nDate: ${booking.journey_date}\n\nPlease check your dashboard for details.`;
+      
+      // Open WhatsApp with pre-filled message
+      const agent = agents.find(a => a.email === agentEmail);
+      window.open(`https://wa.me/${agent.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+
+      toast({
+        title: "Ticket Assigned",
+        description: "Ticket has been assigned to agent successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to assign ticket",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditAgent = (agent: any) => {
+    setAgentFormData({
+      name: agent.name,
+      age: agent.age,
+      gender: agent.gender,
+      phone: agent.phone,
+      address: agent.address,
+      email: agent.email,
+      password: '' // Don't populate password for security
+    });
+    setShowAgentForm(true);
+  };
+
+  const handleDeleteAgent = async (agentId: string) => {
+    if (!window.confirm('Are you sure you want to delete this agent?')) return;
+
+    try {
+      await deleteDoc(doc(db, 'agents', agentId));
+      toast({
+        title: "Agent Deleted",
+        description: "Agent has been deleted successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete agent",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Modified header for better mobile layout */}
@@ -362,6 +494,7 @@ const Admin = () => {
           <TabsList className="mb-6 w-full flex">
             <TabsTrigger value="bookings" className="flex-1">Bookings</TabsTrigger>
             <TabsTrigger value="messages" className="flex-1">Messages</TabsTrigger>
+            <TabsTrigger value="agents" className="flex-1">Agents</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings">
@@ -578,6 +711,23 @@ const Admin = () => {
                             </button>
                           </div>
                         </div>
+                        <div className="mt-4 border-t pt-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
+                          <div className="flex gap-2">
+                            <select 
+                              className="flex-1 px-3 py-2 border rounded-md"
+                              value={booking.assignedAgent || ''}
+                              onChange={(e) => assignTicket(booking.id, e.target.value)}
+                            >
+                              <option value="">Select Agent</option>
+                              {agents.map((agent: any) => (
+                                <option key={agent.id} value={agent.email}>
+                                  {agent.name} ({agent.email})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
                       </>
                     )}
                   </div>
@@ -697,6 +847,23 @@ const Admin = () => {
                           </button>
                         </div>
                       </div>
+                      <div className="mt-4 border-t pt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
+                        <div className="flex gap-2">
+                          <select 
+                            className="flex-1 px-3 py-2 border rounded-md"
+                            value={booking.assignedAgent || ''}
+                            onChange={(e) => assignTicket(booking.id, e.target.value)}
+                          >
+                            <option value="">Select Agent</option>
+                            {agents.map((agent: any) => (
+                              <option key={agent.id} value={agent.email}>
+                                {agent.name} ({agent.email})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -778,6 +945,142 @@ const Admin = () => {
                           />
                         </div>
                       </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="agents">
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-xl font-bold text-travel-blue-dark">Manage Agents</h2>
+                <Button onClick={() => setShowAgentForm(true)} variant="default">
+                  Add New Agent
+                </Button>
+              </div>
+
+              {/* Agent Form Modal */}
+              {showAgentForm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-lg w-full max-w-md p-6">
+                    <h3 className="text-xl font-bold mb-4">{editingId ? 'Edit Agent' : 'Add New Agent'}</h3>
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      createAgent(agentFormData);
+                    }} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={agentFormData.name}
+                          onChange={(e) => setAgentFormData({...agentFormData, name: e.target.value})}
+                          className="w-full px-3 py-2 border rounded"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Age</label>
+                          <input
+                            type="number"
+                            required
+                            value={agentFormData.age}
+                            onChange={(e) => setAgentFormData({...agentFormData, age: e.target.value})}
+                            className="w-full px-3 py-2 border rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Gender</label>
+                          <select
+                            required
+                            value={agentFormData.gender}
+                            onChange={(e) => setAgentFormData({...agentFormData, gender: e.target.value})}
+                            className="w-full px-3 py-2 border rounded"
+                          >
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Phone</label>
+                        <input
+                          type="tel"
+                          required
+                          value={agentFormData.phone}
+                          onChange={(e) => setAgentFormData({...agentFormData, phone: e.target.value})}
+                          className="w-full px-3 py-2 border rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Address</label>
+                        <textarea
+                          required
+                          value={agentFormData.address}
+                          onChange={(e) => setAgentFormData({...agentFormData, address: e.target.value})}
+                          className="w-full px-3 py-2 border rounded"
+                          rows={3}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Email</label>
+                        <input
+                          type="email"
+                          required
+                          value={agentFormData.email}
+                          onChange={(e) => setAgentFormData({...agentFormData, email: e.target.value})}
+                          className="w-full px-3 py-2 border rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Password</label>
+                        <input
+                          type="password"
+                          required
+                          value={agentFormData.password}
+                          onChange={(e) => setAgentFormData({...agentFormData, password: e.target.value})}
+                          className="w-full px-3 py-2 border rounded"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2 mt-6">
+                        <Button type="button" variant="outline" onClick={() => setShowAgentForm(false)}>
+                          Cancel
+                        </Button>
+                        <Button type="submit">
+                          {editingId ? 'Update Agent' : 'Add Agent'}
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Agents List */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {agents.map((agent: any) => (
+                  <div key={agent.id} className="bg-white border rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="font-medium text-lg">{agent.name}</h3>
+                        <p className="text-sm text-gray-500">{agent.email}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleEditAgent(agent)} className="p-2 hover:bg-gray-100 rounded-full">
+                          <PencilIcon size={16} className="text-blue-600" />
+                        </button>
+                        <button onClick={() => handleDeleteAgent(agent.id)} className="p-2 hover:bg-gray-100 rounded-full">
+                          <TrashIcon size={16} className="text-red-600" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <p><span className="font-medium">Age:</span> {agent.age}</p>
+                      <p><span className="font-medium">Gender:</span> {agent.gender}</p>
+                      <p><span className="font-medium">Phone:</span> {agent.phone}</p>
+                      <p><span className="font-medium">Address:</span> {agent.address}</p>
                     </div>
                   </div>
                 ))}

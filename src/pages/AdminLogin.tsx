@@ -13,6 +13,7 @@ const AdminLogin = () => {
   const { signIn, isAdmin, user, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [loginType, setLoginType] = useState<'admin' | 'agent'>('admin');
 
   // If user is already logged in and is an admin, redirect to admin dashboard
   useEffect(() => {
@@ -40,24 +41,23 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(email, password, loginType);
       
       if (error) {
         toast({
           title: "Authentication Error",
-          description: "Invalid admin credentials",
+          description: "Invalid credentials",
           variant: "destructive",
         });
         return;
       }
 
-      // No need to check isAdmin separately since we only allow admin login
       toast({
         title: "Login Successful",
-        description: "Welcome to the admin dashboard",
+        description: loginType === 'admin' ? "Welcome to the admin dashboard" : "Welcome to the agent dashboard",
       });
       
-      navigate("/admin", { replace: true });
+      navigate(loginType === 'admin' ? "/admin" : "/agent-dashboard", { replace: true });
     } catch (error: any) {
       toast({
         title: "Authentication Error",
@@ -73,9 +73,33 @@ const AdminLogin = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-center text-travel-blue-dark">Admin Login</CardTitle>
+          <CardTitle className="text-2xl text-center text-travel-blue-dark">
+            {loginType === 'admin' ? 'Admin Login' : 'Agent Login'}
+          </CardTitle>
+          <div className="flex justify-center gap-4 mt-4">
+            <button
+              onClick={() => setLoginType('admin')}
+              className={`px-4 py-2 rounded ${
+                loginType === 'admin' 
+                  ? 'bg-travel-blue-dark text-white' 
+                  : 'bg-gray-100'
+              }`}
+            >
+              Admin
+            </button>
+            <button
+              onClick={() => setLoginType('agent')}
+              className={`px-4 py-2 rounded ${
+                loginType === 'agent' 
+                  ? 'bg-travel-blue-dark text-white' 
+                  : 'bg-gray-100'
+              }`}
+            >
+              Agent
+            </button>
+          </div>
           <CardDescription className="text-center">
-            Sign in to access the admin dashboard
+            Sign in to access the {loginType === 'admin' ? 'admin' : 'agent'} dashboard
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>

@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function: returns true if the user is admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Agents collection: allow admin to read all agent documents or agents to read their own
+    match /agents/{docId} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.token.email == resource.data.email);
+      allow write: if isAdmin();
+    }
+    
+    // Bookings collection: Admin gets full read/write access
+    match /bookings/{docId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Contact submissions: Admin gets full access
+    match /contact_submissions/{docId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
