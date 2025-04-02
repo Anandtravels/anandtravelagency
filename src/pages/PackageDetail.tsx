@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { MapPin, Calendar, Clock, Users, Check, Star, Image } from "lucide-react";
@@ -11,11 +10,11 @@ const packagesData = {
   domestic: [
     {
       id: 1,
-      title: "Magical Kashmir",
+      title: "Jammu & Kashmir",
       images: [
-        "https://source.unsplash.com/photo-1501693126003-1fefa4902dd3",
-        "https://source.unsplash.com/photo-1566837497312-7be7830ae9b1",
-        "https://source.unsplash.com/photo-1571913148439-32cf6f98ef3d"
+        "https://media.istockphoto.com/id/1323846766/photo/a-beautiful-view-of-dal-lake-in-winter-srinagar-kashmir-india.jpg?s=612x612&w=0&k=20&c=Dp3peie2t-jdLEmqe4W-DD09GACu2Cr-JjHHeB6rpBc=",
+        "https://media.istockphoto.com/id/1323846766/photo/a-beautiful-view-of-dal-lake-in-winter-srinagar-kashmir-india.jpg?s=612x612&w=0&k=20&c=Dp3peie2t-jdLEmqe4W-DD09GACu2Cr-JjHHeB6rpBc=",
+        "https://media.istockphoto.com/id/1323846766/photo/a-beautiful-view-of-dal-lake-in-winter-srinagar-kashmir-india.jpg?s=612x612&w=0&k=20&c=Dp3peie2t-jdLEmqe4W-DD09GACu2Cr-JjHHeB6rpBc="
       ],
       days: "5N/6D",
       price: "₹35,999",
@@ -87,9 +86,9 @@ const packagesData = {
       id: 2,
       title: "Kerala Backwaters",
       images: [
-        "https://source.unsplash.com/photo-1602501059056-93457550b099",
-        "https://source.unsplash.com/photo-1593693729108-ec04c7f3b7ed",
-        "https://source.unsplash.com/photo-1563016234-08b5c084221c"
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/f3/1b/4a/alleppey-backwater-cruise.jpg?w=1200&h=-1&s=1",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/f3/1b/4a/alleppey-backwater-cruise.jpg?w=1200&h=-1&s=1",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/f3/1b/4a/alleppey-backwater-cruise.jpg?w=1200&h=-1&s=1"
       ],
       days: "4N/5D",
       price: "₹25,999",
@@ -151,16 +150,218 @@ const packagesData = {
       duration: "5 Days, 4 Nights",
       departureInfo: "Monday, Wednesday, Friday",
       minAge: 0
+    },
+    {
+      id: 3,
+      title: "Taj Mahal",
+      images: [
+        "https://images.pexels.com/photos/1603650/pexels-photo-1603650.jpeg",
+        "https://images.pexels.com/photos/1603650/pexels-photo-1603650.jpeg",
+        "https://images.pexels.com/photos/1603650/pexels-photo-1603650.jpeg"
+      ],
+      days: "6N/7D",
+      price: "₹28,999",
+      location: "Agra",
+      rating: 4.7,
+      reviews: 152,
+      overview: "Experience the magnificence of the Taj Mahal and explore the rich Mughal heritage of Agra.",
+      highlights: [
+        "Visit the iconic Taj Mahal at sunrise",
+        "Explore Agra Fort UNESCO site",
+        "Visit Fatehpur Sikri",
+        "Shopping at local markets",
+        "Traditional Mughlai cuisine experience"
+      ],
+      inclusions: [
+        "6 nights accommodation in 4-star hotels",
+        "Daily breakfast and dinner",
+        "All transfers in AC vehicle",
+        "Professional tour guide",
+        "Monument entrance fees",
+        "Welcome drink on arrival"
+      ],
+      exclusions: [
+        "Airfare",
+        "Personal expenses",
+        "Camera fees at monuments",
+        "Tips and gratuities",
+        "Travel insurance"
+      ],
+      itinerary: [
+        {
+          day: "Day 1",
+          title: "Arrival in Agra",
+          description: "Arrive in Agra and check-in to your hotel. Evening at leisure."
+        },
+        {
+          day: "Day 2",
+          title: "Taj Mahal Visit",
+          description: "Early morning visit to Taj Mahal, afternoon Agra Fort tour."
+        }
+        // ...add more days
+      ],
+      category: "domestic",
+      maxPeople: 15,
+      duration: "7 Days, 6 Nights",
+      departureInfo: "Daily departures available",
+      minAge: 0
+    },
+    {
+      id: 4,
+      title: "Goa",
+      images: [
+        "https://lp-cms-production.imgix.net/2022-03/India%20Varkala%20andrijosef%20shutterstock_1902816124%20RFC.jpg?auto=format&w=1440&h=810&fit=crop&q=75",
+        "https://lp-cms-production.imgix.net/2022-03/India%20Varkala%20andrijosef%20shutterstock_1902816124%20RFC.jpg?auto=format&w=1440&h=810&fit=crop&q=75",
+        "https://lp-cms-production.imgix.net/2022-03/India%20Varkala%20andrijosef%20shutterstock_1902816124%20RFC.jpg?auto=format&w=1440&h=810&fit=crop&q=75"
+      ],
+      days: "3N/4D",
+      price: "₹18,999",
+      location: "North & South Goa",
+      rating: 4.6,
+      reviews: 210,
+      overview: "Discover the vibrant beaches, rich culture, and exciting nightlife of Goa.",
+      highlights: [
+        "Beach hopping tour",
+        "Water sports activities",
+        "Old Goa church visits",
+        "Spice plantation tour",
+        "Sunset river cruise"
+      ],
+      inclusions: [
+        "3 nights accommodation",
+        "Daily breakfast",
+        "Airport/station transfers",
+        "Sightseeing as per itinerary",
+        "All taxes included"
+      ],
+      exclusions: [
+        "Flights/train tickets",
+        "Personal expenses",
+        "Water sports charges",
+        "Entry fees",
+        "Travel insurance"
+      ],
+      itinerary: [
+        {
+          day: "Day 1",
+          title: "Arrival in Goa",
+          description: "Arrive and transfer to hotel. Evening free for beach visit."
+        }
+        // ...add more days
+      ],
+      category: "domestic",
+      maxPeople: 10,
+      duration: "4 Days, 3 Nights",
+      departureInfo: "Daily departures",
+      minAge: 0
+    },
+    {
+      id: 5,
+      title: "Andaman Islands",
+      images: [
+        "https://static.theprint.in/wp-content/uploads/2020/08/Untitled-design-2020-08-09T193331.340.jpg",
+        "https://static.theprint.in/wp-content/uploads/2020/08/Untitled-design-2020-08-09T193331.340.jpg",
+        "https://static.theprint.in/wp-content/uploads/2020/08/Untitled-design-2020-08-09T193331.340.jpg"
+      ],
+      days: "5N/6D",
+      price: "₹32,999",
+      location: "Port Blair, Havelock, Neil Island",
+      rating: 4.9,
+      reviews: 96,
+      overview: "Explore the pristine beaches and crystal-clear waters of the Andaman Islands.",
+      highlights: [
+        "Snorkeling at Elephant Beach",
+        "Visit to Radhanagar Beach",
+        "Explore Cellular Jail",
+        "Scuba diving experience",
+        "Boat ride to Ross Island"
+      ],
+      inclusions: [
+        "5 nights accommodation",
+        "Daily breakfast",
+        "Airport transfers",
+        "Sightseeing as per itinerary",
+        "All taxes included"
+      ],
+      exclusions: [
+        "Flights",
+        "Personal expenses",
+        "Water sports charges",
+        "Entry fees",
+        "Travel insurance"
+      ],
+      itinerary: [
+        {
+          day: "Day 1",
+          title: "Arrival in Port Blair",
+          description: "Arrive and transfer to hotel. Evening visit to Cellular Jail."
+        }
+        // ...add more days
+      ],
+      category: "domestic",
+      maxPeople: 12,
+      duration: "6 Days, 5 Nights",
+      departureInfo: "Daily departures",
+      minAge: 0
+    },
+    {
+      id: 6,
+      title: "MANALI",
+      images: [
+        "https://s7ap1.scene7.com/is/image/incredibleindia/The-Best-Adventure-Experiences-in-Manali1-hero?qlt=82&ts=1726731002736",
+        "https://s7ap1.scene7.com/is/image/incredibleindia/The-Best-Adventure-Experiences-in-Manali1-hero?qlt=82&ts=1726731002736",
+        "https://s7ap1.scene7.com/is/image/incredibleindia/The-Best-Adventure-Experiences-in-Manali1-hero?qlt=82&ts=1726731002736"
+      ],
+      days: "7N/8D",
+      price: "₹42,999",
+      location: "Manali, Shimla, Dharamshala",
+      rating: 4.7,
+      reviews: 78,
+      overview: "Experience the beauty of the Himalayas and adventure sports in Manali.",
+      highlights: [
+        "Visit to Rohtang Pass",
+        "Explore Solang Valley",
+        "Trekking in Manali",
+        "Visit to Hadimba Temple",
+        "Shopping at Mall Road"
+      ],
+      inclusions: [
+        "7 nights accommodation",
+        "Daily breakfast and dinner",
+        "All transfers in AC vehicle",
+        "Sightseeing as per itinerary",
+        "All taxes included"
+      ],
+      exclusions: [
+        "Flights/train tickets",
+        "Personal expenses",
+        "Entry fees",
+        "Tips and gratuities",
+        "Travel insurance"
+      ],
+      itinerary: [
+        {
+          day: "Day 1",
+          title: "Arrival in Manali",
+          description: "Arrive and transfer to hotel. Evening at leisure."
+        }
+        // ...add more days
+      ],
+      category: "domestic",
+      maxPeople: 15,
+      duration: "8 Days, 7 Nights",
+      departureInfo: "Daily departures",
+      minAge: 0
     }
   ],
   international: [
     {
       id: 7,
-      title: "Amazing Thailand",
+      title: "Bangkok, Thailand",
       images: [
-        "https://source.unsplash.com/photo-1528181304800-259b08848526",
-        "https://source.unsplash.com/photo-1546982573-0780b38e9f73",
-        "https://source.unsplash.com/photo-1587637833188-23603301546a"
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0e/43/44/db/photo0jpg.jpg?w=900&h=500&s=1",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0e/43/44/db/photo0jpg.jpg?w=900&h=500&s=1",
+        "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0e/43/44/db/photo0jpg.jpg?w=900&h=500&s=1"
       ],
       days: "6N/7D",
       price: "₹65,999",
@@ -233,6 +434,424 @@ const packagesData = {
       maxPeople: 20,
       duration: "7 Days, 6 Nights",
       departureInfo: "Tuesday, Saturday",
+      minAge: 2
+    },
+    {
+      id: 8,
+      title: "Dubai",
+      images: [
+        "https://media.tacdn.com/media/attractions-splice-spp-674x446/10/71/94/a2.jpg",
+        "https://media.tacdn.com/media/attractions-splice-spp-674x446/10/71/94/a2.jpg",
+        "https://media.tacdn.com/media/attractions-splice-spp-674x446/10/71/94/a2.jpg"
+      ],
+      days: "5N/6D",
+      price: "₹55,999",
+      location: "Dubai",
+      rating: 4.7,
+      reviews: 98,
+      overview: "Explore the dazzling city of Dubai with our exclusive tour package. From the iconic Burj Khalifa to the traditional souks, experience the perfect blend of modernity and tradition in this vibrant city.",
+      highlights: [
+        "Visit to Burj Khalifa",
+        "Desert Safari with BBQ Dinner",
+        "Dhow Cruise on Dubai Creek",
+        "Explore the Dubai Mall and Aquarium",
+        "Visit to Palm Jumeirah and Atlantis"
+      ],
+      inclusions: [
+        "5 nights accommodation in 4-star hotels",
+        "Daily breakfast",
+        "All transfers by air-conditioned vehicle",
+        "English-speaking tour guide",
+        "All entrance fees as per itinerary",
+        "Dubai visa assistance"
+      ],
+      exclusions: [
+        "International airfare",
+        "Lunch and dinner unless specified",
+        "Personal expenses and tips",
+        "Optional tours and activities",
+        "Travel insurance",
+        "Dubai Visa fees"
+      ],
+      itinerary: [
+        {
+          day: "Day 1",
+          title: "Arrival in Dubai",
+          description: "Arrive at Dubai International Airport, where our representative will greet you and transfer you to your hotel. Rest of the day at leisure to explore the city on your own. Overnight stay in Dubai."
+        },
+        {
+          day: "Day 2",
+          title: "Dubai City Tour",
+          description: "After breakfast, embark on a city tour visiting the Burj Khalifa, Dubai Mall, Dubai Aquarium, and the Dubai Fountain. Evening is free for shopping at local markets. Overnight stay in Dubai."
+        },
+        {
+          day: "Day 3",
+          title: "Desert Safari",
+          description: "After breakfast, enjoy a morning at leisure. In the afternoon, proceed for a Desert Safari with dune bashing, camel riding, and a BBQ dinner. Return to the hotel for overnight stay."
+        },
+        {
+          day: "Day 4",
+          title: "Dhow Cruise",
+          description: "After breakfast, enjoy a day at leisure. In the evening, proceed for a Dhow Cruise on Dubai Creek with dinner. Return to the hotel for overnight stay."
+        },
+        {
+          day: "Day 5",
+          title: "Palm Jumeirah and Atlantis",
+          description: "After breakfast, visit the Palm Jumeirah and Atlantis. Enjoy the Aquaventure Waterpark and Lost Chambers Aquarium. Return to the hotel for overnight stay."
+        },
+        {
+          day: "Day 6",
+          title: "Dubai - Departure",
+          description: "After breakfast, check out from the hotel. Depending on your flight time, you can explore more of Dubai or relax at the hotel before being transferred to Dubai International Airport for your onward journey."
+        }
+      ],
+      category: "international",
+      maxPeople: 15,
+      duration: "6 Days, 5 Nights",
+      departureInfo: "Wednesday, Saturday",
+      minAge: 2
+    },
+    {
+      id: 9,
+      title: "Malaysia & Langkawi",
+      images: [
+        "https://cdn.pixabay.com/photo/2016/11/13/12/52/kuala-lumpur-1820944_960_720.jpg",
+        "https://cdn.pixabay.com/photo/2016/11/13/12/52/kuala-lumpur-1820944_960_720.jpg",
+        "https://cdn.pixabay.com/photo/2016/11/13/12/52/kuala-lumpur-1820944_960_720.jpg"
+      ],
+      days: "6N/7D",
+      price: "₹60,999",
+      location: "Kuala Lumpur, Langkawi",
+      rating: 4.6,
+      reviews: 112,
+      overview: "Experience the best of Malaysia with our tour package covering the bustling city of Kuala Lumpur and the serene island of Langkawi. Enjoy a perfect blend of urban excitement and island relaxation.",
+      highlights: [
+        "Visit to Petronas Twin Towers",
+        "Langkawi Island Hopping Tour",
+        "Explore the Batu Caves",
+        "Visit to Langkawi Sky Bridge",
+        "Shopping at Bukit Bintang"
+      ],
+      inclusions: [
+        "6 nights accommodation in 4-star hotels",
+        "Daily breakfast",
+        "All transfers by air-conditioned vehicle",
+        "Kuala Lumpur to Langkawi domestic flight",
+        "English-speaking tour guide",
+        "All entrance fees as per itinerary",
+        "Malaysia visa assistance"
+      ],
+      exclusions: [
+        "International airfare",
+        "Lunch and dinner unless specified",
+        "Personal expenses and tips",
+        "Optional tours and activities",
+        "Travel insurance",
+        "Malaysia Visa fees"
+      ],
+      itinerary: [
+        {
+          day: "Day 1",
+          title: "Arrival in Kuala Lumpur",
+          description: "Arrive at Kuala Lumpur International Airport, where our representative will greet you and transfer you to your hotel. Rest of the day at leisure to explore the city on your own. Overnight stay in Kuala Lumpur."
+        },
+        {
+          day: "Day 2",
+          title: "Kuala Lumpur City Tour",
+          description: "After breakfast, embark on a city tour visiting the Petronas Twin Towers, Batu Caves, and Merdeka Square. Evening is free for shopping at Bukit Bintang. Overnight stay in Kuala Lumpur."
+        },
+        {
+          day: "Day 3",
+          title: "Kuala Lumpur to Langkawi",
+          description: "After breakfast, check out from the hotel and transfer to the airport for your flight to Langkawi. Arrive in Langkawi and transfer to your hotel. Rest of the day at leisure to explore the beaches. Overnight stay in Langkawi."
+        },
+        {
+          day: "Day 4",
+          title: "Langkawi Island Hopping Tour",
+          description: "After breakfast, embark on a full-day island hopping tour visiting the famous Langkawi Sky Bridge, Eagle Square, and the Langkawi Cable Car. Return to the hotel for overnight stay."
+        },
+        {
+          day: "Day 5",
+          title: "Langkawi Beach Day",
+          description: "After breakfast, enjoy a day at leisure on the beautiful beaches of Langkawi. You can opt for water sports or simply relax by the sea. Overnight stay in Langkawi."
+        },
+        {
+          day: "Day 6",
+          title: "Langkawi to Kuala Lumpur",
+          description: "After breakfast, check out from the hotel and transfer to the airport for your flight back to Kuala Lumpur. Arrive in Kuala Lumpur and transfer to your hotel. Rest of the day at leisure. Overnight stay in Kuala Lumpur."
+        },
+        {
+          day: "Day 7",
+          title: "Kuala Lumpur - Departure",
+          description: "After breakfast, check out from the hotel. Depending on your flight time, you can explore more of Kuala Lumpur or relax at the hotel before being transferred to Kuala Lumpur International Airport for your onward journey."
+        }
+      ],
+      category: "international",
+      maxPeople: 20,
+      duration: "7 Days, 6 Nights",
+      departureInfo: "Monday, Thursday",
+      minAge: 2
+    },
+    {
+      id: 10,
+      title: "Bali, Indonesia",
+      images: [
+        "https://www.outlooktravelmag.com/media/bali-tg.png",
+        "https://www.outlooktravelmag.com/media/bali-tg.png",
+        "https://www.outlooktravelmag.com/media/bali-tg.png"
+      ],
+      days: "5N/6D",
+      price: "₹50,999",
+      location: "Bali",
+      rating: 4.8,
+      reviews: 134,
+      overview: "Discover the enchanting island of Bali with our exclusive tour package. From stunning beaches to vibrant culture, experience the best of Bali with our carefully curated itinerary.",
+      highlights: [
+        "Visit to Uluwatu Temple",
+        "Kintamani Volcano Tour",
+        "Explore the Ubud Monkey Forest",
+        "Tegallalang Rice Terraces",
+        "Relax at Seminyak Beach"
+      ],
+      inclusions: [
+        "5 nights accommodation in 4-star hotels",
+        "Daily breakfast",
+        "All transfers by air-conditioned vehicle",
+        "English-speaking tour guide",
+        "All entrance fees as per itinerary",
+        "Bali visa assistance"
+      ],
+      exclusions: [
+        "International airfare",
+        "Lunch and dinner unless specified",
+        "Personal expenses and tips",
+        "Optional tours and activities",
+        "Travel insurance",
+        "Bali Visa fees"
+      ],
+      itinerary: [
+        {
+          day: "Day 1",
+          title: "Arrival in Bali",
+          description: "Arrive at Ngurah Rai International Airport, where our representative will greet you and transfer you to your hotel. Rest of the day at leisure to explore the island on your own. Overnight stay in Bali."
+        },
+        {
+          day: "Day 2",
+          title: "Uluwatu Temple Tour",
+          description: "After breakfast, embark on a tour to the famous Uluwatu Temple, perched on a cliff overlooking the Indian Ocean. Enjoy a traditional Kecak dance performance in the evening. Return to the hotel for overnight stay."
+        },
+        {
+          day: "Day 3",
+          title: "Kintamani Volcano Tour",
+          description: "After breakfast, proceed for a full-day tour to Kintamani Volcano. Visit the Tegallalang Rice Terraces, Ubud Monkey Forest, and the Tirta Empul Temple. Return to the hotel for overnight stay."
+        },
+        {
+          day: "Day 4",
+          title: "Beach Day at Seminyak",
+          description: "After breakfast, enjoy a day at leisure on the beautiful beaches of Seminyak. You can opt for water sports or simply relax by the sea. Overnight stay in Bali."
+        },
+        {
+          day: "Day 5",
+          title: "Explore Ubud",
+          description: "After breakfast, explore the cultural heart of Bali - Ubud. Visit the Ubud Palace, Ubud Art Market, and the Sacred Monkey Forest Sanctuary. Return to the hotel for overnight stay."
+        },
+        {
+          day: "Day 6",
+          title: "Bali - Departure",
+          description: "After breakfast, check out from the hotel. Depending on your flight time, you can explore more of Bali or relax at the hotel before being transferred to Ngurah Rai International Airport for your onward journey."
+        }
+      ],
+      category: "international",
+      maxPeople: 15,
+      duration: "6 Days, 5 Nights",
+      departureInfo: "Tuesday, Friday",
+      minAge: 2
+    },
+    {
+      id: 11,
+      title: "European Dreams",
+      images: [
+        "https://images.pexels.com/photos/532826/pexels-photo-532826.jpeg",
+        "https://images.pexels.com/photos/532826/pexels-photo-532826.jpeg",
+        "https://images.pexels.com/photos/532826/pexels-photo-532826.jpeg"
+      ],
+      days: "10N/11D",
+      price: "₹1,50,999",
+      location: "Paris, Rome, Amsterdam",
+      rating: 4.9,
+      reviews: 89,
+      overview: "Embark on a journey through the heart of Europe with our European Dreams tour package. Explore the iconic cities of Paris, Rome, and Amsterdam, and experience the rich history, culture, and beauty of Europe.",
+      highlights: [
+        "Eiffel Tower visit in Paris",
+        "Colosseum tour in Rome",
+        "Canal cruise in Amsterdam",
+        "Visit to the Louvre Museum",
+        "Explore the Vatican City"
+      ],
+      inclusions: [
+        "10 nights accommodation in 4-star hotels",
+        "Daily breakfast",
+        "All transfers by air-conditioned vehicle",
+        "Intercity train tickets",
+        "English-speaking tour guide",
+        "All entrance fees as per itinerary",
+        "Schengen visa assistance"
+      ],
+      exclusions: [
+        "International airfare",
+        "Lunch and dinner unless specified",
+        "Personal expenses and tips",
+        "Optional tours and activities",
+        "Travel insurance",
+        "Schengen Visa fees"
+      ],
+      itinerary: [
+        {
+          day: "Day 1",
+          title: "Arrival in Paris",
+          description: "Arrive at Charles de Gaulle Airport, where our representative will greet you and transfer you to your hotel. Rest of the day at leisure to explore the city on your own. Overnight stay in Paris."
+        },
+        {
+          day: "Day 2",
+          title: "Paris City Tour",
+          description: "After breakfast, embark on a city tour visiting the Eiffel Tower, Louvre Museum, Notre-Dame Cathedral, and a Seine River cruise. Evening is free for shopping at Champs-Élysées. Overnight stay in Paris."
+        },
+        {
+          day: "Day 3",
+          title: "Paris to Rome",
+          description: "After breakfast, check out from the hotel and transfer to the train station for your journey to Rome. Arrive in Rome and transfer to your hotel. Rest of the day at leisure. Overnight stay in Rome."
+        },
+        {
+          day: "Day 4",
+          title: "Rome City Tour",
+          description: "After breakfast, embark on a city tour visiting the Colosseum, Roman Forum, Trevi Fountain, and the Pantheon. Evening is free for leisure. Overnight stay in Rome."
+        },
+        {
+          day: "Day 5",
+          title: "Vatican City Tour",
+          description: "After breakfast, proceed for a tour of the Vatican City, including St. Peter's Basilica, the Vatican Museums, and the Sistine Chapel. Return to the hotel for overnight stay."
+        },
+        {
+          day: "Day 6",
+          title: "Rome to Amsterdam",
+          description: "After breakfast, check out from the hotel and transfer to the train station for your journey to Amsterdam. Arrive in Amsterdam and transfer to your hotel. Rest of the day at leisure. Overnight stay in Amsterdam."
+        },
+        {
+          day: "Day 7",
+          title: "Amsterdam City Tour",
+          description: "After breakfast, embark on a city tour visiting the Anne Frank House, Van Gogh Museum, and a canal cruise. Evening is free for leisure. Overnight stay in Amsterdam."
+        },
+        {
+          day: "Day 8",
+          title: "Day Trip to Zaanse Schans",
+          description: "After breakfast, proceed for a day trip to Zaanse Schans, a picturesque village known for its historic windmills and traditional Dutch houses. Return to the hotel for overnight stay."
+        },
+        {
+          day: "Day 9",
+          title: "Amsterdam to Paris",
+          description: "After breakfast, check out from the hotel and transfer to the train station for your journey back to Paris. Arrive in Paris and transfer to your hotel. Rest of the day at leisure. Overnight stay in Paris."
+        },
+        {
+          day: "Day 10",
+          title: "Versailles Palace Tour",
+          description: "After breakfast, proceed for a tour of the Palace of Versailles, a UNESCO World Heritage site. Explore the opulent palace and its beautiful gardens. Return to the hotel for overnight stay."
+        },
+        {
+          day: "Day 11",
+          title: "Paris - Departure",
+          description: "After breakfast, check out from the hotel. Depending on your flight time, you can explore more of Paris or relax at the hotel before being transferred to Charles de Gaulle Airport for your onward journey."
+        }
+      ],
+      category: "international",
+      maxPeople: 25,
+      duration: "11 Days, 10 Nights",
+      departureInfo: "Friday, Sunday",
+      minAge: 2
+    },
+    {
+      id: 12,
+      title: "Vietnam",
+      images: [
+        "https://images.squarespace-cdn.com/content/v1/5c3824e246d6976392372cd9/1560106931611-VVF5OJ34KV28ZNBPRQRS/Vietnam+visitor+visa.jpg?format=2500w",
+        "https://images.squarespace-cdn.com/content/v1/5c3824e246d6976392372cd9/1560106931611-VVF5OJ34KV28ZNBPRQRS/Vietnam+visitor+visa.jpg?format=2500w",
+        "https://images.squarespace-cdn.com/content/v1/5c3824e246d6976392372cd9/1560106931611-VVF5OJ34KV28ZNBPRQRS/Vietnam+visitor+visa.jpg?format=2500w"
+      ],
+      days: "7N/8D",
+      price: "₹70,999",
+      location: "Hanoi, Ho Chi Minh City, Halong Bay",
+      rating: 4.7,
+      reviews: 102,
+      overview: "Explore the rich history and natural beauty of Vietnam with our comprehensive tour package. From the bustling cities of Hanoi and Ho Chi Minh City to the serene waters of Halong Bay, experience the best of Vietnam.",
+      highlights: [
+        "Halong Bay Cruise",
+        "Cu Chi Tunnels tour",
+        "Visit to the War Remnants Museum",
+        "Explore the Old Quarter of Hanoi",
+        "Mekong Delta tour"
+      ],
+      inclusions: [
+        "7 nights accommodation in 4-star hotels",
+        "Daily breakfast",
+        "All transfers by air-conditioned vehicle",
+        "Domestic flights within Vietnam",
+        "English-speaking tour guide",
+        "All entrance fees as per itinerary",
+        "Vietnam visa assistance"
+      ],
+      exclusions: [
+        "International airfare",
+        "Lunch and dinner unless specified",
+        "Personal expenses and tips",
+        "Optional tours and activities",
+        "Travel insurance",
+        "Vietnam Visa fees"
+      ],
+      itinerary: [
+        {
+          day: "Day 1",
+          title: "Arrival in Hanoi",
+          description: "Arrive at Noi Bai International Airport, where our representative will greet you and transfer you to your hotel. Rest of the day at leisure to explore the city on your own. Overnight stay in Hanoi."
+        },
+        {
+          day: "Day 2",
+          title: "Hanoi City Tour",
+          description: "After breakfast, embark on a city tour visiting the Ho Chi Minh Mausoleum, One Pillar Pagoda, Temple of Literature, and the Old Quarter. Evening is free for leisure. Overnight stay in Hanoi."
+        },
+        {
+          day: "Day 3",
+          title: "Halong Bay Cruise",
+          description: "After breakfast, proceed for a full-day cruise on Halong Bay, a UNESCO World Heritage site. Enjoy the stunning limestone karsts, caves, and islands. Return to Hanoi for overnight stay."
+        },
+        {
+          day: "Day 4",
+          title: "Hanoi to Ho Chi Minh City",
+          description: "After breakfast, check out from the hotel and transfer to the airport for your flight to Ho Chi Minh City. Arrive in Ho Chi Minh City and transfer to your hotel. Rest of the day at leisure. Overnight stay in Ho Chi Minh City."
+        },
+        {
+          day: "Day 5",
+          title: "Ho Chi Minh City Tour",
+          description: "After breakfast, embark on a city tour visiting the War Remnants Museum, Reunification Palace, Notre-Dame Cathedral, and Ben Thanh Market. Evening is free for leisure. Overnight stay in Ho Chi Minh City."
+        },
+        {
+          day: "Day 6",
+          title: "Cu Chi Tunnels Tour",
+          description: "After breakfast, proceed for a tour of the Cu Chi Tunnels, an extensive network of underground tunnels used during the Vietnam War. Return to the hotel for overnight stay."
+        },
+        {
+          day: "Day 7",
+          title: "Mekong Delta Tour",
+          description: "After breakfast, embark on a full-day tour to the Mekong Delta. Enjoy a boat ride through the canals, visit local villages, and experience the rural life of Vietnam. Return to the hotel for overnight stay."
+        },
+        {
+          day: "Day 8",
+          title: "Ho Chi Minh City - Departure",
+          description: "After breakfast, check out from the hotel. Depending on your flight time, you can explore more of Ho Chi Minh City or relax at the hotel before being transferred to Tan Son Nhat International Airport for your onward journey."
+        }
+      ],
+      category: "international",
+      maxPeople: 20,
+      duration: "8 Days, 7 Nights",
+      departureInfo: "Monday, Thursday",
       minAge: 2
     }
   ]
