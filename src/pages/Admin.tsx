@@ -427,32 +427,19 @@ const Admin = () => {
           role: 'agent',
           created_at: serverTimestamp(),
           created_by: user.email,
-          updated_at: serverTimestamp()
+          updated_at: serverTimestamp(),
+          // Add these fields to trigger the AuthAccountCreator
+          needsAuthAccount: true,
+          password: data.password
         };
         
         // Add to agents collection
-        const docRef = await addDoc(collection(db, 'agents'), agentData);
+        await addDoc(collection(db, 'agents'), agentData);
         
-        // Only after Firestore success, create the auth account
-        try {
-          // Add the flag indicating the agent needs account creation
-          await updateDoc(doc(db, 'agents', docRef.id), {
-            needsAuthAccount: true,
-            password: data.password // Temporarily store password (not secure, will be removed by cloud function)
-          });
-          
-          toast({
-            title: "Agent Created",
-            description: "New agent has been added successfully. They can now login using their email and password."
-          });
-        } catch (authError) {
-          console.error('Error setting up authentication for agent:', authError);
-          // If auth creation fails, still keep the agent record but notify admin
-          toast({
-            title: "Partial Success",
-            description: "Agent created, but authentication setup failed. Please contact your developer."
-          });
-        }
+        toast({
+          title: "Agent Created",
+          description: "New agent has been added successfully. They can now login using their email and password."
+        });
       }
       
       // Reset state
