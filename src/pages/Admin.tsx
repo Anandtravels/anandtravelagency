@@ -487,9 +487,43 @@ const Admin = () => {
         assignedAt: serverTimestamp()
       });
 
-      // Format WhatsApp message
+      // Format WhatsApp message with detailed information
       const booking = bookings.find(b => b.id === bookingId);
-      const message = `New ticket assigned:\n\nBooking ID: ${bookingId}\nFrom: ${booking.from}\nTo: ${booking.to}\nDate: ${booking.journey_date}\n\nPlease check your dashboard for details.`;
+      
+      // Format passenger information
+      let passengerInfo = '';
+      if (Array.isArray(booking.passengers)) {
+        passengerInfo = `${booking.passengers.length} passenger(s):\n`;
+        booking.passengers.forEach((passenger, index) => {
+          passengerInfo += `   ${index + 1}. ${passenger.name} (${passenger.age} yrs, ${passenger.gender})\n`;
+        });
+      } else {
+        passengerInfo = `Passengers: ${booking.passengers}`;
+      }
+      
+      // Format any additional requirements
+      const additionalInfo = booking.additional_requirements ? 
+        `\n*Special Requirements:*\n${booking.additional_requirements}` : '';
+      
+      // Create a comprehensive message
+      const message = `🚗 *NEW BOOKING ASSIGNED*\n\n` +
+        `*Booking ID:* ${bookingId}\n` +
+        `*Service Type:* ${booking.booking_type || 'Not specified'}\n\n` +
+        
+        `*Journey Details:*\n` +
+        `From: ${booking.from}\n` +
+        `To: ${booking.to}\n` +
+        `Date: ${booking.journey_date}\n` +
+        `${passengerInfo}\n` +
+        
+        `*Customer Details:*\n` +
+        `Name: ${booking.name}\n` +
+        `Phone: ${booking.phone}\n` +
+        `Email: ${booking.email}\n` +
+        `${additionalInfo}\n\n` +
+        
+        `Please check your dashboard for complete details and update the status once completed.\n` +
+        `Thank you for your service! 👍`;
       
       // Open WhatsApp with pre-filled message
       const agent = agents.find(a => a.email === agentEmail);
