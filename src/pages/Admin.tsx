@@ -6,12 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { collection, getDocs, orderBy, query, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp, addDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Checkbox } from "@/components/ui/checkbox";
 import { TrashIcon, PencilIcon, Check, X, Phone, Mail, MessageSquare } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import debounce from 'lodash/debounce';
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 
 const Admin = () => {
   const { user, signOut, loading } = useAuth();
@@ -49,6 +50,7 @@ const Admin = () => {
     email: '',
     password: ''
   });
+  const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
 
   // Memoized functions - use useMemo for derived values
   const combinedLoading = useMemo(() => bookingLoading || contactsLoading, [bookingLoading, contactsLoading]);
@@ -379,27 +381,83 @@ const Admin = () => {
 
   const createAgent = async (data) => {
     try {
-      // Create a clean agent object with correct types
-      const agentData = {
-        name: data.name,
-        email: data.email.toLowerCase(), // Ensure email is lowercase
-        password: data.password,
-        phone: data.phone,
-        age: data.age.toString(),
-        gender: data.gender,
-        address: data.address,
-        created_at: serverTimestamp()
-      };
+      // First check if the email already exists
+      const agentsQuery = query(
+        collection(db, 'agents'),
+        where('email', '==', data.email.toLowerCase())
+      );
+      
+      const existingAgents = await getDocs(agentsQuery);
+      if (!existingAgents.empty && !editingAgentId) {
+        toast({
+          title: "Error",
+          description: "An agent with this email already exists",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (editingAgentId) {
+        // If editing, update the existing agent
+        await updateDoc(doc(db, 'agents', editingAgentId), {
+          name: data.name,
+          email: data.email.toLowerCase(),
+          phone: data.phone,
+          age: data.age.toString(),
+          gender: data.gender,
+          address: data.address,
+          role: 'agent',
+          updated_at: serverTimestamp(),
+          updated_by: user.email
+        });
 
-      // Add to agents collection
-      await addDoc(collection(db, 'agents'), agentData);
+        toast({
+          title: "Agent Updated",
+          description: "Agent information has been updated successfully."
+        });
+      } else {
+        // If creating new agent, add the agent to Firestore
+        const agentData = {
+          name: data.name,
+          email: data.email.toLowerCase(),
+          phone: data.phone,
+          age: data.age.toString(),
+          gender: data.gender,
+          address: data.address,
+          role: 'agent',
+          created_at: serverTimestamp(),
+          created_by: user.email,
+          updated_at: serverTimestamp()
+        };
+        
+        // Add to agents collection
+        const docRef = await addDoc(collection(db, 'agents'), agentData);
+        
+        // Only after Firestore success, create the auth account
+        try {
+          // Add the flag indicating the agent needs account creation
+          await updateDoc(doc(db, 'agents', docRef.id), {
+            needsAuthAccount: true,
+            password: data.password // Temporarily store password (not secure, will be removed by cloud function)
+          });
+          
+          toast({
+            title: "Agent Created",
+            description: "New agent has been added successfully. They can now login using their email and password."
+          });
+        } catch (authError) {
+          console.error('Error setting up authentication for agent:', authError);
+          // If auth creation fails, still keep the agent record but notify admin
+          toast({
+            title: "Partial Success",
+            description: "Agent created, but authentication setup failed. Please contact your developer."
+          });
+        }
+      }
       
-      toast({
-        title: "Agent Created",
-        description: "New agent has been added successfully"
-      });
-      
+      // Reset state
       setShowAgentForm(false);
+      setEditingAgentId(null);
       setAgentFormData({
         name: '',
         age: '',
@@ -410,10 +468,10 @@ const Admin = () => {
         password: ''
       });
     } catch (error) {
-      console.error('Error creating agent:', error);
+      console.error('Error creating/updating agent:', error);
       toast({
         title: "Error",
-        description: "Failed to create agent",
+        description: error.message || "Failed to create/update agent",
         variant: "destructive"
       });
     }
@@ -448,6 +506,9 @@ const Admin = () => {
   };
 
   const handleEditAgent = (agent: any) => {
+    // Set the agent ID we're editing
+    setEditingAgentId(agent.id);
+    
     setAgentFormData({
       name: agent.name,
       age: agent.age,
@@ -457,6 +518,25 @@ const Admin = () => {
       email: agent.email,
       password: '' // Don't populate password for security
     });
+    setShowAgentForm(true);
+  };
+
+  const handleAddNewAgent = () => {
+    // Reset the agent ID to null to indicate we're adding a new agent
+    setEditingAgentId(null);
+    
+    // Reset the form data
+    setAgentFormData({
+      name: '',
+      age: '',
+      gender: 'male',
+      phone: '',
+      address: '',
+      email: '',
+      password: ''
+    });
+    
+    // Show the form
     setShowAgentForm(true);
   };
 
@@ -967,7 +1047,7 @@ const Admin = () => {
             <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h2 className="text-xl font-bold text-travel-blue-dark">Manage Agents</h2>
-                <Button onClick={() => setShowAgentForm(true)} variant="default">
+                <Button onClick={handleAddNewAgent} variant="default">
                   Add New Agent
                 </Button>
               </div>
@@ -976,7 +1056,7 @@ const Admin = () => {
               {showAgentForm && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                   <div className="bg-white rounded-lg w-full max-w-md p-6">
-                    <h3 className="text-xl font-bold mb-4">{editingId ? 'Edit Agent' : 'Add New Agent'}</h3>
+                    <h3 className="text-xl font-bold mb-4">{editingAgentId ? 'Edit Agent' : 'Add New Agent'}</h3>
                     <form onSubmit={(e) => {
                       e.preventDefault();
                       createAgent(agentFormData);
@@ -1046,22 +1126,30 @@ const Admin = () => {
                           className="w-full px-3 py-2 border rounded"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Password</label>
-                        <input
-                          type="password"
-                          required
-                          value={agentFormData.password}
-                          onChange={(e) => setAgentFormData({...agentFormData, password: e.target.value})}
-                          className="w-full px-3 py-2 border rounded"
-                        />
-                      </div>
+                      {!editingAgentId && (
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Password</label>
+                          <input
+                            type="password"
+                            required={!editingAgentId}
+                            value={agentFormData.password}
+                            onChange={(e) => setAgentFormData({...agentFormData, password: e.target.value})}
+                            className="w-full px-3 py-2 border rounded"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Only required for new agents
+                          </p>
+                        </div>
+                      )}
                       <div className="flex justify-end gap-2 mt-6">
-                        <Button type="button" variant="outline" onClick={() => setShowAgentForm(false)}>
+                        <Button type="button" variant="outline" onClick={() => {
+                          setShowAgentForm(false);
+                          setEditingAgentId(null);
+                        }}>
                           Cancel
                         </Button>
                         <Button type="submit">
-                          {editingId ? 'Update Agent' : 'Add Agent'}
+                          {editingAgentId ? 'Update Agent' : 'Add Agent'}
                         </Button>
                       </div>
                     </form>

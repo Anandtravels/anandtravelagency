@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,18 +10,45 @@ const AgentLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, user, isAgent, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // If already authenticated and agent, redirect to agent dashboard
+  useEffect(() => {
+    if (user && isAgent && !loading) {
+      navigate("/agent-dashboard", { replace: true });
+    }
+  }, [user, isAgent, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-travel-blue-dark border-r-transparent"></div>
+      </div>
+    );
+  }
+
+  if (user && isAgent) {
+    return <Navigate to="/agent-dashboard" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const { error } = await signIn(email, password, 'agent');
+      // For debugging only - uncomment if you need to debug auth issues
+      /*
+      import { debugAuth } from '@/utils/authDebugger';
+      const debugResult = await debugAuth(email, password);
+      console.log("Auth debug result:", debugResult);
+      */
+      
+      const { user, error } = await signIn(email, password, 'agent');
       
       if (error) {
+        console.error("Agent login error:", error);
         toast({
           title: "Authentication Error",
           description: error.message || "Invalid agent credentials",
@@ -38,6 +65,7 @@ const AgentLogin = () => {
       
       navigate("/agent-dashboard", { replace: true });
     } catch (error: any) {
+      console.error("Agent login exception:", error);
       toast({
         title: "Authentication Error",
         description: "An unexpected error occurred. Please try again.",

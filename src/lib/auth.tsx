@@ -1,10 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useMemo } from "react";
 import { 
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User,
-  createUserWithEmailAndPassword // Add this import
+  User as FirebaseUser,
+  createUserWithEmailAndPassword
 } from "firebase/auth";
 import { auth, db } from "./firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
@@ -12,31 +12,40 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 const ADMIN_EMAIL = "admin@anandtravels.com";
 const ADMIN_PASSWORD = "admin@anandtravels.com";
 
+// Create a custom user type that extends Firebase User
+interface ExtendedUser extends FirebaseUser {
+  role?: 'admin' | 'agent' | 'customer';
+  agentId?: string;
+  agentInfo?: any;
+}
+
 type AuthContextType = {
-  user: User | null;
-  signIn: (email: string, password: string, role?: 'admin' | 'agent') => Promise<{ error: any }>;
+  user: ExtendedUser | null;
+  signIn: (email: string, password: string, role?: 'admin' | 'agent') => Promise<{ user?: ExtendedUser, error?: any }>;
   signOut: () => Promise<{ error: any }>;
   isAdmin: boolean;
   isAgent: boolean;
   loading: boolean;
+  userRole: string | null;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isAgent, setIsAgent] = useState(false);
+  const [user, setUser] = useState<ExtendedUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        await checkRole(user.email);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Create an extended user object
+        const extendedUser = firebaseUser as ExtendedUser;
+        await checkRole(extendedUser.email);
+        setUser(extendedUser);
       } else {
-        setIsAdmin(false);
-        setIsAgent(false);
+        setUser(null);
+        setUserRole(null);
       }
       setLoading(false);
     });
@@ -46,94 +55,70 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const checkRole = async (email: string | null) => {
     if (!email) {
-      setIsAdmin(false);
-      setIsAgent(false);
+      setUserRole(null);
       return;
     }
 
     if (email === ADMIN_EMAIL) {
-      setIsAdmin(true);
-      setIsAgent(false);
+      setUserRole('admin');
       return;
     }
 
-    // Check if agent exists using query
     const agentsRef = collection(db, 'agents');
     const q = query(agentsRef, where('email', '==', email));
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
-      setIsAgent(true);
-      setIsAdmin(false);
+      setUserRole('agent');
       return;
     }
 
-    setIsAdmin(false);
-    setIsAgent(false);
+    setUserRole('customer');
   };
 
-  const signIn = async (email: string, password: string, role?: 'admin' | 'agent') => {
+  const signIn = async (email: string, password: string, role: string = 'customer') => {
     try {
-      if (role === 'admin' && email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        try {
-          const userCredential = await signInWithEmailAndPassword(auth, email, password);
-          await checkRole(email);
-          return { error: null };
-        } catch (signInError: any) {
-          if (signInError.code === 'auth/user-not-found') {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            await checkRole(email);
-            return { error: null };
-          }
-          throw signInError;
-        }
-      } else if (role === 'agent') {
-        console.log('Attempting agent login:', email); // Debug log
-        
-        // Query agents collection for the email
-        const agentsRef = collection(db, 'agents');
-        const q = query(agentsRef, where('email', '==', email));
-        
-        try {
-          const querySnapshot = await getDocs(q);
-          
-          if (querySnapshot.empty) {
-            console.log('No agent found with email:', email); // Debug log
-            return { error: { message: 'Agent not found' } };
-          }
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
 
-          const agentDoc = querySnapshot.docs[0];
-          const agentData = agentDoc.data();
-          
-          console.log('Agent found:', agentData.email); // Debug log
+      // Create extended user
+      const extendedUser = firebaseUser as ExtendedUser;
 
-          if (agentData.password !== password) {
-            return { error: { message: 'Invalid password' } };
-          }
-
-          // Try to authenticate with Firebase
-          try {
-            await signInWithEmailAndPassword(auth, email, password);
-          } catch (authError: any) {
-            if (authError.code === 'auth/user-not-found') {
-              await createUserWithEmailAndPassword(auth, email, password);
-            } else {
-              throw authError;
-            }
-          }
-
-          setIsAgent(true);
-          return { error: null };
-        } catch (error: any) {
-          console.error('Agent verification error:', error); // Debug log
-          return { error: { message: 'Error verifying agent credentials' } };
-        }
+      if (role === 'admin' && email !== ADMIN_EMAIL) {
+        await auth.signOut();
+        return { error: { message: 'Unauthorized access' } };
       }
 
-      return { error: { message: "Invalid credentials" } };
-    } catch (error: any) {
-      console.error("Sign in error:", error);
-      return { error: { message: error.message || 'Authentication failed' } };
+      if (role === 'agent') {
+        const agentsRef = collection(db, 'agents');
+        const q = query(agentsRef, where('email', '==', email.toLowerCase()));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          await auth.signOut();
+          return { error: { message: 'Invalid agent credentials' } };
+        }
+
+        const agentData = querySnapshot.docs[0].data();
+        extendedUser.role = 'agent';
+        extendedUser.agentId = querySnapshot.docs[0].id;
+        extendedUser.agentInfo = agentData;
+        
+        setUserRole('agent');
+        setUser(extendedUser);
+      } else if (role === 'admin') {
+        extendedUser.role = 'admin';
+        setUserRole('admin');
+        setUser(extendedUser);
+      } else {
+        extendedUser.role = 'customer';
+        setUserRole('customer');
+        setUser(extendedUser);
+      }
+
+      return { user: extendedUser };
+    } catch (error) {
+      return { error };
     }
   };
 
@@ -146,15 +131,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const isAdmin = useMemo(() => {
+    return user?.email === ADMIN_EMAIL;
+  }, [user]);
+
+  const isAgent = useMemo(() => {
+    return userRole === 'agent';
+  }, [userRole]);
+
   return (
     <AuthContext.Provider
       value={{
         user,
+        loading,
         signIn,
         signOut,
         isAdmin,
         isAgent,
-        loading,
+        userRole
       }}
     >
       {children}

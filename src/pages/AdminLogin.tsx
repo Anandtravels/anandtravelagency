@@ -38,7 +38,7 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await signIn(email, password, 'admin');
+      const { user, error } = await signIn(email, password, 'admin');
       
       if (error) {
         toast({

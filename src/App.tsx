@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -18,10 +18,12 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import FAQ from "./pages/FAQ";
 import AgentLogin from "./pages/AgentLogin";
+import AgentDashboard from "./pages/AgentDashboard";
 import logo from './assets/poster.png';
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import LoadingScreen from "@/components/LoadingScreen";
+import AuthAccountCreator from './components/AuthAccountCreator';
 
 const queryClient = new QueryClient();
 
@@ -61,6 +63,7 @@ const App = () => {
           <div style={{ visibility: loading ? 'hidden' : 'visible' }}>
             <Toaster />
             <Sonner />
+            <AuthAccountCreator />
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -75,7 +78,12 @@ const App = () => {
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/faq" element={<FAQ />} />
-                <Route path="/agent" element={<AgentLogin />} />
+                
+                {/* Add a redirect for /agent to /agent-login */}
+                <Route path="/agent" element={<Navigate to="/agent-login" replace />} />
+                <Route path="/agent-login" element={<AgentLogin />} />
+                <Route path="/agent-dashboard" element={<AgentDashboard />} />
+                
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

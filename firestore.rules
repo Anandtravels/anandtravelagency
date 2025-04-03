@@ -1,26 +1,22 @@
+// Firebase rules to paste in the console
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    // Allow public read/write access to contact submissions
+    match /contact_submissions/{document=**} {
+      allow read: if request.auth != null; // Only authenticated users can read
+      allow write: if true; // Anyone can submit contact form
     }
     
-    match /agents/{docId} {
-      // Allow reading agent data for authentication (open read access)
-      allow read: if true;
-      allow write: if isAdmin();
+    // Allow public read/write access to bookings
+    match /bookings/{document=**} {
+      allow read: if request.auth != null; // Only authenticated users can read
+      allow write: if true; // Anyone can submit booking
     }
     
-    match /bookings/{docId} {
-      allow read: if request.auth != null && (
-        isAdmin() || 
-        resource.data.assignedAgent == request.auth.token.email
-      );
-      allow write: if isAdmin();
-    }
-    
-    match /contact_submissions/{docId} {
-      allow read, write: if isAdmin();
+    // Protect other collections
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
