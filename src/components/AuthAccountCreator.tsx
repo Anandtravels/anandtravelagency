@@ -13,7 +13,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth';
 
 // Define interface for the agent data
-interface AgentData {
+ interface AgentData {
   id: string;
   email: string;
   password: string;

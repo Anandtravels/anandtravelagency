@@ -466,6 +466,22 @@ const Admin = () => {
 
   const assignTicket = async (bookingId: string, agentEmail: string) => {
     try {
+      // If agentEmail is empty, this means "Select Agent" was chosen (unassign agent)
+      if (!agentEmail) {
+        // Remove the agent assignment
+        await updateDoc(doc(db, 'bookings', bookingId), {
+          assignedAgent: null,
+          assignedAt: null
+        });
+        
+        toast({
+          title: "Agent Unassigned",
+          description: "Agent has been removed from this booking"
+        });
+        return;
+      }
+      
+      // If code reaches here, a valid agent is being assigned
       await updateDoc(doc(db, 'bookings', bookingId), {
         assignedAgent: agentEmail,
         assignedAt: serverTimestamp()
@@ -477,13 +493,16 @@ const Admin = () => {
       
       // Open WhatsApp with pre-filled message
       const agent = agents.find(a => a.email === agentEmail);
-      window.open(`https://wa.me/${agent.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+      if (agent && agent.phone) {
+        window.open(`https://wa.me/${agent.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+      }
 
       toast({
         title: "Ticket Assigned",
         description: "Ticket has been assigned to agent successfully"
       });
     } catch (error) {
+      console.error("Error assigning/unassigning ticket:", error);
       toast({
         title: "Error",
         description: "Failed to assign ticket",
@@ -791,16 +810,16 @@ const Admin = () => {
                         </div>
                         <div className="mt-4 border-t pt-4">
                           <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
-                          <div className="flex gap-2">
+                          <div className="w-full max-w-full overflow-hidden">
                             <select 
-                              className="flex-1 px-3 py-2 border rounded-md"
+                              className="w-full px-3 py-2 border rounded-md text-sm"
                               value={booking.assignedAgent || ''}
                               onChange={(e) => assignTicket(booking.id, e.target.value)}
                             >
                               <option value="">Select Agent</option>
                               {agents.map((agent: any) => (
-                                <option key={agent.id} value={agent.email}>
-                                  {agent.name} ({agent.email})
+                                <option key={agent.id} value={agent.email} className="truncate">
+                                  {agent.name.length > 15 ? agent.name.substring(0, 15) + '...' : agent.name} ({agent.email.substring(0, 15)}...)
                                 </option>
                               ))}
                             </select>
@@ -927,9 +946,9 @@ const Admin = () => {
                       </div>
                       <div className="mt-4 border-t pt-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
-                        <div className="flex gap-2">
+                        <div className="w-full max-w-full overflow-hidden">
                           <select 
-                            className="flex-1 px-3 py-2 border rounded-md"
+                            className="w-full px-3 py-2 border rounded-md"
                             value={booking.assignedAgent || ''}
                             onChange={(e) => assignTicket(booking.id, e.target.value)}
                           >
