@@ -51,9 +51,27 @@ const Admin = () => {
     password: ''
   });
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Memoized functions - use useMemo for derived values
   const combinedLoading = useMemo(() => bookingLoading || contactsLoading, [bookingLoading, contactsLoading]);
+
+  // Calculate booking counts by status - add this after the existing useMemo
+  const bookingStats = useMemo(() => {
+    const pending = bookings.filter(b => !b.status || b.status === 'pending').length;
+    const completed = bookings.filter(b => b.status === 'completed').length;
+    const total = bookings.length;
+    
+    return { pending, completed, total };
+  }, [bookings]);
+  
+  // Filter bookings based on status filter
+  const filteredBookings = useMemo(() => {
+    if (statusFilter === 'all') return bookings;
+    if (statusFilter === 'pending') return bookings.filter(b => !b.status || b.status === 'pending');
+    if (statusFilter === 'completed') return bookings.filter(b => b.status === 'completed');
+    return bookings;
+  }, [bookings, statusFilter]);
 
   // Callbacks - use useCallback for functions passed as props or used in effects
   const debouncedNoteUpdate = useCallback(
@@ -632,21 +650,39 @@ const Admin = () => {
             <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h2 className="text-xl font-bold text-travel-blue-dark">Booking Requests</h2>
-                {selectedBookings.length > 0 && (
-                  <button
-                    onClick={() => deleteBookings(selectedBookings)}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-                  >
-                    <TrashIcon size={16} />
-                    Delete Selected ({selectedBookings.length})
-                  </button>
-                )}
+                
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  {/* Status filter dropdown */}
+                  <div className="relative">
+                    <select
+                      className="pl-3 pr-10 py-2 text-sm border rounded-md bg-white w-full"
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Bookings ({bookingStats.total})</option>
+                      <option value="pending">Pending ({bookingStats.pending})</option>
+                      <option value="completed">Completed ({bookingStats.completed})</option>
+                    </select>
+                  </div>
+                  
+                  {/* Delete selected button */}
+                  {selectedBookings.length > 0 && (
+                    <button
+                      onClick={() => deleteBookings(selectedBookings)}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+                    >
+                      <TrashIcon size={16} />
+                      Delete Selected ({selectedBookings.length})
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Mobile View for Bookings */}
+              {/* Mobile View for Bookings - update to use filteredBookings instead of bookings */}
               <div className="block lg:hidden space-y-4">
-                {bookings.map((booking) => (
-                  <div key={booking.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                {filteredBookings.length > 0 ? (
+                  filteredBookings.map((booking) => (
+                    <div key={booking.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
                     {editingId === booking.id ? (
                       // Edit Mode
                       <div className="space-y-3">
@@ -862,13 +898,19 @@ const Admin = () => {
                       </>
                     )}
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No {statusFilter === 'all' ? '' : statusFilter} bookings found</p>
+                  </div>
+                )}
               </div>
 
-              {/* Desktop View for Bookings */}
+              {/* Desktop View for Bookings - update to use filteredBookings instead of bookings */}
               <div className="hidden lg:grid grid-cols-3 gap-4">
-                {bookings.map((booking) => (
-                  <div key={booking.id} className="bg-white rounded-lg shadow-sm p-4 hover:bg-gray-50 transition-colors">
+                {filteredBookings.length > 0 ? (
+                  filteredBookings.map((booking) => (
+                    <div key={booking.id} className="bg-white rounded-lg shadow-sm p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-start gap-3">
                         <Checkbox 
@@ -997,7 +1039,12 @@ const Admin = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="col-span-3 text-center py-8 text-gray-500">
+                    <p>No {statusFilter === 'all' ? '' : statusFilter} bookings found</p>
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>

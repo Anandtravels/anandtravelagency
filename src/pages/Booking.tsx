@@ -33,6 +33,21 @@ const Booking = () => {
       return prev.slice(0, count);
     });
   };
+
+  // Fix the handlePassengerChange function to properly update individual passenger data
+  const handlePassengerChange = (index: number, field: string, value: string) => {
+    // Create a deep copy of the passengers array to avoid reference issues
+    const updatedPassengers = [...passengers.map(passenger => ({...passenger}))];
+    
+    // Update only the specific passenger's field
+    updatedPassengers[index] = {
+      ...updatedPassengers[index],
+      [field]: value
+    };
+    
+    // Set the updated passengers array
+    setPassengers(updatedPassengers);
+  };
   
   const onSubmit = async (data) => {
     setIsLoading(true);
@@ -412,59 +427,42 @@ const Booking = () => {
                         </div>
 
                         {passengers.map((passenger, index) => (
-                          <div key={index} className="bg-gray-50 p-4 rounded-lg space-y-4">
-                            <h4 className="font-medium text-travel-blue-dark">Passenger {index + 1}</h4>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div key={index} className="space-y-4 p-4 border rounded-md">
+                            <h3 className="font-medium">Passenger {index + 1}</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div>
-                                <label className="block text-gray-700 font-medium mb-2">Full Name</label>
+                                <label className="block text-sm font-medium mb-1">Name</label>
                                 <input
                                   type="text"
-                                  value={passenger.name}
-                                  onChange={(e) => {
-                                    const newPassengers = [...passengers];
-                                    newPassengers[index].name = e.target.value;
-                                    setPassengers(newPassengers);
-                                  }}
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                                  placeholder="Enter passenger name"
+                                  value={passenger.name || ''}
+                                  onChange={(e) => handlePassengerChange(index, 'name', e.target.value)}
+                                  className="w-full px-3 py-2 border rounded-md"
                                   required
                                 />
                               </div>
                               
                               <div>
-                                <label className="block text-gray-700 font-medium mb-2">Age</label>
+                                <label className="block text-sm font-medium mb-1">Age</label>
                                 <input
                                   type="number"
-                                  value={passenger.age}
-                                  onChange={(e) => {
-                                    const newPassengers = [...passengers];
-                                    newPassengers[index].age = e.target.value;
-                                    setPassengers(newPassengers);
-                                  }}
-                                  min="0"
-                                  max="120"
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                                  placeholder="Enter age"
+                                  value={passenger.age || ''}
+                                  onChange={(e) => handlePassengerChange(index, 'age', e.target.value)}
+                                  className="w-full px-3 py-2 border rounded-md"
                                   required
                                 />
                               </div>
                               
                               <div>
-                                <label className="block text-gray-700 font-medium mb-2">Gender</label>
+                                <label className="block text-sm font-medium mb-1">Gender</label>
                                 <select
-                                  value={passenger.gender}
-                                  onChange={(e) => {
-                                    const newPassengers = [...passengers];
-                                    newPassengers[index].gender = e.target.value;
-                                    setPassengers(newPassengers);
-                                  }}
-                                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                                  value={passenger.gender || 'male'}
+                                  onChange={(e) => handlePassengerChange(index, 'gender', e.target.value)}
+                                  className="w-full px-3 py-2 border rounded-md"
                                   required
                                 >
                                   <option value="male">Male</option>
                                   <option value="female">Female</option>
-                                  <option value="transgender">Transgender</option>
+                                  <option value="other">Other</option>
                                 </select>
                               </div>
                             </div>

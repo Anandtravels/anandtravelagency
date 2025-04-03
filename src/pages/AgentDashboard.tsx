@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ const AgentDashboard = () => {
   const { user, signOut, loading, isAgent } = useAuth();
   const [assignedBookings, setAssignedBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -141,6 +142,21 @@ const AgentDashboard = () => {
     }
   };
 
+  const bookingStats = useMemo(() => {
+    const pending = assignedBookings.filter(b => !b.status || b.status === 'pending').length;
+    const completed = assignedBookings.filter(b => b.status === 'completed').length;
+    const total = assignedBookings.length;
+    
+    return { pending, completed, total };
+  }, [assignedBookings]);
+  
+  const filteredBookings = useMemo(() => {
+    if (statusFilter === 'all') return assignedBookings;
+    if (statusFilter === 'pending') return assignedBookings.filter(b => !b.status || b.status === 'pending');
+    if (statusFilter === 'completed') return assignedBookings.filter(b => b.status === 'completed');
+    return assignedBookings;
+  }, [assignedBookings, statusFilter]);
+
   if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -162,11 +178,25 @@ const AgentDashboard = () => {
       </header>
 
       <main className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">Assigned Bookings</h2>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+          <h2 className="text-xl font-semibold">Assigned Bookings</h2>
+          
+          <div className="mt-2 sm:mt-0 w-full sm:w-auto">
+            <select
+              className="pl-3 pr-10 py-2 text-sm border rounded-md bg-white w-full sm:w-auto"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">All Bookings ({bookingStats.total})</option>
+              <option value="pending">Pending ({bookingStats.pending})</option>
+              <option value="completed">Completed ({bookingStats.completed})</option>
+            </select>
+          </div>
+        </div>
         
         <div className="grid gap-4">
-          {assignedBookings.length > 0 ? (
-            assignedBookings.map((booking) => (
+          {filteredBookings.length > 0 ? (
+            filteredBookings.map((booking) => (
               <div key={booking.id} className="border rounded-lg p-4 hover:bg-gray-50">
                 <div className="flex justify-between items-start mb-4">
                   <div>
@@ -237,8 +267,10 @@ const AgentDashboard = () => {
             ))
           ) : (
             <div className="text-center py-8 text-gray-500">
-              <p>No bookings assigned yet</p>
-              <p className="text-sm mt-2">When admin assigns bookings to you, they will appear here</p>
+              <p>No {statusFilter === 'all' ? '' : statusFilter} bookings assigned yet</p>
+              {statusFilter !== 'all' && bookingStats.total > 0 && (
+                <p className="text-sm mt-2">Try changing the filter to view other bookings</p>
+              )}
             </div>
           )}
         </div>
