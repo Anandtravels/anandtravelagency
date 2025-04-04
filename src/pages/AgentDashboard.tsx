@@ -1,107 +1,105 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/lib/auth';
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { collection, query, where, onSnapshot, doc, updateDoc, orderBy, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Phone, Mail, MessageSquare } from "lucide-react";
-
-interface Passenger {
-  name: string;
-  age: string | number;
-  gender: string;
-}
-
-interface Booking {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  from: string;
-  to: string;
-  journey_date: string;
-  booking_type: string;
-  passengers: Passenger[] | string | number;
-  status?: 'pending' | 'completed';
-  created_at: Date;
-  assignedAgent?: string;
-}
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { format } from "date-fns";
 
 const AgentDashboard = () => {
-  const { user, signOut, loading, isAgent } = useAuth();
-  const [assignedBookings, setAssignedBookings] = useState<Booking[]>([]);
+  const { user, isAgent, signOut, loading } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const { toast } = useToast();
-  const navigate = useNavigate();
-
+  const [whatsappModal, setWhatsappModal] = useState(false);
+  const [currentBooking, setCurrentBooking] = useState<any>(null);
+  const [messageDetails, setMessageDetails] = useState({
+    ticketCost: '',
+    bookingCharge: '',
+    totalAmount: '',
+    additionalInfo: '',
+    bookingType: 'General Booking'
+  });
+  
+  // Check authentication and fetch agent's bookings
   useEffect(() => {
-    // Check if user is authenticated and is an agent
-    if (!loading && (!user || !isAgent)) {
-      navigate("/agent-login", { replace: true });
-      return;
-    }
-
-    if (user && isAgent && user.email) {
-      // Fetch assigned bookings for this agent
-      const bookingsQuery = query(
-        collection(db, 'bookings'),
-        where('assignedAgent', '==', user.email),
-        orderBy('created_at', 'desc')
+    if (!loading) {
+      if (!user || !isAgent) {
+        navigate("/agent-login");
+        return;
+      }
+      
+      // Fetch bookings assigned to this agent
+      const agentEmail = user.email;
+      if (!agentEmail) return;
+      
+      const bookingsRef = collection(db, "bookings");
+      const q = query(
+        bookingsRef, 
+        where("assignedAgent", "==", agentEmail),
+        orderBy("created_at", "desc")
       );
-
-      const unsubscribe = onSnapshot(bookingsQuery, 
-        (snapshot) => {
-          const bookingsData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            created_at: doc.data().created_at?.toDate() || new Date()
-          })) as Booking[];
-          
-          setAssignedBookings(bookingsData);
-          setIsLoading(false);
-        },
-        (error) => {
-          console.error("Error listening to assigned bookings:", error);
-          toast({
-            title: "Error",
-            description: "Failed to load your assigned bookings",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-        }
-      );
-
+      
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const bookingsList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          created_at: doc.data().created_at?.toDate() || new Date()
+        }));
+        setBookings(bookingsList);
+        setIsLoading(false);
+      }, (error) => {
+        console.error("Error fetching bookings:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load your assigned bookings",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+      });
+      
       return () => unsubscribe();
     }
   }, [user, isAgent, loading, navigate, toast]);
 
-  const formatFirebaseTimestamp = (timestamp: Date | null | undefined) => {
-    if (!timestamp) return 'Unknown';
-    
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-    }).format(timestamp);
+  // Filter bookings based on status
+  const filteredBookings = useCallback(() => {
+    if (statusFilter === 'all') return bookings;
+    if (statusFilter === 'pending') return bookings.filter(b => !b.status || b.status === 'pending');
+    if (statusFilter === 'completed') return bookings.filter(b => b.status === 'completed');
+    return bookings;
+  }, [bookings, statusFilter]);
+
+  // Helper functions
+  const formatDate = (date: Date | string) => {
+    if (!date) return "N/A";
+    try {
+      return format(new Date(date), "dd MMM yyyy, HH:mm");
+    } catch (e) {
+      return "Invalid Date";
+    }
   };
 
-  const updateStatus = async (bookingId: string, status: 'pending' | 'completed') => {
-    if (!user?.email) return;
-    
+  const updateBookingStatus = async (bookingId: string, status: 'pending' | 'completed') => {
     try {
-      await updateDoc(doc(db, 'bookings', bookingId), {
-        status: status,
+      await updateDoc(doc(db, 'bookings', bookingId), { 
+        status,
         updated_at: serverTimestamp(),
-        updated_by: user.email
+        updated_by: user?.email
       });
       
       toast({
         title: "Status Updated",
-        description: `Booking status has been changed to ${status}`,
+        description: `Booking marked as ${status}`,
       });
     } catch (error) {
       console.error("Error updating status:", error);
@@ -117,12 +115,133 @@ const AgentDashboard = () => {
     window.location.href = `tel:${phone}`;
   };
 
-  const handleWhatsapp = (phone: string) => {
-    window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
-  };
-
   const handleEmail = (email: string) => {
     window.location.href = `mailto:${email}`;
+  };
+
+  const handleWhatsapp = (phone: string, booking?: any) => {
+    if (booking) {
+      setCurrentBooking(booking);
+      setWhatsappModal(true);
+      
+      // Set the booking type from the customer's original selection if available
+      const initialBookingType = booking.booking_type || 'General Booking';
+      
+      setMessageDetails({
+        ticketCost: '',
+        bookingCharge: '',
+        totalAmount: '',
+        additionalInfo: '',
+        bookingType: initialBookingType
+      });
+    } else {
+      // Direct WhatsApp chat without booking context
+      window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
+    }
+  };
+
+  const calculateBookingCharge = (bookingType: string, basePrice: number): number => {
+    switch(bookingType) {
+      case 'Tatkal Booking':
+        return 200; // Fixed ₹200 for Tatkal
+      case 'Premium Booking':
+        return Math.max(200, basePrice * 0.15); // Minimum ₹200 or 15% whichever is higher
+      case 'General Booking':
+      default:
+        return 50; // Fixed ₹50 for General
+    }
+  };
+
+  const calculateTotal = () => {
+    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
+    let bookingCharge = parseFloat(messageDetails.bookingCharge) || 0;
+    
+    // If booking charge was not manually set, calculate it based on booking type
+    if (messageDetails.bookingCharge === '') {
+      bookingCharge = calculateBookingCharge(messageDetails.bookingType, ticketCost);
+    }
+    
+    return (ticketCost + bookingCharge).toFixed(2);
+  };
+
+  const handleBookingTypeChange = (type: string) => {
+    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
+    const bookingCharge = calculateBookingCharge(type, ticketCost);
+    
+    setMessageDetails({
+      ...messageDetails,
+      bookingType: type,
+      bookingCharge: bookingCharge.toString()
+    });
+  };
+
+  const sendWhatsappMessage = () => {
+    if (!currentBooking) return;
+    
+    // Format passengers data
+    let passengerInfo = '';
+    if (Array.isArray(currentBooking.passengers)) {
+      passengerInfo = `*Passengers:* ${currentBooking.passengers.length}\n`;
+      currentBooking.passengers.forEach((passenger: any, index: number) => {
+        passengerInfo += `   ${index + 1}. ${passenger.name} (${passenger.age} yrs, ${passenger.gender})\n`;
+      });
+    } else {
+      passengerInfo = `*Passengers:* ${currentBooking.passengers}\n`;
+    }
+    
+    // Build the formatted message based on booking type
+    let pricingDetails = '';
+    
+    if (messageDetails.bookingType === 'Tatkal Booking') {
+      pricingDetails = 
+`*Pricing Details:*
+Tatkal Cost: ₹${messageDetails.ticketCost}
+Tatkal Booking Charge: ₹${messageDetails.bookingCharge}
+*Total Amount: ₹${calculateTotal()}*`;
+    } else if (messageDetails.bookingType === 'Premium Booking') {
+      pricingDetails = 
+`*Pricing Details:*
+Premium Ticket Cost: ₹${messageDetails.ticketCost}
+Premium Booking Charge: ₹${messageDetails.bookingCharge}
+*Total Amount: ₹${calculateTotal()}*`;
+    } else {
+      pricingDetails = 
+`*Pricing Details:*
+Ticket Cost: ₹${messageDetails.ticketCost}
+Booking Charge: ₹${messageDetails.bookingCharge}
+*Total Amount: ₹${calculateTotal()}*`;
+    }
+    
+    // Build the complete message
+    const message = 
+`Dear *${currentBooking.name}*,
+
+Thank you for your booking request with Anand Travels!
+------------------
+*Booking Details:*
+Journey: ${currentBooking.from} to ${currentBooking.to}
+Date: ${currentBooking.journey_date}
+Service Type: ${messageDetails.bookingType}
+${passengerInfo}
+${currentBooking.additional_requirements ? `Special Requirements: ${currentBooking.additional_requirements}\n` : ''}
+------------------
+${pricingDetails}
+
+${messageDetails.additionalInfo ? `\n${messageDetails.additionalInfo}\n` : ''}
+------------------
+
+*Payment Information:*
+PhonePe/UPI: 8985816481 or 9676138010
+Account Holder: Pinisetty Naga Satya Surya Shiva Anand
+------------------
+Please complete the payment to confirm your booking.
+For any queries, feel free to contact us.
+
+Thank you for choosing Anand Travels!`;
+
+    // Open WhatsApp with the message
+    window.open(`https://wa.me/${currentBooking.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+    setWhatsappModal(false);
   };
 
   const handleSignOut = async () => {
@@ -133,7 +252,7 @@ const AgentDashboard = () => {
         description: "You have been successfully signed out",
       });
       navigate("/agent-login");
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
         description: "Failed to sign out",
@@ -142,71 +261,67 @@ const AgentDashboard = () => {
     }
   };
 
-  const bookingStats = useMemo(() => {
-    const pending = assignedBookings.filter(b => !b.status || b.status === 'pending').length;
-    const completed = assignedBookings.filter(b => b.status === 'completed').length;
-    const total = assignedBookings.length;
-    
-    return { pending, completed, total };
-  }, [assignedBookings]);
-  
-  const filteredBookings = useMemo(() => {
-    if (statusFilter === 'all') return assignedBookings;
-    if (statusFilter === 'pending') return assignedBookings.filter(b => !b.status || b.status === 'pending');
-    if (statusFilter === 'completed') return assignedBookings.filter(b => b.status === 'completed');
-    return assignedBookings;
-  }, [assignedBookings, statusFilter]);
-
-  if (loading || isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-travel-blue-dark border-r-transparent"></div>
       </div>
     );
   }
 
+  if (!user || !isAgent) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <header className="bg-white shadow-sm mb-6 p-4 rounded-lg">
-        <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="container py-4 px-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-travel-blue-dark">Agent Dashboard</h1>
-            <p className="text-gray-600">{user?.email}</p>
+            <h1 className="text-xl font-bold text-travel-blue-dark">Agent Dashboard</h1>
+            <p className="text-sm text-gray-600">{user?.email}</p>
           </div>
-          <Button onClick={handleSignOut} className="bg-travel-blue-dark hover:bg-travel-blue-dark/90">Sign Out</Button>
+          <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
         </div>
       </header>
 
-      <main className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-          <h2 className="text-xl font-semibold">Assigned Bookings</h2>
-          
-          <div className="mt-2 sm:mt-0 w-full sm:w-auto">
-            <select
-              className="pl-3 pr-10 py-2 text-sm border rounded-md bg-white w-full sm:w-auto"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Bookings ({bookingStats.total})</option>
-              <option value="pending">Pending ({bookingStats.pending})</option>
-              <option value="completed">Completed ({bookingStats.completed})</option>
-            </select>
+      <main className="container p-4">
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 className="text-xl font-bold text-travel-blue-dark">Your Assigned Bookings</h2>
+            
+            <div className="relative">
+              <select
+                className="pl-3 pr-10 py-2 text-sm border rounded-md bg-white w-full"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Bookings ({bookings.length})</option>
+                <option value="pending">Pending ({bookings.filter(b => !b.status || b.status === 'pending').length})</option>
+                <option value="completed">Completed ({bookings.filter(b => b.status === 'completed').length})</option>
+              </select>
+            </div>
           </div>
         </div>
-        
-        <div className="grid gap-4">
-          {filteredBookings.length > 0 ? (
-            filteredBookings.map((booking) => (
-              <div key={booking.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-medium text-lg">{booking.name}</h3>
-                    <p className="text-sm text-gray-500">Booking ID: {booking.id}</p>
-                  </div>
-                  <div className="flex gap-2">
+
+        {isLoading ? (
+          <div className="text-center py-10">
+            <div className="h-8 w-8 mx-auto animate-spin rounded-full border-4 border-travel-blue-dark border-r-transparent"></div>
+            <p className="mt-4 text-gray-500">Loading your bookings...</p>
+          </div>
+        ) : filteredBookings().length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredBookings().map((booking) => (
+              <Card key={booking.id} className="overflow-hidden">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg">{booking.name}</CardTitle>
+                      <p className="text-sm text-gray-500">{formatDate(booking.created_at)}</p>
+                    </div>
                     <select
                       value={booking.status || 'pending'}
-                      onChange={(e) => updateStatus(booking.id, e.target.value as 'pending' | 'completed')}
+                      onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
                       className={`px-3 py-1 rounded-full text-sm font-medium ${
                         booking.status === 'completed' 
                           ? 'bg-green-100 text-green-800' 
@@ -217,64 +332,188 @@ const AgentDashboard = () => {
                       <option value="completed">Completed</option>
                     </select>
                   </div>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-medium">Contact:</span> {booking.phone} | {booking.email}</p>
-                  <p><span className="font-medium">Service:</span> {booking.booking_type}</p>
-                  <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
-                  <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
-                  <div>
-                    <span className="font-medium">Passengers:</span>
-                    <div className="ml-2 mt-1">
-                      {Array.isArray(booking.passengers) ? (
-                        booking.passengers.map((passenger: Passenger, idx: number) => (
-                          <div key={idx} className="text-sm bg-gray-50 p-1 rounded mb-1">
-                            {passenger.name} ({passenger.age} yrs, {passenger.gender})
-                          </div>
-                        ))
-                      ) : (
-                        <div>{booking.passengers}</div>
+                </CardHeader>
+                <CardContent className="pt-2">
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Phone size={16} className="text-gray-400" />
+                      <span>{booking.phone}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail size={16} className="text-gray-400" />
+                      <span>{booking.email}</span>
+                    </div>
+                    <div className="border-t border-gray-100 pt-3">
+                      <p><span className="font-medium">Service:</span> {booking.booking_type || 'Not specified'}</p>
+                      <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
+                      <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
+                      <div className="mt-2">
+                        <span className="font-medium">Passengers:</span>
+                        <div className="ml-2 mt-1">
+                          {Array.isArray(booking.passengers) ? booking.passengers.map((passenger: any, idx: number) => (
+                            <div key={idx} className="text-sm bg-gray-50 p-1 rounded mb-1">
+                              {passenger.name} ({passenger.age} yrs, {passenger.gender})
+                            </div>
+                          )) : (
+                            <div>{booking.passengers}</div>
+                          )}
+                        </div>
+                      </div>
+                      {booking.additional_requirements && (
+                        <div className="mt-2">
+                          <span className="font-medium">Special Requirements:</span>
+                          <p className="mt-1 text-sm bg-gray-50 p-2 rounded">{booking.additional_requirements}</p>
+                        </div>
                       )}
                     </div>
+
+                    <div className="pt-3 border-t border-gray-100 flex justify-between">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleCall(booking.phone)}
+                          className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
+                          title="Call"
+                        >
+                          <Phone size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleWhatsapp(booking.phone, booking)}
+                          className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
+                          title="WhatsApp"
+                        >
+                          <MessageSquare size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleEmail(booking.email)}
+                          className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                          title="Email"
+                        >
+                          <Mail size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10 bg-white rounded-lg shadow-sm">
+            <p className="text-gray-500">No {statusFilter === 'all' ? '' : statusFilter} bookings assigned to you.</p>
+          </div>
+        )}
+      </main>
+
+      {/* WhatsApp Message Modal */}
+      <Dialog open={whatsappModal} onOpenChange={setWhatsappModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Send Booking Information</DialogTitle>
+          </DialogHeader>
+          {currentBooking && (
+            <div className="space-y-4 my-4">
+              <div className="bg-gray-50 p-3 rounded-md text-sm">
+                <p><span className="font-medium">Customer:</span> {currentBooking.name}</p>
+                <p><span className="font-medium">Journey:</span> {currentBooking.from} to {currentBooking.to}</p>
+                <p><span className="font-medium">Date:</span> {currentBooking.journey_date}</p>
+                <p><span className="font-medium">Original Service:</span> {currentBooking.booking_type || 'Not specified'}</p>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="bookingType">Booking Type</Label>
+                  <select
+                    id="bookingType"
+                    className="w-full px-3 py-2 border rounded-md"
+                    value={messageDetails.bookingType}
+                    onChange={(e) => handleBookingTypeChange(e.target.value)}
+                  >
+                    <option value="General Booking">General Booking</option>
+                    <option value="Tatkal Booking">Tatkal Booking</option>
+                    <option value="Premium Booking">Premium Booking</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {messageDetails.bookingType === 'Tatkal Booking' ? 
+                      'Tatkal bookings have a fixed charge of ₹200.' : 
+                      messageDetails.bookingType === 'Premium Booking' ? 
+                      'Premium bookings have a minimum charge of ₹200.' : 
+                      'General bookings have a fixed charge of ₹50.'}
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="ticketCost">Ticket Cost (₹)</Label>
+                    <Input
+                      id="ticketCost"
+                      type="number"
+                      value={messageDetails.ticketCost}
+                      onChange={(e) => {
+                        const newTicketCost = e.target.value;
+                        const bookingCharge = calculateBookingCharge(
+                          messageDetails.bookingType, 
+                          parseFloat(newTicketCost) || 0
+                        ).toFixed(2);
+                        
+                        setMessageDetails({
+                          ...messageDetails,
+                          ticketCost: newTicketCost,
+                          bookingCharge: bookingCharge
+                        });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="bookingCharge">Booking Charge (₹)</Label>
+                    <Input
+                      id="bookingCharge"
+                      type="number"
+                      value={messageDetails.bookingCharge}
+                      onChange={(e) => setMessageDetails({
+                        ...messageDetails,
+                        bookingCharge: e.target.value
+                      })}
+                    />
                   </div>
                 </div>
                 
-                <div className="flex gap-2 mt-4">
-                  <button
-                    onClick={() => handleCall(booking.phone)}
-                    className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
-                    title="Call"
-                  >
-                    <Phone size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleWhatsapp(booking.phone)}
-                    className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
-                    title="WhatsApp"
-                  >
-                    <MessageSquare size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleEmail(booking.email)}
-                    className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
-                    title="Email"
-                  >
-                    <Mail size={16} />
-                  </button>
+                <div>
+                  <Label htmlFor="totalAmount">Total Amount (₹)</Label>
+                  <Input
+                    id="totalAmount"
+                    type="text"
+                    value={calculateTotal()}
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="additionalInfo">Additional Information</Label>
+                  <Textarea
+                    id="additionalInfo"
+                    value={messageDetails.additionalInfo}
+                    onChange={(e) => setMessageDetails({
+                      ...messageDetails,
+                      additionalInfo: e.target.value
+                    })}
+                    placeholder="Any additional details or instructions..."
+                    className="min-h-[80px]"
+                  />
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <p>No {statusFilter === 'all' ? '' : statusFilter} bookings assigned yet</p>
-              {statusFilter !== 'all' && bookingStats.total > 0 && (
-                <p className="text-sm mt-2">Try changing the filter to view other bookings</p>
-              )}
             </div>
           )}
-        </div>
-      </main>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWhatsappModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={sendWhatsappMessage}>
+              Send to WhatsApp
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

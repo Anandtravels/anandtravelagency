@@ -13,13 +13,16 @@ import { TrashIcon, PencilIcon, Check, X, Phone, Mail, MessageSquare } from "luc
 import { Textarea } from "@/components/ui/textarea";
 import debounce from 'lodash/debounce';
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 const Admin = () => {
   const { user, signOut, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // State declarations - keep all useState hooks together
+  // State declarations
   const [bookings, setBookings] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [bookingLoading, setBookingLoading] = useState(true);
@@ -39,7 +42,7 @@ const Admin = () => {
     additional_requirements: '',
     booking_type: ''
   });
-  const [agents, setAgents] = useState([]);
+  const [agents, setAgents] = useState<any[]>([]);
   const [showAgentForm, setShowAgentForm] = useState(false);
   const [agentFormData, setAgentFormData] = useState({
     name: '',
@@ -52,11 +55,19 @@ const Admin = () => {
   });
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [whatsappModal, setWhatsappModal] = useState(false);
+  const [currentBooking, setCurrentBooking] = useState<any>(null);
+  const [messageDetails, setMessageDetails] = useState({
+    ticketCost: '',
+    bookingCharge: '',
+    totalAmount: '',
+    additionalInfo: '',
+    bookingType: 'General Booking' // Add booking type with default value
+  });
 
-  // Memoized functions - use useMemo for derived values
+  // Memoized values
   const combinedLoading = useMemo(() => bookingLoading || contactsLoading, [bookingLoading, contactsLoading]);
 
-  // Calculate booking counts by status - add this after the existing useMemo
   const bookingStats = useMemo(() => {
     const pending = bookings.filter(b => !b.status || b.status === 'pending').length;
     const completed = bookings.filter(b => b.status === 'completed').length;
@@ -65,7 +76,6 @@ const Admin = () => {
     return { pending, completed, total };
   }, [bookings]);
   
-  // Filter bookings based on status filter
   const filteredBookings = useMemo(() => {
     if (statusFilter === 'all') return bookings;
     if (statusFilter === 'pending') return bookings.filter(b => !b.status || b.status === 'pending');
@@ -73,7 +83,7 @@ const Admin = () => {
     return bookings;
   }, [bookings, statusFilter]);
 
-  // Callbacks - use useCallback for functions passed as props or used in effects
+  // Debounced functions
   const debouncedNoteUpdate = useCallback(
     debounce(async (id: string, note: string, collectionName: string) => {
       try {
@@ -109,7 +119,7 @@ const Admin = () => {
     debouncedNoteUpdate(id, note, 'contact_submissions');
   }, [debouncedNoteUpdate]);
 
-  // Effects - keep all useEffect hooks together
+  // Effects
   useEffect(() => {
     const checkAuth = async () => {
       if (!loading) {
@@ -117,7 +127,6 @@ const Admin = () => {
           navigate("/admin-login", { replace: true });
         } else {
           const unsubscribe = setupRealtimeListeners();
-          // Store the unsubscribe function
           return () => {
             if (unsubscribe) {
               unsubscribe();
@@ -135,6 +144,7 @@ const Admin = () => {
     };
   }, [debouncedNoteUpdate]);
 
+  // Helper functions
   const formatFirebaseTimestamp = (timestamp: any) => {
     if (!timestamp) return "N/A";
     
@@ -253,6 +263,7 @@ const Admin = () => {
     return null;
   }
 
+  // Action handlers
   const handleSignOut = async () => {
     try {
       const { error } = await signOut();
@@ -360,7 +371,7 @@ const Admin = () => {
       journey_date: booking.journey_date || '',
       passengers: booking.passengers || '',
       additional_requirements: booking.additional_requirements || '',
-      booking_type: booking.booking_type || ''  // Add this field
+      booking_type: booking.booking_type || ''
     });
   };
 
@@ -389,22 +400,142 @@ const Admin = () => {
     window.location.href = `tel:${phone}`;
   };
 
-  const handleWhatsapp = (phone: string) => {
-    window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
-  };
-
   const handleEmail = (email: string) => {
     window.location.href = `mailto:${email}`;
   };
 
-  const createAgent = async (data) => {
+  const handleWhatsapp = (phone: string, booking?: any) => {
+    if (booking) {
+      setCurrentBooking(booking);
+      setWhatsappModal(true);
+      
+      // Set the booking type from the customer's original selection if available
+      const initialBookingType = booking.booking_type || 'General Booking';
+      
+      setMessageDetails({
+        ticketCost: '',
+        bookingCharge: '',
+        totalAmount: '',
+        additionalInfo: '',
+        bookingType: initialBookingType
+      });
+    } else {
+      // Direct WhatsApp chat without booking context
+      window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
+    }
+  };
+
+  const calculateBookingCharge = (bookingType: string, basePrice: number): number => {
+    switch(bookingType) {
+      case 'Tatkal Booking':
+        return 200; // Fixed ₹200 for Tatkal
+      case 'Premium Booking':
+        return Math.max(200, basePrice * 0.15); // Minimum ₹200 or 15% whichever is higher
+      case 'General Booking':
+      default:
+        return 50; // Fixed ₹50 for General
+    }
+  };
+
+  const calculateTotal = () => {
+    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
+    let bookingCharge = parseFloat(messageDetails.bookingCharge) || 0;
+    
+    // If booking charge was not manually set, calculate it based on booking type
+    if (messageDetails.bookingCharge === '') {
+      bookingCharge = calculateBookingCharge(messageDetails.bookingType, ticketCost);
+    }
+    
+    return (ticketCost + bookingCharge).toFixed(2);
+  };
+
+  const handleBookingTypeChange = (type: string) => {
+    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
+    const bookingCharge = calculateBookingCharge(type, ticketCost);
+    
+    setMessageDetails({
+      ...messageDetails,
+      bookingType: type,
+      bookingCharge: bookingCharge.toString()
+    });
+  };
+
+  const sendWhatsappMessage = () => {
+    if (!currentBooking) return;
+    
+    // Format passengers data
+    let passengerInfo = '';
+    if (Array.isArray(currentBooking.passengers)) {
+      passengerInfo = `*Passengers:* ${currentBooking.passengers.length}\n`;
+      currentBooking.passengers.forEach((passenger: any, index: number) => {
+        passengerInfo += `   ${index + 1}. ${passenger.name} (${passenger.age} yrs, ${passenger.gender})\n`;
+      });
+    } else {
+      passengerInfo = `*Passengers:* ${currentBooking.passengers}\n`;
+    }
+    
+    // Build the formatted message based on booking type
+    let pricingDetails = '';
+    
+    if (messageDetails.bookingType === 'Tatkal Booking') {
+      pricingDetails = 
+`*Pricing Details:*
+Tatkal Cost: ₹${messageDetails.ticketCost}
+Tatkal Booking Charge: ₹${messageDetails.bookingCharge}
+*Total Amount: ₹${calculateTotal()}*`;
+    } else if (messageDetails.bookingType === 'Premium Booking') {
+      pricingDetails = 
+`*Pricing Details:*
+Premium Ticket Cost: ₹${messageDetails.ticketCost}
+Premium Booking Charge: ₹${messageDetails.bookingCharge}
+*Total Amount: ₹${calculateTotal()}*`;
+    } else {
+      pricingDetails = 
+`*Pricing Details:*
+Ticket Cost: ₹${messageDetails.ticketCost}
+Booking Charge: ₹${messageDetails.bookingCharge}
+*Total Amount: ₹${calculateTotal()}*`;
+    }
+    
+    // Build the complete message
+    const message = 
+`Dear *${currentBooking.name}*,
+
+Thank you for your booking request with Anand Travels!
+------------------
+*Booking Details:*
+Journey: ${currentBooking.from} to ${currentBooking.to}
+Date: ${currentBooking.journey_date}
+Service Type: ${messageDetails.bookingType}
+${passengerInfo}
+${currentBooking.additional_requirements ? `Special Requirements: ${currentBooking.additional_requirements}\n` : ''}
+------------------
+${pricingDetails}
+
+${messageDetails.additionalInfo ? `\n${messageDetails.additionalInfo}\n` : ''}
+------------------
+
+*Payment Information:*
+PhonePe/UPI: 8985816481 or 9676138010
+Account Holder: Pinisetty Naga Satya Surya Shiva Anand
+------------------
+Please complete the payment to confirm your booking.
+For any queries, feel free to contact us.
+
+Thank you for choosing Anand Travels!`;
+
+    // Open WhatsApp with the message
+    window.open(`https://wa.me/${currentBooking.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+    setWhatsappModal(false);
+  };
+
+  const createAgent = async (data: any) => {
     try {
       // First check if the email already exists
       const agentsQuery = query(
         collection(db, 'agents'),
         where('email', '==', data.email.toLowerCase())
       );
-      
       const existingAgents = await getDocs(agentsQuery);
       if (!existingAgents.empty && !editingAgentId) {
         toast({
@@ -414,7 +545,7 @@ const Admin = () => {
         });
         return;
       }
-      
+
       if (editingAgentId) {
         // If editing, update the existing agent
         await updateDoc(doc(db, 'agents', editingAgentId), {
@@ -428,7 +559,7 @@ const Admin = () => {
           updated_at: serverTimestamp(),
           updated_by: user.email
         });
-
+        
         toast({
           title: "Agent Updated",
           description: "Agent information has been updated successfully."
@@ -472,7 +603,7 @@ const Admin = () => {
         email: '',
         password: ''
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating/updating agent:', error);
       toast({
         title: "Error",
@@ -512,7 +643,7 @@ const Admin = () => {
       let passengerInfo = '';
       if (Array.isArray(booking.passengers)) {
         passengerInfo = `${booking.passengers.length} passenger(s):\n`;
-        booking.passengers.forEach((passenger, index) => {
+        booking.passengers.forEach((passenger: any, index: number) => {
           passengerInfo += `   ${index + 1}. ${passenger.name} (${passenger.age} yrs, ${passenger.gender})\n`;
         });
       } else {
@@ -527,7 +658,6 @@ const Admin = () => {
       const message = `🚗 *NEW BOOKING ASSIGNED*\n\n` +
         `*Booking ID:* ${bookingId}\n` +
         `*Service Type:* ${booking.booking_type || 'Not specified'}\n\n` +
-        
         `*Journey Details:*\n` +
         `From: ${booking.from}\n` +
         `To: ${booking.to}\n` +
@@ -548,7 +678,7 @@ const Admin = () => {
       if (agent && agent.phone) {
         window.open(`https://wa.me/${agent.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
       }
-
+      
       toast({
         title: "Ticket Assigned",
         description: "Ticket has been assigned to agent successfully"
@@ -618,7 +748,7 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Modified header for better mobile layout */}
+      {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="container-custom px-4 py-4">
           <div className="flex justify-between items-center">
@@ -678,164 +808,307 @@ const Admin = () => {
                 </div>
               </div>
 
-              {/* Mobile View for Bookings - update to use filteredBookings instead of bookings */}
+              {/* Mobile View for Bookings */}
               <div className="block lg:hidden space-y-4">
                 {filteredBookings.length > 0 ? (
                   filteredBookings.map((booking) => (
                     <div key={booking.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
-                    {editingId === booking.id ? (
-                      // Edit Mode
-                      <div className="space-y-3">
-                        <input
-                          type="text"
-                          value={editFormData.name}
-                          onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
-                          className="w-full px-3 py-2 border rounded"
-                          placeholder="Name"
-                        />
-                        <div className="grid grid-cols-1 gap-2">
-                          <input
-                            type="email"
-                            value={editFormData.email}
-                            onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
-                            className="w-full px-3 py-2 border rounded"
-                            placeholder="Email"
-                          />
-                          <input
-                            type="tel"
-                            value={editFormData.phone}
-                            onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
-                            className="w-full px-3 py-2 border rounded"
-                            placeholder="Phone"
-                          />
-                        </div>
-                        <input
-                          type="text"
-                          value={editFormData.booking_type}
-                          onChange={(e) => setEditFormData({...editFormData, booking_type: e.target.value})}
-                          className="w-full px-3 py-2 border rounded"
-                          placeholder="Service Type"
-                        />
-                        <div className="grid grid-cols-2 gap-2">
+                      {editingId === booking.id ? (
+                        // Edit Mode
+                        <div className="space-y-3">
                           <input
                             type="text"
-                            value={editFormData.from}
-                            onChange={(e) => setEditFormData({...editFormData, from: e.target.value})}
+                            value={editFormData.name}
+                            onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
                             className="w-full px-3 py-2 border rounded"
-                            placeholder="From"
+                            placeholder="Name"
                           />
-                          <input
-                            type="text"
-                            value={editFormData.to}
-                            onChange={(e) => setEditFormData({...editFormData, to: e.target.value})}
-                            className="w-full px-3 py-2 border rounded"
-                            placeholder="To"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="date"
-                            value={editFormData.journey_date}
-                            onChange={(e) => setEditFormData({...editFormData, journey_date: e.target.value})}
-                            className="w-full px-3 py-2 border rounded"
-                          />
-                          <input
-                            type="number"
-                            value={editFormData.passengers}
-                            onChange={(e) => setEditFormData({...editFormData, passengers: e.target.value})}
-                            className="w-full px-3 py-2 border rounded"
-                            placeholder="Passengers"
-                          />
-                        </div>
-                        <textarea
-                          value={editFormData.additional_requirements}
-                          onChange={(e) => setEditFormData({...editFormData, additional_requirements: e.target.value})}
-                          className="w-full px-3 py-2 border rounded"
-                          rows={3}
-                          placeholder="Additional Requirements"
-                        ></textarea>
-                        <div className="flex gap-2 justify-end">
-                          <button
-                            onClick={() => handleSaveEdit(booking.id)}
-                            className="px-3 py-1 bg-green-100 text-green-700 rounded-full"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="px-3 py-1 bg-red-100 text-red-700 rounded-full"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      // View Mode
-                      <>
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-3">
-                            <Checkbox 
-                              checked={selectedBookings.includes(booking.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedBookings([...selectedBookings, booking.id]);
-                                } else {
-                                  setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
-                                }
-                              }}
+                          <div className="grid grid-cols-1 gap-2">
+                            <input
+                              type="email"
+                              value={editFormData.email}
+                              onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                              className="w-full px-3 py-2 border rounded"
+                              placeholder="Email"
                             />
+                            <input
+                              type="tel"
+                              value={editFormData.phone}
+                              onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
+                              className="w-full px-3 py-2 border rounded"
+                              placeholder="Phone"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            value={editFormData.booking_type}
+                            onChange={(e) => setEditFormData({...editFormData, booking_type: e.target.value})}
+                            className="w-full px-3 py-2 border rounded"
+                            placeholder="Service Type"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              value={editFormData.from}
+                              onChange={(e) => setEditFormData({...editFormData, from: e.target.value})}
+                              className="w-full px-3 py-2 border rounded"
+                              placeholder="From"
+                            />
+                            <input
+                              type="text"
+                              value={editFormData.to}
+                              onChange={(e) => setEditFormData({...editFormData, to: e.target.value})}
+                              className="w-full px-3 py-2 border rounded"
+                              placeholder="To"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="date"
+                              value={editFormData.journey_date}
+                              onChange={(e) => setEditFormData({...editFormData, journey_date: e.target.value})}
+                              className="w-full px-3 py-2 border rounded"
+                            />
+                            <input
+                              type="number"
+                              value={editFormData.passengers}
+                              onChange={(e) => setEditFormData({...editFormData, passengers: e.target.value})}
+                              className="w-full px-3 py-2 border rounded"
+                              placeholder="Passengers"
+                            />
+                          </div>
+                          <textarea
+                            value={editFormData.additional_requirements}
+                            onChange={(e) => setEditFormData({...editFormData, additional_requirements: e.target.value})}
+                            className="w-full px-3 py-2 border rounded"
+                            rows={3}
+                            placeholder="Additional Requirements"
+                          ></textarea>
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => handleSaveEdit(booking.id)}
+                              className="px-3 py-1 bg-green-100 text-green-700 rounded-full"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="px-3 py-1 bg-red-100 text-red-700 rounded-full"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        // View Mode
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3">
+                              <Checkbox
+                                checked={selectedBookings.includes(booking.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedBookings([...selectedBookings, booking.id]);
+                                  } else {
+                                    setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
+                                  }
+                                }}
+                              />
+                              <div>
+                                <h3 className="font-medium">{booking.name}</h3>
+                                <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
+                              </div>
+                            </div>
+                            <select
+                              value={booking.status || 'pending'}
+                              onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
+                              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                booking.status === 'completed' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="completed">Completed</option>
+                            </select>
+                          </div>
+
+                          <div className="text-sm space-y-2">
+                            <p><span className="font-medium">Contact:</span> {booking.email} | {booking.phone}</p>
+                            <p><span className="font-medium">Service:</span> {booking.booking_type}</p>
+                            <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
+                            <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
                             <div>
-                              <h3 className="font-medium">{booking.name}</h3>
-                              <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
+                              <span className="font-medium">Passengers:</span>
+                              <div className="ml-2">
+                                {Array.isArray(booking.passengers) ? booking.passengers.map((passenger, idx) => (
+                                  <div key={idx} className="text-sm">
+                                    {passenger.name} ({passenger.age} years, {passenger.gender})
+                                  </div>
+                                )) : (
+                                  <div>{booking.passengers}</div>
+                                )}
+                              </div>
+                            </div>
+                            {booking.additional_requirements && (
+                              <p><span className="font-medium">Notes:</span> {booking.additional_requirements}</p>
+                            )}
+                            <div className="mt-4">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Admin Notes</label>
+                              <Textarea
+                                value={adminNotes[booking.id] || ''}
+                                onChange={(e) => handleNoteChange(booking.id, e.target.value)}
+                                placeholder="Add notes about this booking..."
+                                className="w-full min-h-[100px] text-sm"
+                              />
                             </div>
                           </div>
-                          <select
-                            value={booking.status || 'pending'}
-                            onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
-                            className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              booking.status === 'completed' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="completed">Completed</option>
-                          </select>
-                        </div>
 
-                        <div className="text-sm space-y-2">
-                          <p><span className="font-medium">Contact:</span> {booking.email} | {booking.phone}</p>
+                          <div className="flex justify-between items-center pt-2">
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleCall(booking.phone)}
+                                className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
+                                title="Call"
+                              >
+                                <Phone size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleWhatsapp(booking.phone, booking)}
+                                className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
+                                title="WhatsApp"
+                              >
+                                <MessageSquare size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleEmail(booking.email)}
+                                className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                                title="Email"
+                              >
+                                <Mail size={16} />
+                              </button>
+                            </div>
+
+                            {/* Edit/Delete Buttons */}
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleEdit(booking)}
+                                className="p-2 hover:bg-gray-200 rounded-full"
+                                title="Edit"
+                              >
+                                <PencilIcon size={16} className="text-blue-600" />
+                              </button>
+                              <button
+                                onClick={() => deleteBookings([booking.id])}
+                                className="p-2 hover:bg-gray-200 rounded-full"
+                                title="Delete"
+                              >
+                                <TrashIcon size={16} className="text-red-600" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 border-t pt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
+                            <div className="w-full max-w-full overflow-hidden">
+                              <select
+                                className="w-full px-3 py-2 border rounded-md text-sm"
+                                value={booking.assignedAgent || ''}
+                                onChange={(e) => assignTicket(booking.id, e.target.value)}
+                              >
+                                <option value="">Select Agent</option>
+                                {agents.map((agent: any) => (
+                                  <option key={agent.id} value={agent.email} className="truncate">
+                                    {agent.name.length > 15 ? agent.name.substring(0, 15) + '...' : agent.name} ({agent.email.substring(0, 15)}...)
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No {statusFilter === 'all' ? '' : statusFilter} bookings found</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop View for Bookings */}
+              <div className="hidden lg:grid grid-cols-3 gap-4">
+                {filteredBookings.length > 0 ? (
+                  filteredBookings.map((booking) => (
+                    <div key={booking.id} className="bg-white rounded-lg shadow-sm p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start gap-3">
+                          <Checkbox 
+                            checked={selectedBookings.includes(booking.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedBookings([...selectedBookings, booking.id]);
+                              } else {
+                                setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
+                              }
+                            }}
+                          />
+                          <div>
+                            <h3 className="font-medium">{booking.name}</h3>
+                            <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
+                          </div>
+                        </div>
+                        <select
+                          value={booking.status || 'pending'}
+                          onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            booking.status === 'completed' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Phone size={16} className="text-gray-400" />
+                          <span>{booking.phone}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail size={16} className="text-gray-400" />
+                          <span>{booking.email}</span>
+                        </div>
+                        <div className="border-t border-gray-100 pt-3">
                           <p><span className="font-medium">Service:</span> {booking.booking_type}</p>
                           <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
                           <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
-                          <div>
+                          <div className="mt-2">
                             <span className="font-medium">Passengers:</span>
-                            <div className="ml-2">
+                            <div className="ml-2 mt-1">
                               {Array.isArray(booking.passengers) ? booking.passengers.map((passenger, idx) => (
-                                <div key={idx} className="text-sm">
-                                  {passenger.name} ({passenger.age} years, {passenger.gender})
+                                <div key={idx} className="text-sm bg-gray-50 p-1 rounded mb-1">
+                                  {passenger.name} ({passenger.age} yrs, {passenger.gender})
                                 </div>
                               )) : (
                                 <div>{booking.passengers}</div>
                               )}
                             </div>
                           </div>
-                          {booking.additional_requirements && (
-                            <p><span className="font-medium">Notes:</span> {booking.additional_requirements}</p>
-                          )}
-                          <div className="mt-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Admin Notes</label>
-                            <Textarea
-                              value={adminNotes[booking.id] || ''}
-                              onChange={(e) => handleNoteChange(booking.id, e.target.value)}
-                              placeholder="Add notes about this booking..."
-                              className="w-full min-h-[100px] text-sm"
-                            />
-                          </div>
+                        </div>
+                        <div className="border-t border-gray-100 pt-3">
+                          <Textarea
+                            value={adminNotes[booking.id] || ''}
+                            onChange={(e) => handleNoteChange(booking.id, e.target.value)}
+                            placeholder="Add notes..."
+                            className="w-full min-h-[80px] text-sm"
+                          />
                         </div>
 
-                        <div className="flex justify-between items-center pt-2">
-                          {/* Action Buttons */}
+                        <div className="flex justify-between items-center pt-3 border-t border-gray-100">
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleCall(booking.phone)}
@@ -845,7 +1118,7 @@ const Admin = () => {
                               <Phone size={16} />
                             </button>
                             <button
-                              onClick={() => handleWhatsapp(booking.phone)}
+                              onClick={() => handleWhatsapp(booking.phone, booking)}
                               className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
                               title="WhatsApp"
                             >
@@ -860,7 +1133,6 @@ const Admin = () => {
                             </button>
                           </div>
 
-                          {/* Edit/Delete Buttons */}
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleEdit(booking)}
@@ -878,167 +1150,26 @@ const Admin = () => {
                             </button>
                           </div>
                         </div>
+                        
                         <div className="mt-4 border-t pt-4">
                           <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
                           <div className="w-full max-w-full overflow-hidden">
-                            <select 
-                              className="w-full px-3 py-2 border rounded-md text-sm"
+                            <select
+                              className="w-full px-3 py-2 border rounded-md"
                               value={booking.assignedAgent || ''}
                               onChange={(e) => assignTicket(booking.id, e.target.value)}
                             >
                               <option value="">Select Agent</option>
                               {agents.map((agent: any) => (
-                                <option key={agent.id} value={agent.email} className="truncate">
-                                  {agent.name.length > 15 ? agent.name.substring(0, 15) + '...' : agent.name} ({agent.email.substring(0, 15)}...)
+                                <option key={agent.id} value={agent.email}>
+                                  {agent.name} ({agent.email})
                                 </option>
                               ))}
                             </select>
                           </div>
                         </div>
-                      </>
-                    )}
-                  </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No {statusFilter === 'all' ? '' : statusFilter} bookings found</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop View for Bookings - update to use filteredBookings instead of bookings */}
-              <div className="hidden lg:grid grid-cols-3 gap-4">
-                {filteredBookings.length > 0 ? (
-                  filteredBookings.map((booking) => (
-                    <div key={booking.id} className="bg-white rounded-lg shadow-sm p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-start gap-3">
-                        <Checkbox 
-                          checked={selectedBookings.includes(booking.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedBookings([...selectedBookings, booking.id]);
-                            } else {
-                              setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
-                            }
-                          }}
-                        />
-                        <div>
-                          <h3 className="font-medium">{booking.name}</h3>
-                          <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
-                        </div>
-                      </div>
-                      <select
-                        value={booking.status || 'pending'}
-                        onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          booking.status === 'completed' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="completed">Completed</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Phone size={16} className="text-gray-400" />
-                        <span>{booking.phone}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Mail size={16} className="text-gray-400" />
-                        <span>{booking.email}</span>
-                      </div>
-                      <div className="border-t border-gray-100 pt-3">
-                        <p><span className="font-medium">Service:</span> {booking.booking_type}</p>
-                        <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
-                        <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
-                        <div className="mt-2">
-                          <span className="font-medium">Passengers:</span>
-                          <div className="ml-2 mt-1">
-                            {Array.isArray(booking.passengers) ? booking.passengers.map((passenger, idx) => (
-                              <div key={idx} className="text-sm bg-gray-50 p-1 rounded mb-1">
-                                {passenger.name} ({passenger.age} yrs, {passenger.gender})
-                              </div>
-                            )) : (
-                              <div>{booking.passengers}</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="border-t border-gray-100 pt-3">
-                        <Textarea
-                          value={adminNotes[booking.id] || ''}
-                          onChange={(e) => handleNoteChange(booking.id, e.target.value)}
-                          placeholder="Add notes..."
-                          className="w-full min-h-[80px] text-sm"
-                        />
-                      </div>
-
-                      <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleCall(booking.phone)}
-                            className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
-                            title="Call"
-                          >
-                            <Phone size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleWhatsapp(booking.phone)}
-                            className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
-                            title="WhatsApp"
-                          >
-                            <MessageSquare size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleEmail(booking.email)}
-                            className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
-                            title="Email"
-                          >
-                            <Mail size={16} />
-                          </button>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleEdit(booking)}
-                            className="p-2 hover:bg-gray-200 rounded-full"
-                            title="Edit"
-                          >
-                            <PencilIcon size={16} className="text-blue-600" />
-                          </button>
-                          <button
-                            onClick={() => deleteBookings([booking.id])}
-                            className="p-2 hover:bg-gray-200 rounded-full"
-                            title="Delete"
-                          >
-                            <TrashIcon size={16} className="text-red-600" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="mt-4 border-t pt-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
-                        <div className="w-full max-w-full overflow-hidden">
-                          <select 
-                            className="w-full px-3 py-2 border rounded-md"
-                            value={booking.assignedAgent || ''}
-                            onChange={(e) => assignTicket(booking.id, e.target.value)}
-                          >
-                            <option value="">Select Agent</option>
-                            {agents.map((agent: any) => (
-                              <option key={agent.id} value={agent.email}>
-                                {agent.name} ({agent.email})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
                       </div>
                     </div>
-                  </div>
                   ))
                 ) : (
                   <div className="col-span-3 text-center py-8 text-gray-500">
@@ -1275,6 +1406,117 @@ const Admin = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* WhatsApp Message Modal */}
+      <Dialog open={whatsappModal} onOpenChange={setWhatsappModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Send Booking Information</DialogTitle>
+          </DialogHeader>
+          {currentBooking && (
+            <div className="space-y-4 my-4">
+              <div className="bg-gray-50 p-3 rounded-md text-sm">
+                <p><span className="font-medium">Customer:</span> {currentBooking.name}</p>
+                <p><span className="font-medium">Journey:</span> {currentBooking.from} to {currentBooking.to}</p>
+                <p><span className="font-medium">Date:</span> {currentBooking.journey_date}</p>
+                <p><span className="font-medium">Original Service:</span> {currentBooking.booking_type || 'Not specified'}</p>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="bookingType">Booking Type</Label>
+                  <select
+                    id="bookingType"
+                    className="w-full px-3 py-2 border rounded-md"
+                    value={messageDetails.bookingType}
+                    onChange={(e) => handleBookingTypeChange(e.target.value)}
+                  >
+                    <option value="General Booking">General Booking</option>
+                    <option value="Tatkal Booking">Tatkal Booking</option>
+                    <option value="Premium Booking">Premium Booking</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {messageDetails.bookingType === 'Tatkal Booking' ? 
+                      'Tatkal bookings have a fixed charge of ₹200.' : 
+                      messageDetails.bookingType === 'Premium Booking' ? 
+                      'Premium bookings have a minimum charge of ₹200.' : 
+                      'General bookings have a fixed charge of ₹50.'}
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="ticketCost">Ticket Cost (₹)</Label>
+                    <Input
+                      id="ticketCost"
+                      type="number"
+                      value={messageDetails.ticketCost}
+                      onChange={(e) => {
+                        const newTicketCost = e.target.value;
+                        const bookingCharge = calculateBookingCharge(
+                          messageDetails.bookingType, 
+                          parseFloat(newTicketCost) || 0
+                        ).toFixed(2);
+                        
+                        setMessageDetails({
+                          ...messageDetails,
+                          ticketCost: newTicketCost,
+                          bookingCharge: bookingCharge
+                        });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="bookingCharge">Booking Charge (₹)</Label>
+                    <Input
+                      id="bookingCharge"
+                      type="number"
+                      value={messageDetails.bookingCharge}
+                      onChange={(e) => setMessageDetails({
+                        ...messageDetails,
+                        bookingCharge: e.target.value
+                      })}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="totalAmount">Total Amount (₹)</Label>
+                  <Input
+                    id="totalAmount"
+                    type="text"
+                    value={calculateTotal()}
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="additionalInfo">Additional Information</Label>
+                  <Textarea
+                    id="additionalInfo"
+                    value={messageDetails.additionalInfo}
+                    onChange={(e) => setMessageDetails({
+                      ...messageDetails,
+                      additionalInfo: e.target.value
+                    })}
+                    placeholder="Any additional details or instructions..."
+                    className="min-h-[80px]"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWhatsappModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={sendWhatsappMessage}>
+              Send to WhatsApp
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
