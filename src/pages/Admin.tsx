@@ -474,7 +474,7 @@ const Admin = () => {
       passengerInfo = `*Passengers:* ${currentBooking.passengers}\n`;
     }
     
-    // Build the formatted message based on booking type
+    // Build the formatted message  based on booking type
     let pricingDetails = '';
     
     if (messageDetails.bookingType === 'Tatkal Booking') {
