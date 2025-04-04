@@ -4,6 +4,14 @@ import { MapPin, Calendar, Clock, Users, Check, Star, Image } from "lucide-react
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useToast } from "@/hooks/use-toast";
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 // This would normally come from the database
 const packagesData = {
@@ -870,6 +878,27 @@ const PackageDetail = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [travelers, setTravelers] = useState(2);
   const { toast } = useToast();
+  const [bookingForm, setBookingForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    date: '',
+    adults: 1,
+    children: 0,
+    special_requests: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  
+  // Add new state for the initial contact form
+  const [contactInfo, setContactInfo] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  });
+  const [showContactForm, setShowContactForm] = useState(true);
+  const [contactFormComplete, setContactFormComplete] = useState(false);
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   
   useEffect(() => {
     // Simulate loading data from API
@@ -892,10 +921,103 @@ const PackageDetail = () => {
   }, [id]);
   
   const handleBookNow = () => {
-    toast({
-      title: "Booking Initiated",
-      description: `Your booking request for ${packageData.title} for ${travelers} travelers has been received. We'll contact you shortly.`,
-    });
+    setBookingModalOpen(true);
+  };
+
+  // Validate contact form
+  const validateContactForm = () => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!contactInfo.name.trim()) {
+      errors.name = "Name is required";
+    }
+    
+    if (!contactInfo.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(contactInfo.email)) {
+      errors.email = "Please enter a valid email";
+    }
+    
+    if (!contactInfo.phone.trim()) {
+      errors.phone = "Phone number is required";
+    } else if (!/^\d{10}$/.test(contactInfo.phone.replace(/\D/g, ''))) {
+      errors.phone = "Please enter a valid 10-digit phone number";
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  // Handle initial form submission
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (validateContactForm()) {
+      // Transfer contact info to booking form
+      setBookingForm(prev => ({
+        ...prev,
+        name: contactInfo.name,
+        email: contactInfo.email,
+        phone: contactInfo.phone
+      }));
+      
+      setContactFormComplete(true);
+      setShowContactForm(false);
+      setBookingModalOpen(true);
+    }
+  };
+  
+  const handleBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      // Save booking to Firestore
+      await addDoc(collection(db, 'package_bookings'), {
+        package_id: id,
+        package_name: packageData?.title || 'Unknown Package',
+        name: bookingForm.name,
+        email: bookingForm.email,
+        phone: bookingForm.phone,
+        travel_date: bookingForm.date,
+        adults_count: bookingForm.adults,
+        children_count: bookingForm.children,
+        special_requests: bookingForm.special_requests,
+        status: 'pending',
+        created_at: serverTimestamp()
+      });
+      
+      // Show success message
+      toast({
+        title: "Booking Successful",
+        description: "Your package booking has been submitted. We'll contact you shortly.",
+      });
+      
+      // Reset form
+      setBookingForm({
+        name: '',
+        email: '',
+        phone: '',
+        date: '',
+        adults: 1,
+        children: 0,
+        special_requests: ''
+      });
+      
+      // Close booking modal
+      setBookingModalOpen(false);
+      setContactFormComplete(false);
+      setShowContactForm(true);
+    } catch (error) {
+      console.error("Error submitting booking:", error);
+      toast({
+        title: "Booking Failed",
+        description: "There was an error submitting your booking. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -1089,76 +1211,76 @@ const PackageDetail = () => {
                 <div className="bg-white rounded-lg shadow-md p-6 sticky top-24">
                   <h2 className="text-2xl font-bold text-travel-blue-dark mb-4">Book This Package</h2>
                   
-                  <div className="mb-4">
-                    <label className="block text-gray-700 mb-2">Number of Travelers</label>
-                    <div className="flex items-center">
-                      <button 
-                        onClick={() => setTravelers(prev => Math.max(1, prev - 1))}
-                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-l"
+                  {/* Contact form before booking */}
+                  {showContactForm && (
+                    <form onSubmit={handleContactSubmit} className="space-y-4">
+                      <div>
+                        <Label htmlFor="name">Your Name</Label>
+                        <Input 
+                          id="name"
+                          value={contactInfo.name}
+                          onChange={(e) => setContactInfo({...contactInfo, name: e.target.value})}
+                          placeholder="Enter your full name"
+                        />
+                        {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input 
+                          id="email"
+                          type="email"
+                          value={contactInfo.email}
+                          onChange={(e) => setContactInfo({...contactInfo, email: e.target.value})}
+                          placeholder="Enter your email"
+                        />
+                        {formErrors.email && <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>}
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input 
+                          id="phone"
+                          value={contactInfo.phone}
+                          onChange={(e) => setContactInfo({...contactInfo, phone: e.target.value})}
+                          placeholder="Enter your phone number"
+                        />
+                        {formErrors.phone && <p className="text-red-500 text-sm mt-1">{formErrors.phone}</p>}
+                      </div>
+                      
+                      <Button type="submit" className="w-full">
+                        Book Now
+                      </Button>
+                    </form>
+                  )}
+                  
+                  {/* Call to action buttons for non-contact form state (should not normally be visible) */}
+                  {!showContactForm && !bookingModalOpen && (
+                    <div className="space-y-4">
+                      <Button 
+                        className="w-full" 
+                        onClick={() => setBookingModalOpen(true)}
                       >
-                        -
-                      </button>
-                      <input 
-                        type="number" 
-                        value={travelers}
-                        readOnly
-                        className="w-16 py-2 px-3 text-center border-t border-b border-gray-300"
-                      />
-                      <button 
-                        onClick={() => setTravelers(prev => Math.min(packageData.maxPeople, prev + 1))}
-                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-r"
+                        Book Now
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setShowContactForm(true)}
                       >
-                        +
-                      </button>
+                        Edit Contact Info
+                      </Button>
                     </div>
-                  </div>
+                  )}
                   
-                  <div className="mb-4">
-                    <label className="block text-gray-700 mb-2">Select Travel Date</label>
-                    <input 
-                      type="date" 
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                      min={new Date().toISOString().split('T')[0]}
-                    />
-                  </div>
-                  
-                  <div className="border-t border-gray-200 pt-4 mb-4">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-gray-700">Base Price</span>
-                      <span className="text-gray-700">{packageData.price} x {travelers}</span>
-                    </div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-gray-700">Taxes & Fees</span>
-                      <span className="text-gray-700">₹{(parseInt(packageData.price.replace(/[^0-9]/g, '')) * 0.18).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-lg border-t border-gray-200 pt-2">
-                      <span className="text-travel-blue-dark">Total</span>
-                      <span className="text-travel-blue-dark">₹{(parseInt(packageData.price.replace(/[^0-9]/g, '')) * travelers * 1.18).toLocaleString()}</span>
-                    </div>
-                  </div>
-                  
-                  <button 
-                    onClick={handleBookNow}
-                    className="w-full py-3 btn-primary text-lg mb-4"
-                  >
-                    Book Now
-                  </button>
-                  
-                  <p className="text-sm text-gray-500 mb-4">
-                    * A 20% advance payment is required to confirm your booking.
-                  </p>
-                  
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-travel-blue-dark mb-2">Need Help?</h3>
-                    <p className="text-gray-600 text-sm mb-2">
-                      Our travel experts are here to assist you with your booking and answer any questions.
-                    </p>
-                    <Link 
-                      to="/contact" 
-                      className="text-travel-orange hover:text-travel-blue-dark font-medium text-sm flex items-center gap-1"
-                    >
-                      Contact Us <span aria-hidden="true">→</span>
-                    </Link>
+                  <div className="mt-6 border-t pt-4">
+                    <h3 className="font-medium mb-2">Why Book With Us</h3>
+                    <ul className="text-sm space-y-2">
+                      <li>✓ Best price guarantee</li>
+                      <li>✓ 24/7 customer support</li>
+                      <li>✓ Flexible payment options</li>
+                      <li>✓ Customizable itineraries</li>
+                    </ul>
                   </div>
                 </div>
               </div>
@@ -1217,6 +1339,112 @@ const PackageDetail = () => {
         </section>
       </main>
       <Footer />
+      
+      {/* Booking Modal */}
+      <Dialog open={bookingModalOpen} onOpenChange={setBookingModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Book {packageData?.title}</DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleBooking} className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <Label htmlFor="date">Travel Date</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  required
+                  value={bookingForm.date}
+                  onChange={(e) => setBookingForm({...bookingForm, date: e.target.value})}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="adults">Adults</Label>
+                <Input
+                  id="adults"
+                  type="number"
+                  min={1}
+                  required
+                  value={bookingForm.adults}
+                  onChange={(e) => setBookingForm({...bookingForm, adults: parseInt(e.target.value) || 1})}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="children">Children</Label>
+                <Input
+                  id="children"
+                  type="number"
+                  min={0}
+                  value={bookingForm.children}
+                  onChange={(e) => setBookingForm({...bookingForm, children: parseInt(e.target.value) || 0})}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="special_requests">Special Requests (Optional)</Label>
+              <Textarea
+                id="special_requests"
+                placeholder="Any special requests or requirements..."
+                value={bookingForm.special_requests}
+                onChange={(e) => setBookingForm({...bookingForm, special_requests: e.target.value})}
+                className="min-h-[100px]"
+              />
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span>Price per person:</span>
+                <span>₹{packageData?.price.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span>Adults:</span>
+                <span>{bookingForm.adults} × ₹{packageData?.price.toLocaleString('en-IN')}</span>
+              </div>
+              {bookingForm.children > 0 && (
+                <div className="flex justify-between items-center mb-2">
+                  <span>Children:</span>
+                  <span>{bookingForm.children} × ₹{Math.round(packageData?.price * 0.7).toLocaleString('en-IN')}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center font-bold pt-2 border-t">
+                <span>Total:</span>
+                <span>₹{(
+                  (packageData?.price * bookingForm.adults) +
+                  (packageData?.price * 0.7 * bookingForm.children)
+                ).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setBookingModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent"></span>
+                    Processing...
+                  </span>
+                ) : (
+                  "Complete Booking"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

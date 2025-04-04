@@ -71,6 +71,46 @@ const AgentDashboard = () => {
     }
   }, [user, isAgent, loading, navigate, toast]);
 
+  // Add a useEffect to fetch package bookings
+  useEffect(() => {
+    if (!loading && user && isAgent) {
+      const agentEmail = user.email;
+      if (!agentEmail) return;
+      
+      // Fetch package bookings assigned to this agent
+      const packageBookingsRef = collection(db, "package_bookings");
+      const packageQuery = query(
+        packageBookingsRef, 
+        where("assignedAgent", "==", agentEmail),
+        orderBy("created_at", "desc")
+      );
+      
+      const unsubscribe = onSnapshot(packageQuery, (snapshot) => {
+        const packageBookingsList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          created_at: doc.data().created_at?.toDate() || new Date()
+        }));
+        
+        // Add to the existing bookings array with a type indicator
+        const packageBookingsWithType = packageBookingsList.map(booking => ({
+          ...booking,
+          booking_type: 'package'
+        }));
+        
+        setBookings(prevBookings => {
+          // Filter out any package bookings that might have been added before
+          const regularBookings = prevBookings.filter(b => b.booking_type !== 'package');
+          return [...regularBookings, ...packageBookingsWithType];
+        });
+        
+        setIsLoading(false);
+      });
+      
+      return () => unsubscribe();
+    }
+  }, [user, isAgent, loading]);
+
   // Filter bookings based on status
   const filteredBookings = useCallback(() => {
     if (statusFilter === 'all') return bookings;

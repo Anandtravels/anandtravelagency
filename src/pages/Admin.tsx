@@ -64,6 +64,10 @@ const Admin = () => {
     additionalInfo: '',
     bookingType: 'General Booking' // Add booking type with default value
   });
+  const [packageBookings, setPackageBookings] = useState<any[]>([]);
+  const [packageBookingLoading, setPackageBookingLoading] = useState(true);
+  const [selectedPackageBookings, setSelectedPackageBookings] = useState<string[]>([]);
+  const [packageStatusFilter, setPackageStatusFilter] = useState<string>('all');
 
   // Memoized values
   const combinedLoading = useMemo(() => bookingLoading || contactsLoading, [bookingLoading, contactsLoading]);
@@ -82,6 +86,21 @@ const Admin = () => {
     if (statusFilter === 'completed') return bookings.filter(b => b.status === 'completed');
     return bookings;
   }, [bookings, statusFilter]);
+
+  const packageBookingStats = useMemo(() => {
+    const pending = packageBookings.filter(b => !b.status || b.status === 'pending').length;
+    const completed = packageBookings.filter(b => b.status === 'completed').length;
+    const total = packageBookings.length;
+    
+    return { pending, completed, total };
+  }, [packageBookings]);
+  
+  const filteredPackageBookings = useMemo(() => {
+    if (packageStatusFilter === 'all') return packageBookings;
+    if (packageStatusFilter === 'pending') return packageBookings.filter(b => !b.status || b.status === 'pending');
+    if (packageStatusFilter === 'completed') return packageBookings.filter(b => b.status === 'completed');
+    return packageBookings;
+  }, [packageBookings, packageStatusFilter]);
 
   // Debounced functions
   const debouncedNoteUpdate = useCallback(
@@ -251,11 +270,46 @@ const Admin = () => {
       }
     );
 
+    // Add package bookings listener
+    const packageBookingsQuery = query(
+      collection(db, 'package_bookings'),
+      orderBy('created_at', 'desc')
+    );
+
+    const packageBookingsUnsubscribe = onSnapshot(packageBookingsQuery, 
+      (snapshot) => {
+        const packageBookingsData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          // Update adminNotes state with existing notes
+          setAdminNotes(prev => ({
+            ...prev,
+            [doc.id]: data.admin_notes || ''
+          }));
+          return {
+            id: doc.id,
+            ...data,
+            created_at: data.created_at?.toDate() || new Date()
+          };
+        });
+        setPackageBookings(packageBookingsData);
+        setPackageBookingLoading(false);
+      },
+      (error) => {
+        console.error("Error listening to package bookings:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load package booking data",
+          variant: "destructive",
+        });
+      }
+    );
+
     // Return cleanup function
     return () => {
       bookingsUnsubscribe();
       contactsUnsubscribe();
       agentsUnsubscribe();
+      packageBookingsUnsubscribe();
     };
   };
 
@@ -746,6 +800,121 @@ Thank you for choosing Anand Travels!`;
     }
   };
 
+  const deletePackageBookings = async (ids: string[]) => {
+    if (!window.confirm('Are you sure you want to delete the selected package bookings?')) return;
+
+    try {
+      // First verify admin auth
+      if (!user || user.email !== 'admin@anandtravels.com') {
+        throw new Error('Unauthorized access');
+      }
+
+      await Promise.all(ids.map(id => deleteDoc(doc(db, 'package_bookings', id))));
+      setSelectedPackageBookings([]);
+      
+      toast({
+        title: "Deleted Successfully",
+        description: "Selected package bookings have been deleted",
+      });
+    } catch (error) {
+      console.error("Error deleting package bookings:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete package bookings. Please check your permissions.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updatePackageBookingStatus = async (bookingId: string, status: 'pending' | 'completed') => {
+    try {
+      // First verify admin auth
+      if (!user || user.email !== 'admin@anandtravels.com') {
+        throw new Error('Unauthorized access');
+      }
+
+      await updateDoc(doc(db, 'package_bookings', bookingId), { 
+        status,
+        updated_at: serverTimestamp(),
+        updated_by: user.email
+      });
+
+      toast({
+        title: "Status Updated",
+        description: "Package booking status has been updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update package booking status. Please check your permissions.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const assignPackageTicket = async (bookingId: string, agentEmail: string) => {
+    try {
+      // Similar to assignTicket but for package bookings
+      if (!agentEmail) {
+        await updateDoc(doc(db, 'package_bookings', bookingId), {
+          assignedAgent: null,
+          assignedAt: null
+        });
+        
+        toast({
+          title: "Agent Unassigned",
+          description: "Agent has been removed from this package booking"
+        });
+        return;
+      }
+      
+      await updateDoc(doc(db, 'package_bookings', bookingId), {
+        assignedAgent: agentEmail,
+        assignedAt: serverTimestamp()
+      });
+
+      // Format WhatsApp message with detailed information
+      const booking = packageBookings.find(b => b.id === bookingId);
+      
+      // Create a comprehensive message
+      const message = `🏝️ *NEW PACKAGE BOOKING ASSIGNED*\n\n` +
+        `*Booking ID:* ${bookingId}\n` +
+        `*Package Name:* ${booking.package_name || 'Not specified'}\n\n` +
+        `*Travel Details:*\n` +
+        `Date: ${booking.travel_date}\n` +
+        `Adults: ${booking.adults_count}\n` +
+        `Children: ${booking.children_count}\n\n` +
+        
+        `*Customer Details:*\n` +
+        `Name: ${booking.name}\n` +
+        `Phone: ${booking.phone}\n` +
+        `Email: ${booking.email}\n` +
+        `${booking.special_requests ? `\n*Special Requests:*\n${booking.special_requests}` : ''}\n\n` +
+        
+        `Please check your dashboard for complete details and update the status once completed.\n` +
+        `Thank you for your service! 👍`;
+      
+      // Open WhatsApp with pre-filled message
+      const agent = agents.find(a => a.email === agentEmail);
+      if (agent && agent.phone) {
+        window.open(`https://wa.me/${agent.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+      }
+      
+      toast({
+        title: "Package Assigned",
+        description: "Package booking has been assigned to agent successfully"
+      });
+    } catch (error) {
+      console.error("Error assigning/unassigning package:", error);
+      toast({
+        title: "Error",
+        description: "Failed to assign package booking",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -772,6 +941,7 @@ Thank you for choosing Anand Travels!`;
         <Tabs defaultValue="bookings" className="w-full">
           <TabsList className="mb-6 w-full flex">
             <TabsTrigger value="bookings" className="flex-1">Bookings</TabsTrigger>
+            <TabsTrigger value="packages" className="flex-1">Package Bookings</TabsTrigger>
             <TabsTrigger value="messages" className="flex-1">Messages</TabsTrigger>
             <TabsTrigger value="agents" className="flex-1">Agents</TabsTrigger>
           </TabsList>
@@ -1174,6 +1344,287 @@ Thank you for choosing Anand Travels!`;
                 ) : (
                   <div className="col-span-3 text-center py-8 text-gray-500">
                     <p>No {statusFilter === 'all' ? '' : statusFilter} bookings found</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="packages">
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-xl font-bold text-travel-blue-dark">Package Bookings</h2>
+                
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  {/* Status filter dropdown */}
+                  <div className="relative">
+                    <select
+                      className="pl-3 pr-10 py-2 text-sm border rounded-md bg-white w-full"
+                      value={packageStatusFilter}
+                      onChange={(e) => setPackageStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Package Bookings ({packageBookingStats.total})</option>
+                      <option value="pending">Pending ({packageBookingStats.pending})</option>
+                      <option value="completed">Completed ({packageBookingStats.completed})</option>
+                    </select>
+                  </div>
+                  
+                  {/* Delete selected button */}
+                  {selectedPackageBookings.length > 0 && (
+                    <button
+                      onClick={() => deletePackageBookings(selectedPackageBookings)}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+                    >
+                      <TrashIcon size={16} />
+                      Delete Selected ({selectedPackageBookings.length})
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Mobile View for Package Bookings */}
+              <div className="block lg:hidden space-y-4">
+                {filteredPackageBookings.length > 0 ? (
+                  filteredPackageBookings.map((booking) => (
+                    <div key={booking.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={selectedPackageBookings.includes(booking.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedPackageBookings([...selectedPackageBookings, booking.id]);
+                              } else {
+                                setSelectedPackageBookings(selectedPackageBookings.filter(id => id !== booking.id));
+                              }
+                            }}
+                          />
+                          <div>
+                            <h3 className="font-medium">{booking.name}</h3>
+                            <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
+                          </div>
+                        </div>
+                        <select
+                          value={booking.status || 'pending'}
+                          onChange={(e) => updatePackageBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            booking.status === 'completed' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                      </div>
+
+                      <div className="text-sm space-y-2">
+                        <p><span className="font-medium">Contact:</span> {booking.email} | {booking.phone}</p>
+                        <p><span className="font-medium">Package:</span> {booking.package_name}</p>
+                        <p><span className="font-medium">Date:</span> {booking.travel_date}</p>
+                        <p><span className="font-medium">Travelers:</span> {booking.adults_count} Adults, {booking.children_count} Children</p>
+                        {booking.special_requests && (
+                          <p><span className="font-medium">Special Requests:</span> {booking.special_requests}</p>
+                        )}
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Admin Notes</label>
+                          <Textarea
+                            value={adminNotes[booking.id] || ''}
+                            onChange={(e) => handleNoteChange(booking.id, e.target.value)}
+                            placeholder="Add notes about this booking..."
+                            className="w-full min-h-[100px] text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center pt-2">
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleCall(booking.phone)}
+                            className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
+                            title="Call"
+                          >
+                            <Phone size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleWhatsapp(booking.phone, booking)}
+                            className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
+                            title="WhatsApp"
+                          >
+                            <MessageSquare size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleEmail(booking.email)}
+                            className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                            title="Email"
+                          >
+                            <Mail size={16} />
+                          </button>
+                        </div>
+
+                        {/* Delete Button */}
+                        <div>
+                          <button
+                            onClick={() => deletePackageBookings([booking.id])}
+                            className="p-2 hover:bg-gray-200 rounded-full"
+                            title="Delete"
+                          >
+                            <TrashIcon size={16} className="text-red-600" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 border-t pt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
+                        <div className="w-full max-w-full overflow-hidden">
+                          <select
+                            className="w-full px-3 py-2 border rounded-md text-sm"
+                            value={booking.assignedAgent || ''}
+                            onChange={(e) => assignPackageTicket(booking.id, e.target.value)}
+                          >
+                            <option value="">Select Agent</option>
+                            {agents.map((agent: any) => (
+                              <option key={agent.id} value={agent.email} className="truncate">
+                                {agent.name.length > 15 ? agent.name.substring(0, 15) + '...' : agent.name} ({agent.email.substring(0, 15)}...)
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No {packageStatusFilter === 'all' ? '' : packageStatusFilter} package bookings found</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop View for Package Bookings */}
+              <div className="hidden lg:grid grid-cols-3 gap-4">
+                {filteredPackageBookings.length > 0 ? (
+                  filteredPackageBookings.map((booking) => (
+                    <div key={booking.id} className="bg-white rounded-lg shadow-sm p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start gap-3">
+                          <Checkbox 
+                            checked={selectedPackageBookings.includes(booking.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedPackageBookings([...selectedPackageBookings, booking.id]);
+                              } else {
+                                setSelectedPackageBookings(selectedPackageBookings.filter(id => id !== booking.id));
+                              }
+                            }}
+                          />
+                          <div>
+                            <h3 className="font-medium">{booking.name}</h3>
+                            <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
+                          </div>
+                        </div>
+                        <select
+                          value={booking.status || 'pending'}
+                          onChange={(e) => updatePackageBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            booking.status === 'completed' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Phone size={16} className="text-gray-400" />
+                          <span>{booking.phone}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail size={16} className="text-gray-400" />
+                          <span>{booking.email}</span>
+                        </div>
+                        <div className="border-t border-gray-100 pt-3">
+                          <p><span className="font-medium">Package:</span> {booking.package_name}</p>
+                          <p><span className="font-medium">Date:</span> {booking.travel_date}</p>
+                          <p><span className="font-medium">Travelers:</span> {booking.adults_count} Adults, {booking.children_count} Children</p>
+                          {booking.special_requests && (
+                            <div className="mt-2">
+                              <span className="font-medium">Special Requests:</span>
+                              <p className="mt-1 text-sm bg-gray-50 p-2 rounded">{booking.special_requests}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="border-t border-gray-100 pt-3">
+                          <Textarea
+                            value={adminNotes[booking.id] || ''}
+                            onChange={(e) => handleNoteChange(booking.id, e.target.value)}
+                            placeholder="Add notes..."
+                            className="w-full min-h-[80px] text-sm"
+                          />
+                        </div>
+
+                        <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleCall(booking.phone)}
+                              className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
+                              title="Call"
+                            >
+                              <Phone size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleWhatsapp(booking.phone, booking)}
+                              className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
+                              title="WhatsApp"
+                            >
+                              <MessageSquare size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleEmail(booking.email)}
+                              className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                              title="Email"
+                            >
+                              <Mail size={16} />
+                            </button>
+                          </div>
+
+                          <div>
+                            <button
+                              onClick={() => deletePackageBookings([booking.id])}
+                              className="p-2 hover:bg-gray-200 rounded-full"
+                              title="Delete"
+                            >
+                              <TrashIcon size={16} className="text-red-600" />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 border-t pt-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
+                          <div className="w-full max-w-full overflow-hidden">
+                            <select
+                              className="w-full px-3 py-2 border rounded-md"
+                              value={booking.assignedAgent || ''}
+                              onChange={(e) => assignPackageTicket(booking.id, e.target.value)}
+                            >
+                              <option value="">Select Agent</option>
+                              {agents.map((agent: any) => (
+                                <option key={agent.id} value={agent.email}>
+                                  {agent.name} ({agent.email})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-3 text-center py-8 text-gray-500">
+                    <p>No {packageStatusFilter === 'all' ? '' : packageStatusFilter} package bookings found</p>
                   </div>
                 )}
               </div>
