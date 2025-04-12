@@ -16,11 +16,60 @@ const Booking = () => {
     { name: '', age: '', gender: 'male' }
   ]);
 
-  const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm();
+  const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm({
+    defaultValues: {
+      phone: "",
+      name: "",
+      email: "",
+      from: "",
+      to: "",
+      journey_date: "",
+      passengers: "",
+      additional_requirements: "",
+      // Transport-specific fields
+      train_booking_type: "general",
+      train_class: "SL",
+      preferred_trains: "",
+      // Flight-specific fields
+      flight_trip_type: "one_way",
+      flight_class: "economy",
+      return_date: "",
+      preferred_airlines: "",
+      // Bus-specific fields
+      bus_type: "ac_seater",
+      boarding_point: "",
+      // Cab-specific fields
+      cab_type: "sedan",
+      cab_trip_type: "one_way",
+      pickup_address: ""
+    }
+  });
   
   const handleBookingTypeChange = (type) => {
     setBookingType(type);
-    reset();
+    reset({
+      phone: "",
+      name: "",
+      email: "",
+      from: "",
+      to: "",
+      journey_date: "",
+      passengers: "",
+      additional_requirements: "",
+      // Keep the defaults for all transport types
+      train_booking_type: "general",
+      train_class: "SL",
+      preferred_trains: "",
+      flight_trip_type: "one_way",
+      flight_class: "economy",
+      return_date: "",
+      preferred_airlines: "",
+      bus_type: "ac_seater",
+      boarding_point: "",
+      cab_type: "sedan",
+      cab_trip_type: "one_way",
+      pickup_address: ""
+    });
   };
 
   const handlePassengerCountChange = (e) => {
@@ -34,18 +83,12 @@ const Booking = () => {
     });
   };
 
-  // Fix the handlePassengerChange function to properly update individual passenger data
   const handlePassengerChange = (index: number, field: string, value: string) => {
-    // Create a deep copy of the passengers array to avoid reference issues
     const updatedPassengers = [...passengers.map(passenger => ({...passenger}))];
-    
-    // Update only the specific passenger's field
     updatedPassengers[index] = {
       ...updatedPassengers[index],
       [field]: value
     };
-    
-    // Set the updated passengers array
     setPassengers(updatedPassengers);
   };
   
@@ -53,16 +96,15 @@ const Booking = () => {
     setIsLoading(true);
     
     try {
-      // Add booking type to the data
       const bookingData = {
         ...data,
+        phone: "+91" + data.phone,
         booking_type: bookingType,
-        passengers: passengers, // Add passenger details to booking data
+        passengers: passengers,
         status: "pending",
         created_at: serverTimestamp()
       };
       
-      // Store booking data in Firestore
       const docRef = await addDoc(collection(db, 'bookings'), bookingData);
       
       toast({
@@ -70,8 +112,28 @@ const Booking = () => {
         description: "We've received your booking request. Our team will contact you shortly!",
       });
       
-      // Reset form
-      reset();
+      reset({
+        phone: "",
+        name: "",
+        email: "",
+        from: "",
+        to: "",
+        journey_date: "",
+        passengers: "",
+        additional_requirements: "",
+        train_booking_type: "general",
+        train_class: "SL",
+        preferred_trains: "",
+        flight_trip_type: "one_way",
+        flight_class: "economy",
+        return_date: "",
+        preferred_airlines: "",
+        bus_type: "ac_seater",
+        boarding_point: "",
+        cab_type: "sedan",
+        cab_trip_type: "one_way",
+        pickup_address: ""
+      });
     } catch (error) {
       console.error("Error submitting booking:", error);
       toast({
@@ -88,7 +150,6 @@ const Booking = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow">
-        {/* Hero Section */}
         <div className="relative h-[40vh] min-h-[300px] bg-cover bg-center flex items-center" 
              style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://source.unsplash.com/photo-1544620347-c4fd4a3d5957')" }}>
           <div className="container-custom text-white text-center">
@@ -99,7 +160,6 @@ const Booking = () => {
           </div>
         </div>
         
-        {/* Booking Type Section */}
         <section className="bg-white py-8 border-b">
           <div className="container-custom">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -158,11 +218,9 @@ const Booking = () => {
           </div>
         </section>
         
-        {/* Booking Form Section */}
         <section className="py-16 bg-gray-50">
           <div className="container-custom">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Booking Form */}
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-lg shadow-md p-8">
                   <h2 className="text-2xl font-bold text-travel-blue-dark mb-6">
@@ -173,10 +231,11 @@ const Booking = () => {
                   </h2>
                   
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                    {/* Common Form Fields */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-gray-700 font-medium mb-2">From</label>
+                        <label className="block text-gray-700 font-medium mb-2">
+                          From <span className="text-rose-500">*</span>
+                        </label>
                         <div className="relative">
                           <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                           <input
@@ -190,7 +249,9 @@ const Booking = () => {
                       </div>
                       
                       <div>
-                        <label className="block text-gray-700 font-medium mb-2">To</label>
+                        <label className="block text-gray-700 font-medium mb-2">
+                          To <span className="text-rose-500">*</span>
+                        </label>
                         <div className="relative">
                           <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                           <input
@@ -206,7 +267,9 @@ const Booking = () => {
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-gray-700 font-medium mb-2">Journey Date</label>
+                        <label className="block text-gray-700 font-medium mb-2">
+                          Journey Date <span className="text-rose-500">*</span>
+                        </label>
                         <div className="relative">
                           <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                           <input
@@ -220,14 +283,16 @@ const Booking = () => {
                       </div>
                     </div>
                     
-                    {/* Train Specific Fields */}
                     {bookingType === "train" && (
                       <>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
-                            <label className="block text-gray-700 font-medium mb-2">Booking Type</label>
+                            <label className="block text-gray-700 font-medium mb-2">
+                              Booking Type <span className="text-rose-500">*</span>
+                            </label>
                             <select
                               {...register("train_booking_type", { required: "Booking type is required" })}
+                              defaultValue="general"
                               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
                             >
                               <option value="general">General Booking</option>
@@ -238,9 +303,12 @@ const Booking = () => {
                           </div>
                           
                           <div>
-                            <label className="block text-gray-700 font-medium mb-2">Class Preference</label>
+                            <label className="block text-gray-700 font-medium mb-2">
+                              Class Preference <span className="text-rose-500">*</span>
+                            </label>
                             <select
                               {...register("train_class", { required: "Class preference is required" })}
+                              defaultValue="SL"
                               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
                             >
                               <option value="SL">Sleeper (SL)</option>
@@ -266,13 +334,15 @@ const Booking = () => {
                       </>
                     )}
                     
-                    {/* Bus Specific Fields */}
                     {bookingType === "bus" && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-gray-700 font-medium mb-2">Bus Type</label>
+                          <label className="block text-gray-700 font-medium mb-2">
+                            Bus Type <span className="text-rose-500">*</span>
+                          </label>
                           <select
                             {...register("bus_type", { required: "Bus type is required" })}
+                            defaultValue="ac_seater"
                             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
                           >
                             <option value="ac_seater">AC Seater</option>
@@ -296,14 +366,16 @@ const Booking = () => {
                       </div>
                     )}
                     
-                    {/* Flight Specific Fields */}
                     {bookingType === "flight" && (
                       <>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
-                            <label className="block text-gray-700 font-medium mb-2">Trip Type</label>
+                            <label className="block text-gray-700 font-medium mb-2">
+                              Trip Type <span className="text-rose-500">*</span>
+                            </label>
                             <select
                               {...register("flight_trip_type", { required: "Trip type is required" })}
+                              defaultValue="one_way"
                               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
                             >
                               <option value="one_way">One Way</option>
@@ -328,9 +400,12 @@ const Booking = () => {
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
-                            <label className="block text-gray-700 font-medium mb-2">Class Preference</label>
+                            <label className="block text-gray-700 font-medium mb-2">
+                              Class Preference <span className="text-rose-500">*</span>
+                            </label>
                             <select
                               {...register("flight_class", { required: "Class preference is required" })}
+                              defaultValue="economy"
                               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
                             >
                               <option value="economy">Economy</option>
@@ -354,14 +429,16 @@ const Booking = () => {
                       </>
                     )}
                     
-                    {/* Cab Specific Fields */}
                     {bookingType === "cab" && (
                       <>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
-                            <label className="block text-gray-700 font-medium mb-2">Cab Type</label>
+                            <label className="block text-gray-700 font-medium mb-2">
+                              Cab Type <span className="text-rose-500">*</span>
+                            </label>
                             <select
                               {...register("cab_type", { required: "Cab type is required" })}
+                              defaultValue="sedan"
                               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
                             >
                               <option value="hatchback">Hatchback</option>
@@ -374,9 +451,12 @@ const Booking = () => {
                           </div>
                           
                           <div>
-                            <label className="block text-gray-700 font-medium mb-2">Trip Type</label>
+                            <label className="block text-gray-700 font-medium mb-2">
+                              Trip Type <span className="text-rose-500">*</span>
+                            </label>
                             <select
                               {...register("cab_trip_type", { required: "Trip type is required" })}
+                              defaultValue="one_way"
                               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
                             >
                               <option value="one_way">One Way</option>
@@ -389,7 +469,9 @@ const Booking = () => {
                         </div>
                         
                         <div>
-                          <label className="block text-gray-700 font-medium mb-2">Pickup Address</label>
+                          <label className="block text-gray-700 font-medium mb-2">
+                            Pickup Address <span className="text-rose-500">*</span>
+                          </label>
                           <textarea
                             {...register("pickup_address", { required: "Pickup address is required" })}
                             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
@@ -401,7 +483,6 @@ const Booking = () => {
                       </>
                     )}
                     
-                    {/* Passenger Details */}
                     <div className="border-t border-gray-200 pt-6">
                       <h3 className="text-xl font-semibold text-travel-blue-dark mb-4">Passenger Details</h3>
                       
@@ -409,21 +490,49 @@ const Booking = () => {
                         <div>
                           <label className="block text-gray-700 font-medium mb-2">
                             Number of Passengers
-                            <span className="text-sm text-gray-500 ml-2">(Maximum 6)</span>
+                            {bookingType === "train" && (
+                              <span className="text-sm text-gray-500 ml-2">(Maximum 6)</span>
+                            )}
                           </label>
-                          <input
-                            type="number"
-                            value={passengerCount}
-                            onChange={(e) => {
-                              const count = parseInt(e.target.value);
-                              handlePassengerCountChange(e);
-                              // Also update the form field
-                              setValue("passengers", count);
-                            }}
-                            min="1"
-                            max="6"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                          />
+                          <div className="flex items-center">
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                if (passengerCount > 1) {
+                                  const newCount = passengerCount - 1;
+                                  setPassengerCount(newCount);
+                                  setPassengers(prev => prev.slice(0, newCount));
+                                  setValue("passengers", newCount.toString());
+                                }
+                              }}
+                              className="px-3 py-2 bg-gray-200 rounded-l-md border border-gray-300 hover:bg-gray-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={passengerCount <= 1}
+                            >
+                              -
+                            </button>
+                            <div className="px-4 py-2 border-t border-b border-gray-300 bg-white text-center" style={{minWidth: "60px"}}>
+                              {passengerCount}
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const maxPassengers = bookingType === "train" ? 6 : 20;
+                                if (passengerCount < maxPassengers) {
+                                  const newCount = passengerCount + 1;
+                                  setPassengerCount(newCount);
+                                  setPassengers(prev => [
+                                    ...prev, 
+                                    ...Array(newCount - prev.length).fill({ name: '', age: '', gender: 'male' })
+                                  ]);
+                                  setValue("passengers", newCount.toString());
+                                }
+                              }}
+                              className="px-3 py-2 bg-gray-200 rounded-r-md border border-gray-300 hover:bg-gray-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={bookingType === "train" ? passengerCount >= 6 : false}
+                            >
+                              +
+                            </button>
+                          </div>
                         </div>
 
                         {passengers.map((passenger, index) => (
@@ -471,13 +580,14 @@ const Booking = () => {
                       </div>
                     </div>
 
-                    {/* Contact Information */}
                     <div className="border-t border-gray-200 pt-6">
                       <h3 className="text-xl font-semibold text-travel-blue-dark mb-4">Contact Information</h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-gray-700 font-medium mb-2">Full Name</label>
+                          <label className="block text-gray-700 font-medium mb-2">
+                            Full Name <span className="text-rose-500">*</span>
+                          </label>
                           <div className="relative">
                             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                             <input
@@ -491,35 +601,47 @@ const Booking = () => {
                         </div>
                         
                         <div>
-                          <label className="block text-gray-700 font-medium mb-2">Phone Number</label>
-                          <div className="relative">
-                            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                            <input
-                              type="tel"
-                              {...register("phone", { 
-                                required: "Phone number is required",
-                                pattern: { value: /^[0-9]{10}$/, message: "Enter a valid 10-digit phone number" }
-                              })}
-                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                              placeholder="Your 10-digit phone number"
-                            />
+                          <label className="block text-gray-700 font-medium mb-2">
+                            Phone Number <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="relative flex">
+                            <div className="bg-gray-100 flex items-center px-3 border border-r-0 border-gray-300 rounded-l-md">
+                              <span className="text-gray-600 font-medium">+91</span>
+                            </div>
+                            <div className="relative flex-1">
+                              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                              <input
+                                type="tel"
+                                {...register("phone", { 
+                                  required: "Phone number is required",
+                                  pattern: { 
+                                    value: /^[0-9]{10}$/, 
+                                    message: "Enter a valid 10-digit phone number" 
+                                  }
+                                })}
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                                placeholder="10-digit number"
+                              />
+                            </div>
                           </div>
                           {errors.phone && <p className="text-red-500 text-sm mt-1">{String(errors.phone.message)}</p>}
                         </div>
                       </div>
                       
                       <div className="mt-6">
-                        <label className="block text-gray-700 font-medium mb-2">Email Address</label>
+                        <label className="block text-gray-700 font-medium mb-2">
+                          Email Address
+                          <span className="text-sm text-gray-500 ml-2">(Optional)</span>
+                        </label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                           <input
                             type="email"
                             {...register("email", { 
-                              required: "Email address is required",
                               pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: "Enter a valid email address" }
                             })}
                             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                            placeholder="Your email address"
+                            placeholder="Your email address (optional)"
                           />
                         </div>
                         {errors.email && <p className="text-red-500 text-sm mt-1">{String(errors.email.message)}</p>}
@@ -560,7 +682,6 @@ const Booking = () => {
                 </div>
               </div>
               
-              {/* Booking Info Sidebar */}
               <div className="lg:col-span-1">
                 <div className="bg-white rounded-lg shadow-md p-6 sticky top-24">
                   <h3 className="text-xl font-semibold text-travel-blue-dark mb-4">Booking Information</h3>

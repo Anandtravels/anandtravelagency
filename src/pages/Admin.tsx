@@ -40,7 +40,21 @@ const Admin = () => {
     journey_date: '',
     passengers: '',
     additional_requirements: '',
-    booking_type: ''
+    booking_type: '',
+    status: 'pending',
+    station_name: '',
+    travel_class: '',
+    boarding_point: '',
+    drop_point: '',
+    class_preference: '',
+    ticket_number: '',
+    pnr: '',
+    booking_reference: '',
+    payment_status: 'pending',
+    fare_details: '',
+    train_booking_type: '',
+    train_class: '',
+    preferred_trains: ''
   });
   const [agents, setAgents] = useState<any[]>([]);
   const [showAgentForm, setShowAgentForm] = useState(false);
@@ -55,6 +69,8 @@ const Admin = () => {
   });
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [bookingTypeFilter, setBookingTypeFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<string>('all');
   const [whatsappModal, setWhatsappModal] = useState(false);
   const [currentBooking, setCurrentBooking] = useState<any>(null);
   const [messageDetails, setMessageDetails] = useState({
@@ -68,6 +84,8 @@ const Admin = () => {
   const [packageBookingLoading, setPackageBookingLoading] = useState(true);
   const [selectedPackageBookings, setSelectedPackageBookings] = useState<string[]>([]);
   const [packageStatusFilter, setPackageStatusFilter] = useState<string>('all');
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editBooking, setEditBooking] = useState<any>(null);
 
   // Memoized values
   const combinedLoading = useMemo(() => bookingLoading || contactsLoading, [bookingLoading, contactsLoading]);
@@ -81,11 +99,58 @@ const Admin = () => {
   }, [bookings]);
   
   const filteredBookings = useMemo(() => {
-    if (statusFilter === 'all') return bookings;
-    if (statusFilter === 'pending') return bookings.filter(b => !b.status || b.status === 'pending');
-    if (statusFilter === 'completed') return bookings.filter(b => b.status === 'completed');
-    return bookings;
-  }, [bookings, statusFilter]);
+    let filtered = bookings;
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'pending') {
+        filtered = filtered.filter(b => !b.status || b.status === 'pending');
+      } else if (statusFilter === 'completed') {
+        filtered = filtered.filter(b => b.status === 'completed');
+      } else if (statusFilter === 'payment_done') {
+        filtered = filtered.filter(b => b.payment_status === 'completed');
+      } else if (statusFilter === 'payment_not_done') {
+        filtered = filtered.filter(b => !b.payment_status || b.payment_status === 'pending');
+      } else if (statusFilter === 'in_process') {
+        filtered = filtered.filter(b => b.status === 'in_process');
+      } else if (statusFilter === 'booked') {
+        filtered = filtered.filter(b => b.status === 'booked');
+      }
+    }
+    
+    // Apply booking type filter
+    if (bookingTypeFilter !== 'all') {
+      filtered = filtered.filter(b => b.booking_type === bookingTypeFilter);
+    }
+    
+    // Apply date filter
+    if (dateFilter !== 'all') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      // Format the dates as strings to match the journey_date format (YYYY-MM-DD)
+      const formatDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      const todayStr = formatDate(today);
+      const tomorrowStr = formatDate(tomorrow);
+      
+      if (dateFilter === 'today') {
+        filtered = filtered.filter(b => b.journey_date === todayStr);
+      } else if (dateFilter === 'tomorrow') {
+        filtered = filtered.filter(b => b.journey_date === tomorrowStr);
+      }
+    }
+    
+    return filtered;
+  }, [bookings, statusFilter, bookingTypeFilter, dateFilter]);
 
   const packageBookingStats = useMemo(() => {
     const pending = packageBookings.filter(b => !b.status || b.status === 'pending').length;
@@ -336,7 +401,7 @@ const Admin = () => {
     }
   };
 
-  const updateBookingStatus = async (bookingId: string, status: 'pending' | 'completed') => {
+  const updateBookingStatus = async (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked') => {
     try {
       // First verify admin auth
       if (!user || user.email !== 'admin@anandtravels.com') {
@@ -414,19 +479,36 @@ const Admin = () => {
     }
   };
 
-  const handleEdit = (booking: any) => {
-    setEditingId(booking.id);
+  const openEditModal = (booking: any) => {
+    setEditBooking(booking);
     setEditFormData({
-      name: booking.name,
-      email: booking.email,
-      phone: booking.phone,
-      from: booking.from,
-      to: booking.to,
+      name: booking.name || '',
+      email: booking.email || '',
+      phone: booking.phone || '',
+      from: booking.from || '',
+      to: booking.to || '',
       journey_date: booking.journey_date || '',
-      passengers: booking.passengers || '',
+      passengers: Array.isArray(booking.passengers)
+        ? booking.passengers.map((p: any) => `${p.name} (${p.age} yrs, ${p.gender})`).join("\n")
+        : booking.passengers || '',
       additional_requirements: booking.additional_requirements || '',
-      booking_type: booking.booking_type || ''
+      booking_type: booking.booking_type || '',
+      status: booking.status || 'pending',
+      station_name: booking.station_name || '',
+      travel_class: booking.travel_class || '',
+      boarding_point: booking.boarding_point || '',
+      drop_point: booking.drop_point || '',
+      class_preference: booking.class_preference || '',
+      ticket_number: booking.ticket_number || '',
+      pnr: booking.pnr || '',
+      booking_reference: booking.booking_reference || '',
+      payment_status: booking.payment_status || 'pending',
+      fare_details: booking.fare_details || '',
+      train_booking_type: booking.train_booking_type || '',
+      train_class: booking.train_class || '',
+      preferred_trains: booking.preferred_trains || ''
     });
+    setEditModalOpen(true);
   };
 
   const handleSaveEdit = async (bookingId: string) => {
@@ -435,7 +517,7 @@ const Admin = () => {
         ...editFormData,
         updated_at: serverTimestamp()
       });
-      setEditingId(null);
+      setEditModalOpen(false);
       toast({
         title: "Changes Saved",
         description: "Booking details have been updated successfully",
@@ -925,7 +1007,7 @@ Thank you for choosing Anand Travels!`;
               <h1 className="text-xl font-bold text-travel-blue-dark">Admin Dashboard</h1>
               <span className="hidden sm:inline text-sm text-gray-600">
                 {user?.email}
-              </span>
+              </span> 
             </div>
             <Button 
               variant="outline"
@@ -939,12 +1021,14 @@ Thank you for choosing Anand Travels!`;
 
       <main className="container-custom p-4">
         <Tabs defaultValue="bookings" className="w-full">
-          <TabsList className="mb-6 w-full flex">
-            <TabsTrigger value="bookings" className="flex-1">Bookings</TabsTrigger>
-            <TabsTrigger value="packages" className="flex-1">Package Bookings</TabsTrigger>
-            <TabsTrigger value="messages" className="flex-1">Messages</TabsTrigger>
-            <TabsTrigger value="agents" className="flex-1">Agents</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto pb-1 mb-5">
+            <TabsList className="w-full flex min-w-max">
+              <TabsTrigger value="bookings" className="flex-1">Bookings</TabsTrigger>
+              <TabsTrigger value="packages" className="flex-1">Package Bookings</TabsTrigger>
+              <TabsTrigger value="messages" className="flex-1">Messages</TabsTrigger>
+              <TabsTrigger value="agents" className="flex-1">Agents</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="bookings">
             <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
@@ -952,17 +1036,52 @@ Thank you for choosing Anand Travels!`;
                 <h2 className="text-xl font-bold text-travel-blue-dark">Booking Requests</h2>
                 
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                  {/* Status filter dropdown */}
-                  <div className="relative">
-                    <select
-                      className="pl-3 pr-10 py-2 text-sm border rounded-md bg-white w-full"
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                    >
-                      <option value="all">All Bookings ({bookingStats.total})</option>
-                      <option value="pending">Pending ({bookingStats.pending})</option>
-                      <option value="completed">Completed ({bookingStats.completed})</option>
-                    </select>
+                  {/* Enhanced filter section */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+                    {/* Status filter dropdown */}
+                    <div className="relative">
+                      <select
+                        className="pl-3 pr-10 py-2 text-sm border rounded-md bg-white w-full"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                      >
+                        <option value="all">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="payment_done">Payment Done</option>
+                        <option value="payment_not_done">Payment Not Done</option>
+                        <option value="in_process">In Process</option>
+                        <option value="booked">Booked</option>
+                      </select>
+                    </div>
+                    
+                    {/* Booking Type filter dropdown */}
+                    <div className="relative">
+                      <select
+                        className="pl-3 pr-10 py-2 text-sm border rounded-md bg-white w-full"
+                        value={bookingTypeFilter}
+                        onChange={(e) => setBookingTypeFilter(e.target.value)}
+                      >
+                        <option value="all">All Types</option>
+                        <option value="train">Train</option>
+                        <option value="bus">Bus</option>
+                        <option value="flight">Flight</option>
+                        <option value="cab">Cab</option>
+                      </select>
+                    </div>
+                    
+                    {/* Date filter dropdown */}
+                    <div className="relative">
+                      <select
+                        className="pl-3 pr-10 py-2 text-sm border rounded-md bg-white w-full"
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
+                      >
+                        <option value="all">All Dates</option>
+                        <option value="today">Today</option>
+                        <option value="tomorrow">Tomorrow</option>
+                      </select>
+                    </div>
                   </div>
                   
                   {/* Delete selected button */}
@@ -978,226 +1097,184 @@ Thank you for choosing Anand Travels!`;
                 </div>
               </div>
 
-              {/* Mobile View for Bookings */}
+              {/* Mobile View for Bookings - Fixed display */}
               <div className="block lg:hidden space-y-4">
                 {filteredBookings.length > 0 ? (
                   filteredBookings.map((booking) => (
-                    <div key={booking.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
-                      {editingId === booking.id ? (
-                        // Edit Mode
-                        <div className="space-y-3">
-                          <input
-                            type="text"
-                            value={editFormData.name}
-                            onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
-                            className="w-full px-3 py-2 border rounded"
-                            placeholder="Name"
+                    <div key={booking.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200 shadow-sm">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            checked={selectedBookings.includes(booking.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedBookings([...selectedBookings, booking.id]);
+                              } else {
+                                setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
+                              }
+                            }}
+                            className="mt-1"
                           />
-                          <div className="grid grid-cols-1 gap-2">
-                            <input
-                              type="email"
-                              value={editFormData.email}
-                              onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
-                              className="w-full px-3 py-2 border rounded"
-                              placeholder="Email"
-                            />
-                            <input
-                              type="tel"
-                              value={editFormData.phone}
-                              onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
-                              className="w-full px-3 py-2 border rounded"
-                              placeholder="Phone"
+                          <div>
+                            <h3 className="font-semibold text-base">{booking.name}</h3>
+                            <p className="text-xs text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">
+                                {booking.booking_type || 'Not specified'}
+                              </span>
+                              <span className={`inline-block px-2 py-0.5 rounded text-xs ${
+                                booking.status === 'completed' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : booking.status === 'in_process'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : booking.status === 'booked'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {booking.status === 'completed' ? 'Completed' : booking.status === 'in_process' ? 'In Process' : booking.status === 'booked' ? 'Booked' : 'Pending'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <select
+                          value={booking.status || 'pending'}
+                          onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked')}
+                          className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                            booking.status === 'completed' 
+                              ? 'bg-green-100 text-green-800 border-green-200' 
+                              : booking.status === 'in_process'
+                              ? 'bg-blue-100 text-blue-800 border-blue-200'
+                              : booking.status === 'booked'
+                              ? 'bg-purple-100 text-purple-800 border-purple-200'
+                              : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                          }`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="in_process">In Process</option>
+                          <option value="booked">Booked</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                      </div>
+
+                      {/* Collapsible Sections */}
+                      <div className="mt-4 space-y-2">
+                        <details className="bg-white p-3 rounded-md shadow-sm border border-gray-100">
+                          <summary className="font-medium text-sm cursor-pointer">Journey Details</summary>
+                          <div className="mt-2 pt-2 border-t text-sm space-y-1.5">
+                            <p><span className="font-medium text-gray-500">From:</span> {booking.from}</p>
+                            <p><span className="font-medium text-gray-500">To:</span> {booking.to}</p>
+                            <p><span className="font-medium text-gray-500">Date:</span> {booking.journey_date}</p>
+                            {booking.station_name && <p><span className="font-medium text-gray-500">Station:</span> {booking.station_name}</p>}
+                          </div>
+                        </details>
+                        
+                        <details className="bg-white p-3 rounded-md shadow-sm border border-gray-100">
+                          <summary className="font-medium text-sm cursor-pointer">Contact Information</summary>
+                          <div className="mt-2 pt-2 border-t space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Phone size={14} className="text-gray-400" />
+                              <a href={`tel:${booking.phone}`} className="text-sm hover:underline">{booking.phone}</a>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Mail size={14} className="text-gray-400" />
+                              <a href={`mailto:${booking.email}`} className="text-sm hover:underline text-xs sm:text-sm truncate max-w-[200px]">
+                                {booking.email}
+                              </a>
+                            </div>
+                          </div>
+                        </details>
+                        
+                        <details className="bg-white p-3 rounded-md shadow-sm border border-gray-100">
+                          <summary className="font-medium text-sm cursor-pointer">Passenger Info</summary>
+                          <div className="mt-2 pt-2 border-t text-sm">
+                            <div className="max-h-32 overflow-y-auto">
+                              {Array.isArray(booking.passengers) ? booking.passengers.map((passenger, idx) => (
+                                <div key={idx} className="bg-gray-50 p-2 rounded mb-1">
+                                  {passenger.name} <span className="text-gray-500 text-xs">({passenger.age} yrs, {passenger.gender})</span>
+                                </div>
+                              )) : (
+                                <div className="bg-gray-50 p-2 rounded">{booking.passengers}</div>
+                              )}
+                            </div>
+                          </div>
+                        </details>
+                        
+                        {booking.additional_requirements && (
+                          <details className="bg-white p-3 rounded-md shadow-sm border border-gray-100">
+                            <summary className="font-medium text-sm cursor-pointer">Special Requirements</summary>
+                            <div className="mt-2 pt-2 border-t text-sm">
+                              <p className="text-gray-700">{booking.additional_requirements}</p>
+                            </div>
+                          </details>
+                        )}
+                        
+                        <details className="bg-white p-3 rounded-md shadow-sm border border-gray-100">
+                          <summary className="font-medium text-sm cursor-pointer">Admin Notes</summary>
+                          <div className="mt-2 pt-2 border-t">
+                            <Textarea
+                              value={adminNotes[booking.id] || ''}
+                              onChange={(e) => handleNoteChange(booking.id, e.target.value)}
+                              placeholder="Add notes about this booking..."
+                              className="w-full min-h-[80px] text-sm"
                             />
                           </div>
-                          <input
-                            type="text"
-                            value={editFormData.booking_type}
-                            onChange={(e) => setEditFormData({...editFormData, booking_type: e.target.value})}
-                            className="w-full px-3 py-2 border rounded"
-                            placeholder="Service Type"
-                          />
-                          <div className="grid grid-cols-2 gap-2">
-                            <input
-                              type="text"
-                              value={editFormData.from}
-                              onChange={(e) => setEditFormData({...editFormData, from: e.target.value})}
-                              className="w-full px-3 py-2 border rounded"
-                              placeholder="From"
-                            />
-                            <input
-                              type="text"
-                              value={editFormData.to}
-                              onChange={(e) => setEditFormData({...editFormData, to: e.target.value})}
-                              className="w-full px-3 py-2 border rounded"
-                              placeholder="To"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <input
-                              type="date"
-                              value={editFormData.journey_date}
-                              onChange={(e) => setEditFormData({...editFormData, journey_date: e.target.value})}
-                              className="w-full px-3 py-2 border rounded"
-                            />
-                            <input
-                              type="number"
-                              value={editFormData.passengers}
-                              onChange={(e) => setEditFormData({...editFormData, passengers: e.target.value})}
-                              className="w-full px-3 py-2 border rounded"
-                              placeholder="Passengers"
-                            />
-                          </div>
-                          <textarea
-                            value={editFormData.additional_requirements}
-                            onChange={(e) => setEditFormData({...editFormData, additional_requirements: e.target.value})}
-                            className="w-full px-3 py-2 border rounded"
-                            rows={3}
-                            placeholder="Additional Requirements"
-                          ></textarea>
-                          <div className="flex gap-2 justify-end">
+                        </details>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-col gap-3 mt-4">
+                        <div className="flex justify-between">
+                          <div className="flex gap-1.5">
                             <button
-                              onClick={() => handleSaveEdit(booking.id)}
-                              className="px-3 py-1 bg-green-100 text-green-700 rounded-full"
+                              onClick={() => handleCall(booking.phone)}
+                              className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 flex items-center gap-1"
                             >
-                              Save
+                              <Phone size={14} />
+                              <span className="text-xs">Call</span>
                             </button>
                             <button
-                              onClick={() => setEditingId(null)}
-                              className="px-3 py-1 bg-red-100 text-red-700 rounded-full"
+                              onClick={() => handleWhatsapp(booking.phone, booking)}
+                              className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 flex items-center gap-1"
                             >
-                              Cancel
+                              <MessageSquare size={14} />
+                              <span className="text-xs">WhatsApp</span>
+                            </button>
+                          </div>
+
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => openEditModal(booking)}
+                              className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-1"
+                            >
+                              <PencilIcon size={14} className="text-blue-600" />
+                              <span className="text-xs">Edit</span>
+                            </button>
+                            <button
+                              onClick={() => deleteBookings([booking.id])}
+                              className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-1"
+                            >
+                              <TrashIcon size={14} className="text-red-600" />
+                              <span className="text-xs">Delete</span>
                             </button>
                           </div>
                         </div>
-                      ) : (
-                        // View Mode
-                        <>
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-3">
-                              <Checkbox
-                                checked={selectedBookings.includes(booking.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedBookings([...selectedBookings, booking.id]);
-                                  } else {
-                                    setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
-                                  }
-                                }}
-                              />
-                              <div>
-                                <h3 className="font-medium">{booking.name}</h3>
-                                <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
-                              </div>
-                            </div>
-                            <select
-                              value={booking.status || 'pending'}
-                              onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
-                              className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                booking.status === 'completed' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="completed">Completed</option>
-                            </select>
-                          </div>
-
-                          <div className="text-sm space-y-2">
-                            <p><span className="font-medium">Contact:</span> {booking.email} | {booking.phone}</p>
-                            <p><span className="font-medium">Service:</span> {booking.booking_type}</p>
-                            <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
-                            <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
-                            <div>
-                              <span className="font-medium">Passengers:</span>
-                              <div className="ml-2">
-                                {Array.isArray(booking.passengers) ? booking.passengers.map((passenger, idx) => (
-                                  <div key={idx} className="text-sm">
-                                    {passenger.name} ({passenger.age} years, {passenger.gender})
-                                  </div>
-                                )) : (
-                                  <div>{booking.passengers}</div>
-                                )}
-                              </div>
-                            </div>
-                            {booking.additional_requirements && (
-                              <p><span className="font-medium">Notes:</span> {booking.additional_requirements}</p>
-                            )}
-                            <div className="mt-4">
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Admin Notes</label>
-                              <Textarea
-                                value={adminNotes[booking.id] || ''}
-                                onChange={(e) => handleNoteChange(booking.id, e.target.value)}
-                                placeholder="Add notes about this booking..."
-                                className="w-full min-h-[100px] text-sm"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex justify-between items-center pt-2">
-                            {/* Action Buttons */}
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleCall(booking.phone)}
-                                className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
-                                title="Call"
-                              >
-                                <Phone size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleWhatsapp(booking.phone, booking)}
-                                className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
-                                title="WhatsApp"
-                              >
-                                <MessageSquare size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleEmail(booking.email)}
-                                className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
-                                title="Email"
-                              >
-                                <Mail size={16} />
-                              </button>
-                            </div>
-
-                            {/* Edit/Delete Buttons */}
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleEdit(booking)}
-                                className="p-2 hover:bg-gray-200 rounded-full"
-                                title="Edit"
-                              >
-                                <PencilIcon size={16} className="text-blue-600" />
-                              </button>
-                              <button
-                                onClick={() => deleteBookings([booking.id])}
-                                className="p-2 hover:bg-gray-200 rounded-full"
-                                title="Delete"
-                              >
-                                <TrashIcon size={16} className="text-red-600" />
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 border-t pt-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
-                            <div className="w-full max-w-full overflow-hidden">
-                              <select
-                                className="w-full px-3 py-2 border rounded-md text-sm"
-                                value={booking.assignedAgent || ''}
-                                onChange={(e) => assignTicket(booking.id, e.target.value)}
-                              >
-                                <option value="">Select Agent</option>
-                                {agents.map((agent: any) => (
-                                  <option key={agent.id} value={agent.email} className="truncate">
-                                    {agent.name.length > 15 ? agent.name.substring(0, 15) + '...' : agent.name} ({agent.email.substring(0, 15)}...)
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                        </>
-                      )}
+                        
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Assign to Agent</label>
+                          <select
+                            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md"
+                            value={booking.assignedAgent || ''}
+                            onChange={(e) => assignTicket(booking.id, e.target.value)}
+                          >
+                            <option value="">Select Agent</option>
+                            {agents.map((agent: any) => (
+                              <option key={agent.id} value={agent.email} className="truncate">
+                                {agent.name.length > 15 ? agent.name.substring(0, 15) + '...' : agent.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -1207,13 +1284,35 @@ Thank you for choosing Anand Travels!`;
                 )}
               </div>
 
-              {/* Desktop View for Bookings */}
-              <div className="hidden lg:grid grid-cols-3 gap-4">
+              {/* Desktop View for Bookings - Improved Card Design */}
+              <div className="hidden lg:grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
                 {filteredBookings.length > 0 ? (
                   filteredBookings.map((booking) => (
-                    <div key={booking.id} className="bg-white rounded-lg shadow-sm p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-start gap-3">
+                    <div key={booking.id} className="bg-white rounded-xl overflow-hidden shadow-md border border-gray-100 hover:shadow-lg transition-all">
+                      {/* Card Header */}
+                      <div className="relative bg-gradient-to-r from-blue-50 to-blue-100 p-4 border-b border-gray-100">
+                        <div className="absolute right-4 top-4">
+                          <select
+                            value={booking.status || 'pending'}
+                            onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked')}
+                            className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
+                              booking.status === 'completed' 
+                                ? 'bg-green-100 text-green-800 border-green-200' 
+                                : booking.status === 'in_process'
+                                ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                : booking.status === 'booked'
+                                ? 'bg-purple-100 text-purple-800 border-purple-200'
+                                : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                            }`}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="in_process">In Process</option>
+                            <option value="booked">Booked</option>
+                            <option value="completed">Completed</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-start mb-2">
                           <Checkbox 
                             checked={selectedBookings.includes(booking.id)}
                             onCheckedChange={(checked) => {
@@ -1223,109 +1322,237 @@ Thank you for choosing Anand Travels!`;
                                 setSelectedBookings(selectedBookings.filter(id => id !== booking.id));
                               }
                             }}
+                            className="mt-1 mr-3"
                           />
                           <div>
-                            <h3 className="font-medium">{booking.name}</h3>
-                            <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
-                          </div>
-                        </div>
-                        <select
-                          value={booking.status || 'pending'}
-                          onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
-                          className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            booking.status === 'completed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="completed">Completed</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Phone size={16} className="text-gray-400" />
-                          <span>{booking.phone}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Mail size={16} className="text-gray-400" />
-                          <span>{booking.email}</span>
-                        </div>
-                        <div className="border-t border-gray-100 pt-3">
-                          <p><span className="font-medium">Service:</span> {booking.booking_type}</p>
-                          <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
-                          <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
-                          <div className="mt-2">
-                            <span className="font-medium">Passengers:</span>
-                            <div className="ml-2 mt-1">
-                              {Array.isArray(booking.passengers) ? booking.passengers.map((passenger, idx) => (
-                                <div key={idx} className="text-sm bg-gray-50 p-1 rounded mb-1">
-                                  {passenger.name} ({passenger.age} yrs, {passenger.gender})
-                                </div>
-                              )) : (
-                                <div>{booking.passengers}</div>
-                              )}
+                            <h3 className="font-semibold text-lg text-gray-900">{booking.name}</h3>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <span>{formatFirebaseTimestamp(booking.created_at)}</span>
+                              <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">
+                                {booking.booking_type || 'Not specified'}
+                              </span>
                             </div>
                           </div>
                         </div>
-                        <div className="border-t border-gray-100 pt-3">
-                          <Textarea
-                            value={adminNotes[booking.id] || ''}
-                            onChange={(e) => handleNoteChange(booking.id, e.target.value)}
-                            placeholder="Add notes..."
-                            className="w-full min-h-[80px] text-sm"
-                          />
+
+                        <div className="flex items-center flex-wrap gap-2 mt-3">
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Phone size={14} className="text-blue-500" />
+                            <a href={`tel:${booking.phone}`} className="text-sm hover:underline">{booking.phone}</a>
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Mail size={14} className="text-blue-500" />
+                            <a href={`mailto:${booking.email}`} className="text-sm hover:underline">{booking.email}</a>
+                          </div>
                         </div>
+                      </div>
 
-                        <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleCall(booking.phone)}
-                              className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
-                              title="Call"
-                            >
-                              <Phone size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleWhatsapp(booking.phone, booking)}
-                              className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
-                              title="WhatsApp"
-                            >
-                              <MessageSquare size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleEmail(booking.email)}
-                              className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
-                              title="Email"
-                            >
-                              <Mail size={16} />
-                            </button>
-                          </div>
-
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEdit(booking)}
-                              className="p-2 hover:bg-gray-200 rounded-full"
-                              title="Edit"
-                            >
-                              <PencilIcon size={16} className="text-blue-600" />
-                            </button>
-                            <button
-                              onClick={() => deleteBookings([booking.id])}
-                              className="p-2 hover:bg-gray-200 rounded-full"
-                              title="Delete"
-                            >
-                              <TrashIcon size={16} className="text-red-600" />
-                            </button>
-                          </div>
+                      {/* Card Content - Tabbed Interface */}
+                      <div className="p-4">
+                        <div className="flex border-b border-gray-200 mb-4">
+                          <button 
+                            onClick={() => document.getElementById(`journey-${booking.id}`)?.click()}
+                            className="pb-2 px-3 text-sm font-medium border-b-2 border-travel-blue-dark text-travel-blue-dark"
+                          >
+                            Journey
+                          </button>
+                          <button 
+                            onClick={() => document.getElementById(`passengers-${booking.id}`)?.click()}
+                            className="pb-2 px-3 text-sm font-medium text-gray-500 hover:text-gray-700"
+                          >
+                            Passengers
+                          </button>
+                          <button 
+                            onClick={() => document.getElementById(`details-${booking.id}`)?.click()}
+                            className="pb-2 px-3 text-sm font-medium text-gray-500 hover:text-gray-700"
+                          >
+                            Details
+                          </button>
+                          <button 
+                            onClick={() => document.getElementById(`notes-${booking.id}`)?.click()}
+                            className="pb-2 px-3 text-sm font-medium text-gray-500 hover:text-gray-700"
+                          >
+                            Notes
+                          </button>
                         </div>
                         
-                        <div className="mt-4 border-t pt-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
-                          <div className="w-full max-w-full overflow-hidden">
+                        {/* Collapsible Content */}
+                        <div className="space-y-4">
+                          <details open>
+                            <summary id={`journey-${booking.id}`} className="cursor-pointer list-none font-medium text-sm text-gray-700 flex items-center">
+                              <span className="bg-blue-50 p-1 rounded mr-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                </svg>
+                              </span>
+                              Journey Information
+                            </summary>
+                            <div className="pl-8 pt-2 text-sm space-y-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="bg-gray-50 p-2 rounded">
+                                  <span className="text-xs font-medium text-gray-500 block">From</span>
+                                  <span className="font-medium text-gray-900">{booking.from}</span>
+                                </div>
+                                <div className="bg-gray-50 p-2 rounded">
+                                  <span className="text-xs font-medium text-gray-500 block">To</span>
+                                  <span className="font-medium text-gray-900">{booking.to}</span>
+                                </div>
+                              </div>
+                              <div className="bg-gray-50 p-2 rounded">
+                                <span className="text-xs font-medium text-gray-500 block">Date</span>
+                                <span className="font-medium text-gray-900">{booking.journey_date}</span>
+                              </div>
+                              
+                              {(booking.station_name || booking.boarding_point || booking.drop_point) && (
+                                <div className="bg-blue-50 p-2 rounded border border-blue-100">
+                                  {booking.station_name && <p><span className="text-xs text-blue-700">Station:</span> <span className="text-sm">{booking.station_name}</span></p>}
+                                  {booking.boarding_point && <p><span className="text-xs text-blue-700">Boarding:</span> <span className="text-sm">{booking.boarding_point}</span></p>}
+                                  {booking.drop_point && <p><span className="text-xs text-blue-700">Drop:</span> <span className="text-sm">{booking.drop_point}</span></p>}
+                                </div>
+                              )}
+                            </div>
+                          </details>
+                          
+                          <details>
+                            <summary id={`passengers-${booking.id}`} className="cursor-pointer list-none font-medium text-sm text-gray-700 flex items-center">
+                              <span className="bg-green-50 p-1 rounded mr-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                              </span>
+                              Passenger Information
+                            </summary>
+                            <div className="pl-8 pt-2 text-sm">
+                              <div className="overflow-y-auto max-h-32 space-y-1">
+                                {Array.isArray(booking.passengers) ? booking.passengers.map((passenger, idx) => (
+                                  <div key={idx} className="bg-gray-50 p-2 rounded mb-1 flex items-center">
+                                    <span className="h-5 w-5 rounded-full bg-green-100 text-green-800 text-xs flex items-center justify-center mr-2">
+                                      {idx + 1}
+                                    </span>
+                                    <span>{passenger.name} <span className="text-gray-500">({passenger.age} yrs, {passenger.gender})</span></span>
+                                  </div>
+                                )) : (
+                                  <div className="bg-gray-50 p-2 rounded">{booking.passengers}</div>
+                                )}
+                              </div>
+                            </div>
+                          </details>
+                          
+                          <details>
+                            <summary id={`details-${booking.id}`} className="cursor-pointer list-none font-medium text-sm text-gray-700 flex items-center">
+                              <span className="bg-purple-50 p-1 rounded mr-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414-5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              </span>
+                              Additional Details
+                            </summary>
+                            <div className="pl-8 pt-2 text-sm space-y-2">
+                              {(booking.travel_class || booking.class_preference || booking.train_booking_type || booking.train_class) && (
+                                <div className="bg-purple-50 p-2 rounded border border-purple-100">
+                                  {booking.travel_class && <p><span className="text-xs text-purple-700">Travel Class:</span> <span className="text-sm">{booking.travel_class}</span></p>}
+                                  {booking.class_preference && <p><span className="text-xs text-purple-700">Class Preference:</span> <span className="text-sm">{booking.class_preference}</span></p>}
+                                  {booking.train_booking_type && <p><span className="text-xs text-purple-700">Train Booking Type:</span> <span className="text-sm">{booking.train_booking_type}</span></p>}
+                                  {booking.train_class && <p><span className="text-xs text-purple-700">Train Class:</span> <span className="text-sm">{booking.train_class}</span></p>}
+                                  {booking.preferred_trains && <p><span className="text-xs text-purple-700">Preferred Trains:</span> <span className="text-sm">{booking.preferred_trains}</span></p>}
+                                </div>
+                              )}
+                              
+                              {(booking.ticket_number || booking.pnr || booking.booking_reference || booking.fare_details) && (
+                                <div className="bg-yellow-50 p-2 rounded border border-yellow-100">
+                                  <p className="text-xs font-semibold text-yellow-800 mb-1">Ticket Information</p>
+                                  {booking.ticket_number && <p><span className="text-xs text-yellow-700">Ticket Number:</span> <span className="text-sm">{booking.ticket_number}</span></p>}
+                                  {booking.pnr && <p><span className="text-xs text-yellow-700">PNR:</span> <span className="text-sm">{booking.pnr}</span></p>}
+                                  {booking.booking_reference && <p><span className="text-xs text-yellow-700">Booking Ref:</span> <span className="text-sm">{booking.booking_reference}</span></p>}
+                                  {booking.fare_details && <p><span className="text-xs text-yellow-700">Fare Details:</span> <span className="text-sm">{booking.fare_details}</span></p>}
+                                </div>
+                              )}
+                              
+                              {booking.additional_requirements && (
+                                <div className="bg-red-50 p-2 rounded border border-red-100">
+                                  <p className="text-xs font-semibold text-red-800 mb-1">Special Requirements</p>
+                                  <p className="text-sm">{booking.additional_requirements}</p>
+                                </div>
+                              )}
+                            </div>
+                          </details>
+                          
+                          <details>
+                            <summary id={`notes-${booking.id}`} className="cursor-pointer list-none font-medium text-sm text-gray-700 flex items-center">
+                              <span className="bg-amber-50 p-1 rounded mr-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </span>
+                              Admin Notes
+                            </summary>
+                            <div className="pl-8 pt-2 text-sm">
+                              <Textarea
+                                value={adminNotes[booking.id] || ''}
+                                onChange={(e) => handleNoteChange(booking.id, e.target.value)}
+                                placeholder="Add notes..."
+                                className="w-full min-h-[80px] text-sm border-amber-200 focus:border-amber-300 focus:ring-amber-200"
+                              />
+                            </div>
+                          </details>
+                        </div>
+                      </div>
+                      
+                      {/* Card Footer */}
+                      <div className="p-4 bg-gray-50 border-t border-gray-100">
+                        <div className="flex flex-col gap-3">
+                          <div className="flex justify-between items-center">
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleCall(booking.phone)}
+                                className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 flex items-center gap-1"
+                                title="Call"
+                              >
+                                <Phone size={14} />
+                                <span className="text-xs font-medium">Call</span>
+                              </button>
+                              <button
+                                onClick={() => handleWhatsapp(booking.phone, booking)}
+                                className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 flex items-center gap-1"
+                                title="WhatsApp"
+                              >
+                                <MessageSquare size={14} />
+                                <span className="text-xs font-medium">WhatsApp</span>
+                              </button>
+                              <button
+                                onClick={() => handleEmail(booking.email)}
+                                className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 flex items-center gap-1"
+                                title="Email"
+                              >
+                                <Mail size={14} />
+                                <span className="text-xs font-medium">Email</span>
+                              </button>
+                            </div>
+
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => openEditModal(booking)}
+                                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-1"
+                                title="Edit"
+                              >
+                                <PencilIcon size={14} className="text-blue-600" />
+                                <span className="text-xs font-medium">Edit</span>
+                              </button>
+                              <button
+                                onClick={() => deleteBookings([booking.id])}
+                                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-1"
+                                title="Delete"
+                              >
+                                <TrashIcon size={14} className="text-red-600" />
+                                <span className="text-xs font-medium">Delete</span>
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5">Assign to Agent</label>
                             <select
-                              className="w-full px-3 py-2 border rounded-md"
+                              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-travel-blue-dark focus:border-travel-blue-dark"
                               value={booking.assignedAgent || ''}
                               onChange={(e) => assignTicket(booking.id, e.target.value)}
                             >
@@ -1382,7 +1609,7 @@ Thank you for choosing Anand Travels!`;
                 </div>
               </div>
 
-              {/* Mobile View for Package Bookings */}
+              {/* Rest of package booking content */}
               <div className="block lg:hidden space-y-4">
                 {filteredPackageBookings.length > 0 ? (
                   filteredPackageBookings.map((booking) => (
@@ -1966,6 +2193,364 @@ Thank you for choosing Anand Travels!`;
               Send to WhatsApp
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Enhanced Edit Booking Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 bg-white rounded-xl shadow-xl border-0">
+          <div className="sticky top-0 z-10 bg-gradient-to-r from-travel-blue-dark to-blue-600 text-white p-6 rounded-t-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-2xl font-bold">
+                  Edit Booking
+                </DialogTitle>
+                <p className="text-blue-100 text-sm mt-1">
+                  {editBooking?.name || ""} • {editBooking?.booking_type || ""}
+                </p>
+              </div>
+              <div className="bg-white/20 rounded-lg p-3">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <form onSubmit={(e) => { 
+            e.preventDefault(); 
+            handleSaveEdit(editBooking?.id); 
+            setEditModalOpen(false);
+          }} className="px-6 pb-6">
+            {/* Step Navigation */}
+            <div className="border-b border-gray-200 py-3 sticky top-[84px] bg-white z-10">
+              <div className="flex overflow-x-auto hide-scrollbar" style={{scrollbarWidth: 'none'}}>
+                <button type="button" 
+                  className="flex-shrink-0 flex flex-col items-center mr-8 focus:outline-none group"
+                  onClick={() => document.getElementById('customer-section')?.scrollIntoView({behavior: 'smooth'})}
+                >
+                  <div className="rounded-full bg-travel-blue-dark p-2 mb-1.5 group-hover:bg-travel-blue">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium text-gray-800">Customer</span>
+                </button>
+                
+                <button type="button" 
+                  className="flex-shrink-0 flex flex-col items-center mr-8 focus:outline-none group"
+                  onClick={() => document.getElementById('journey-section')?.scrollIntoView({behavior: 'smooth'})}
+                >
+                  <div className="rounded-full bg-blue-500 p-2 mb-1.5 group-hover:bg-blue-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium text-gray-800">Journey</span>
+                </button>
+                
+                <button type="button" 
+                  className="flex-shrink-0 flex flex-col items-center mr-8 focus:outline-none group"
+                  onClick={() => document.getElementById('train-section')?.scrollIntoView({behavior: 'smooth'})}
+                >
+                  <div className="rounded-full bg-indigo-500 p-2 mb-1.5 group-hover:bg-indigo-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium text-gray-800">Train</span>
+                </button>
+                
+                <button type="button" 
+                  className="flex-shrink-0 flex flex-col items-center mr-8 focus:outline-none group"
+                  onClick={() => document.getElementById('requirements-section')?.scrollIntoView({behavior: 'smooth'})}
+                >
+                  <div className="rounded-full bg-amber-500 p-2 mb-1.5 group-hover:bg-amber-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414-5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium text-gray-800">Special Req.</span>
+                </button>
+                
+                <button type="button" 
+                  className="flex-shrink-0 flex flex-col items-center focus:outline-none group"
+                  onClick={() => document.getElementById('ticket-section')?.scrollIntoView({behavior: 'smooth'})}
+                >
+                  <div className="rounded-full bg-rose-500 p-2 mb-1.5 group-hover:bg-rose-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium text-gray-800">Ticket</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Form sections */}
+            <div className="space-y-8 mt-6">
+              {/* Customer Details Section */}
+              <section id="customer-section" className="scroll-mt-32 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="p-2 bg-travel-blue-dark rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-travel-blue-dark">Customer Details</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">Full Name</label>
+                    <input
+                      type="text"
+                      value={editFormData.name}
+                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-travel-blue-dark focus:border-travel-blue-dark"
+                      placeholder="Customer Name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">Phone Number</label>
+                    <input
+                      type="tel"
+                      value={editFormData.phone}
+                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-travel-blue-dark focus:border-travel-blue-dark"
+                      placeholder="Phone"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">Email Address</label>
+                    <input
+                      type="email"
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-travel-blue-dark focus:border-travel-blue-dark"
+                      placeholder="Email"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* Journey Details Section */}
+              <section id="journey-section" className="scroll-mt-32 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="p-2 bg-blue-500 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Journey Details</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">From</label>
+                    <input
+                      type="text"
+                      value={editFormData.from}
+                      onChange={(e) => setEditFormData({ ...editFormData, from: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Origin"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">To</label>
+                    <input
+                      type="text"
+                      value={editFormData.to}
+                      onChange={(e) => setEditFormData({ ...editFormData, to: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Destination"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">Journey Date</label>
+                    <input
+                      type="date"
+                      value={editFormData.journey_date}
+                      onChange={(e) => setEditFormData({ ...editFormData, journey_date: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">Service Type</label>
+                    <select
+                      value={editFormData.booking_type}
+                      onChange={(e) => setEditFormData({ ...editFormData, booking_type: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select Type</option>
+                      <option value="train">Train</option>
+                      <option value="bus">Bus</option>
+                      <option value="flight">Flight</option>
+                      <option value="cab">Cab</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">Passenger Details</label>
+                    <textarea
+                      value={editFormData.passengers}
+                      onChange={(e) => setEditFormData({ ...editFormData, passengers: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="One passenger per line (e.g., Name - Age - Gender)"
+                      rows={4}
+                    ></textarea>
+                    <p className="text-xs text-gray-500 mt-1 ml-1">Enter each passenger on a new line</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Conditional Train Booking Details Section */}
+              {editFormData.booking_type === "train" && (
+                <section id="train-section" className="scroll-mt-32 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="p-2 bg-indigo-500 rounded-lg">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800">Train Booking Details</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5 text-gray-700">Booking Type</label>
+                      <select
+                        value={editFormData.train_booking_type}
+                        onChange={(e) => setEditFormData({ ...editFormData, train_booking_type: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        <option value="general">General Booking</option>
+                        <option value="tatkal">Tatkal Booking</option>
+                        <option value="premium_tatkal">Premium Tatkal</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5 text-gray-700">Class Preference</label>
+                      <select
+                        value={editFormData.train_class}
+                        onChange={(e) => setEditFormData({ ...editFormData, train_class: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        <option value="SL">Sleeper (SL)</option>
+                        <option value="3A">AC 3-Tier (3A)</option>
+                        <option value="2A">AC 2-Tier (2A)</option>
+                        <option value="1A">AC First Class (1A)</option>
+                        <option value="CC">Chair Car (CC)</option>
+                        <option value="EC">Executive Chair Car (EC)</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium mb-1.5 text-gray-700">Preferred Trains</label>
+                      <input
+                        type="text"
+                        value={editFormData.preferred_trains}
+                        onChange={(e) => setEditFormData({ ...editFormData, preferred_trains: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        placeholder="Train numbers or names (comma separated)"
+                      />
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Additional Requirements Section */}
+              <section id="requirements-section" className="scroll-mt-32 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="p-2 bg-amber-500 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414-5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Special Requirements</h3>
+                </div>
+                
+                <div>
+                  <textarea
+                    value={editFormData.additional_requirements}
+                    onChange={(e) => setEditFormData({ ...editFormData, additional_requirements: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    placeholder="Enter any special needs or requests"
+                    rows={4}
+                  ></textarea>
+                </div>
+              </section>
+
+              {/* Ticket Information Section */}
+              <section id="ticket-section" className="scroll-mt-32 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="p-2 bg-rose-500 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Ticket Details</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">Ticket Number</label>
+                    <input
+                      type="text"
+                      value={editFormData.ticket_number}
+                      onChange={(e) => setEditFormData({ ...editFormData, ticket_number: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                      placeholder="Ticket #"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">PNR</label>
+                    <input
+                      type="text"
+                      value={editFormData.pnr}
+                      onChange={(e) => setEditFormData({ ...editFormData, pnr: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                      placeholder="PNR"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">Booking Reference</label>
+                    <input
+                      type="text"
+                      value={editFormData.booking_reference}
+                      onChange={(e) => setEditFormData({ ...editFormData, booking_reference: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                      placeholder="Reference #"
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">Fare Details</label>
+                    <textarea
+                      value={editFormData.fare_details}
+                      onChange={(e) => setEditFormData({ ...editFormData, fare_details: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                      placeholder="Enter fare breakdown and payment details"
+                      rows={3}
+                    ></textarea>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div className="sticky bottom-0 mt-8 pt-4 pb-1 bg-white flex flex-col sm:flex-row-reverse gap-2 border-t border-gray-200">
+              <Button type="submit" className="w-full sm:w-auto py-3 px-8 text-base font-medium shadow-lg">
+                Save Changes
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full sm:w-auto py-3 px-6 text-base"
+                onClick={() => setEditModalOpen(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
