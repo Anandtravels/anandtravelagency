@@ -6,6 +6,7 @@ import Footer from "../components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { sendBookingConfirmation } from '../server/emailService';
 
 const Booking = () => {
   const [bookingType, setBookingType] = useState("train");
@@ -107,9 +108,14 @@ const Booking = () => {
       
       const docRef = await addDoc(collection(db, 'bookings'), bookingData);
       
+      // Send confirmation email if email is provided
+      if (bookingData.email) {
+        await sendBookingConfirmation(bookingData);
+      }
+      
       toast({
         title: "Booking Submitted Successfully",
-        description: "We've received your booking request. Our team will contact you shortly!",
+        description: "We've received your booking request. A confirmation email has been sent if provided.",
       });
       
       reset({
