@@ -7,28 +7,10 @@ import QuoteSection from "../components/QuoteSection";
 const About = () => {
   const teamMembers = [
     {
-      name: "Anand Kumar",
+      name: "Anand Pinisetty",
       role: "Founder & CEO",
       image: "https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg",
       bio: "A passionate travel entrepreneur who founded Anand Travel Agency with a vision to make travel bookings seamless and hassle-free for everyone."
-    },
-    {
-      name: "Priya Sharma",
-      role: "Travel Operations Manager",
-      image: "https://images.pexels.com/photos/1239288/pexels-photo-1239288.jpeg",
-      bio: "Priya oversees all operational aspects of our travel packages, ensuring seamless experiences for our customers with her 10+ years of expertise in tour management."
-    },
-    {
-      name: "Rajesh Agarwal",
-      role: "Tatkal Booking Specialist",
-      image: "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg",
-      bio: "Rajesh is our expert in securing Tatkal train tickets with a remarkable success rate. His deep knowledge of the IRCTC system helps our clients get confirmed bookings even during peak seasons."
-    },
-    {
-      name: "Meena Patel",
-      role: "International Tours Head",
-      image: "https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg",
-      bio: "With experience across 30+ countries, Meena designs our international tour packages, bringing unique cultural insights and hidden gems to our travelers."
     }
   ];
 
@@ -72,13 +54,13 @@ const About = () => {
               <div>
                 <h2 className="section-title mb-6">Our Story</h2>
                 <p className="text-gray-700 mb-4">
-                  Founded in 2003 by Mr. Anand Kumar, Anand Travel Agency started as a small office in Mumbai providing train ticket booking services. With a vision to make travel accessible and hassle-free for everyone, Mr. Anand leveraged his extensive knowledge of the Indian Railways system to help customers secure seats even during peak seasons.
+                  Founded in 2023 by Mr. Anand Pinisetty, Anand Travel Agency started as a small office in Kakinada providing train ticket booking services. With a vision to make travel accessible and hassle-free for everyone, Mr. Anand leveraged his extensive knowledge of the Indian Railways system to help customers secure seats even during peak seasons.
                 </p>
                 <p className="text-gray-700 mb-4">
                   What began as a modest ticket booking service quickly expanded into a comprehensive travel agency. As our reputation for reliability and customer service grew, so did our offerings. We ventured into domestic tour packages, bus bookings, and flight reservations, becoming a one-stop solution for all travel needs.
                 </p>
                 <p className="text-gray-700 mb-4">
-                  Today, with over 20 years of experience, Anand Travel Agency has established itself as a trusted name in the travel industry across India. Our specialization in Tatkal bookings continues to be our unique strength, while our expanding portfolio of domestic and international tour packages caters to the evolving needs of the modern traveler.
+                  Today, Anand Travel Agency has established itself as a trusted name in the travel industry. Our specialization in Tatkal bookings continues to be our unique strength, while our expanding portfolio of domestic and international tour packages caters to the evolving needs of the modern traveler.
                 </p>
                 <p className="text-gray-700">
                   Throughout our journey, our commitment to personalized service, transparency, and customer satisfaction has remained unwavering. We take pride in turning travel dreams into memorable experiences for thousands of satisfied customers.
@@ -187,9 +169,9 @@ const About = () => {
                 <div className="bg-travel-blue-dark/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Award className="w-8 h-8 text-travel-blue-dark" />
                 </div>
-                <h3 className="text-xl font-semibold text-travel-blue-dark mb-3">20+ Years Experience</h3>
+                <h3 className="text-xl font-semibold text-travel-blue-dark mb-3">1000+ Trusted Customers</h3>
                 <p className="text-gray-600">
-                  Two decades of expertise in the travel industry, consistently delivering reliable service.
+                  Over a thousand satisfied customers who rely on our expertise for their travel needs.
                 </p>
               </div>
               
@@ -217,9 +199,9 @@ const About = () => {
                 <div className="bg-travel-blue-dark/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                   <ThumbsUp className="w-8 h-8 text-travel-blue-dark" />
                 </div>
-                <h3 className="text-xl font-semibold text-travel-blue-dark mb-3">50,000+ Happy Customers</h3>
+                <h3 className="text-xl font-semibold text-travel-blue-dark mb-3">Customer Satisfaction</h3>
                 <p className="text-gray-600">
-                  A large community of satisfied travelers who rely on us for all their travel needs.
+                  Our dedication to ensuring every travel experience exceeds expectations.
                 </p>
               </div>
             </div>
@@ -268,33 +250,36 @@ const About = () => {
           </div>
         </section>
         
-        {/* Team Section */}
+        {/* Founder Section */}
         <section className="py-16">
           <div className="container-custom">
             <div className="text-center mb-12">
-              <h2 className="section-title">Meet Our Team</h2>
+              <h2 className="section-title">The Man Behind Anand Travel Agency</h2>
               <p className="text-gray-600 max-w-3xl mx-auto">
-                The passionate professionals who make your travel experiences exceptional
+                Meet the visionary who makes your travel experiences exceptional
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {teamMembers.map((member, index) => (
-                <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="h-64 overflow-hidden">
-                    <img 
-                      src={member.image} 
-                      alt={member.name} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-semibold text-travel-blue-dark mb-1">{member.name}</h3>
-                    <p className="text-travel-orange font-medium mb-3">{member.role}</p>
-                    <p className="text-gray-600">{member.bio}</p>
-                  </div>
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                <div className="aspect-square w-full overflow-hidden">
+                  <img 
+                    src={teamMembers[0].image} 
+                    alt={teamMembers[0].name} 
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-              ))}
+                <div className="p-8">
+                  <h3 className="text-2xl font-semibold text-travel-blue-dark mb-2">{teamMembers[0].name}</h3>
+                  <p className="text-travel-orange font-medium mb-4">{teamMembers[0].role}</p>
+                  <p className="text-gray-600 text-lg">{teamMembers[0].bio}</p>
+                  <p className="text-gray-600 mt-4 text-lg">
+                    Based in Kakinada, Mr. Anand has built a reputation for excellence in the travel industry. 
+                    His deep understanding of customer needs and commitment to service has helped transform 
+                    Anand Travel Agency into a trusted name for travelers across India.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>

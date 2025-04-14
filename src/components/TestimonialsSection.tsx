@@ -84,7 +84,7 @@ const TestimonialsSection = () => {
                     <path d="M12 6V12L16 14" stroke="#1A365D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <p className="font-medium text-travel-blue-dark">15+ Years</p>
+                <p className="font-medium text-travel-blue-dark">2+ Years</p>
                 <p className="text-sm text-gray-600">Experience</p>
               </div>
               
@@ -97,7 +97,7 @@ const TestimonialsSection = () => {
                     <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="#1A365D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <p className="font-medium text-travel-blue-dark">10,000+</p>
+                <p className="font-medium text-travel-blue-dark">1,000+</p>
                 <p className="text-sm text-gray-600">Happy Customers</p>
               </div>
               

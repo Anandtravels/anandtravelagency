@@ -6,7 +6,6 @@ import Footer from "../components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { sendBookingConfirmation } from '../server/emailService';
 
 const Booking = () => {
   const [bookingType, setBookingType] = useState("train");
@@ -16,6 +15,7 @@ const Booking = () => {
   const [passengers, setPassengers] = useState([
     { name: '', age: '', gender: 'male' }
   ]);
+  const [flightTripType, setFlightTripType] = useState("one_way");
 
   const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm({
     defaultValues: {
@@ -39,6 +39,7 @@ const Booking = () => {
       // Bus-specific fields
       bus_type: "ac_seater",
       boarding_point: "",
+      drop_point: "", // Add this new field
       // Cab-specific fields
       cab_type: "sedan",
       cab_trip_type: "one_way",
@@ -67,6 +68,7 @@ const Booking = () => {
       preferred_airlines: "",
       bus_type: "ac_seater",
       boarding_point: "",
+      drop_point: "", // Add this new field
       cab_type: "sedan",
       cab_trip_type: "one_way",
       pickup_address: ""
@@ -108,14 +110,9 @@ const Booking = () => {
       
       const docRef = await addDoc(collection(db, 'bookings'), bookingData);
       
-      // Send confirmation email if email is provided
-      if (bookingData.email) {
-        await sendBookingConfirmation(bookingData);
-      }
-      
       toast({
         title: "Booking Submitted Successfully",
-        description: "We've received your booking request. A confirmation email has been sent if provided.",
+        description: "We've received your booking request. Our team will contact you shortly!",
       });
       
       reset({
@@ -136,6 +133,7 @@ const Booking = () => {
         preferred_airlines: "",
         bus_type: "ac_seater",
         boarding_point: "",
+        drop_point: "", // Add this new field
         cab_type: "sedan",
         cab_trip_type: "one_way",
         pickup_address: ""
@@ -341,35 +339,55 @@ const Booking = () => {
                     )}
                     
                     {bookingType === "bus" && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-gray-700 font-medium mb-2">
-                            Bus Type <span className="text-rose-500">*</span>
-                          </label>
-                          <select
-                            {...register("bus_type", { required: "Bus type is required" })}
-                            defaultValue="ac_seater"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                          >
-                            <option value="ac_seater">AC Seater</option>
-                            <option value="non_ac_seater">Non-AC Seater</option>
-                            <option value="ac_sleeper">AC Sleeper</option>
-                            <option value="non_ac_sleeper">Non-AC Sleeper</option>
-                            <option value="volvo">Volvo</option>
-                          </select>
-                          {errors.bus_type && <p className="text-red-500 text-sm mt-1">{String(errors.bus_type.message)}</p>}
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-gray-700 font-medium mb-2">
+                              Bus Type <span className="text-rose-500">*</span>
+                            </label>
+                            <select
+                              {...register("bus_type", { required: "Bus type is required" })}
+                              defaultValue="ac_seater"
+                              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                            >
+                              <option value="ac_seater">AC Seater</option>
+                              <option value="non_ac_seater">Non-AC Seater</option>
+                              <option value="ac_sleeper">AC Sleeper</option>
+                              <option value="non_ac_sleeper">Non-AC Sleeper</option>
+                              <option value="volvo">Volvo</option>
+                            </select>
+                            {errors.bus_type && <p className="text-red-500 text-sm mt-1">{String(errors.bus_type.message)}</p>}
+                          </div>
                         </div>
                         
-                        <div>
-                          <label className="block text-gray-700 font-medium mb-2">Boarding Point (Optional)</label>
-                          <input
-                            type="text"
-                            {...register("boarding_point")}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                            placeholder="Specific boarding location"
-                          />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-gray-700 font-medium mb-2">
+                              Boarding Point <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              {...register("boarding_point", { required: "Boarding point is required" })}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                              placeholder="Specific boarding location"
+                            />
+                            {errors.boarding_point && <p className="text-red-500 text-sm mt-1">{String(errors.boarding_point.message)}</p>}
+                          </div>
+                          
+                          <div>
+                            <label className="block text-gray-700 font-medium mb-2">
+                              Drop Point <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              {...register("drop_point", { required: "Drop point is required" })}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                              placeholder="Specific drop location"
+                            />
+                            {errors.drop_point && <p className="text-red-500 text-sm mt-1">{String(errors.drop_point.message)}</p>}
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
                     
                     {bookingType === "flight" && (
@@ -383,6 +401,7 @@ const Booking = () => {
                               {...register("flight_trip_type", { required: "Trip type is required" })}
                               defaultValue="one_way"
                               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                              onChange={(e) => setFlightTripType(e.target.value)}
                             >
                               <option value="one_way">One Way</option>
                               <option value="round_trip">Round Trip</option>
@@ -390,18 +409,20 @@ const Booking = () => {
                             {errors.flight_trip_type && <p className="text-red-500 text-sm mt-1">{String(errors.flight_trip_type.message)}</p>}
                           </div>
                           
-                          <div>
-                            <label className="block text-gray-700 font-medium mb-2">Return Date (for Round Trip)</label>
-                            <div className="relative">
-                              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                              <input
-                                type="date"
-                                {...register("return_date")}
-                                min={new Date().toISOString().split('T')[0]}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                              />
+                          {flightTripType === "round_trip" && (
+                            <div>
+                              <label className="block text-gray-700 font-medium mb-2">Return Date (for Round Trip)</label>
+                              <div className="relative">
+                                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                                <input
+                                  type="date"
+                                  {...register("return_date")}
+                                  min={new Date().toISOString().split('T')[0]}
+                                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                                />
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
