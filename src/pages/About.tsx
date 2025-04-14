@@ -3,13 +3,16 @@ import { Award, Star, Users, ThumbsUp, Calendar } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import QuoteSection from "../components/QuoteSection";
+// Import the profile image
+import profileImage from "../assets/profile.jpg";
 
 const About = () => {
   const teamMembers = [
     {
       name: "Anand Pinisetty",
       role: "Founder & CEO",
-      image: "https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg",
+      // Use the imported image instead of the placeholder
+      image: profileImage,
       bio: "A passionate travel entrepreneur who founded Anand Travel Agency with a vision to make travel bookings seamless and hassle-free for everyone."
     }
   ];
@@ -70,28 +73,28 @@ const About = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-lg overflow-hidden shadow-md h-64">
                   <img 
-                    src="https://source.unsplash.com/photo-1551632436-cbf8dd35adfa" 
-                    alt="Our office in 2003" 
+                    src="https://www.winnershtriangle.co.uk/wp-content/uploads/2023/06/WT-banner.jpg" 
+                    alt="Our office in 2023" 
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="rounded-lg overflow-hidden shadow-md h-64">
                   <img 
-                    src="https://source.unsplash.com/photo-1622547748225-3fc4abd2cca0" 
+                    src="https://images.stockcake.com/public/9/1/9/919e4519-5b34-4859-b8f1-e45ccbd58df9_large/joyful-office-celebration-stockcake.jpg" 
                     alt="Team celebration" 
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="rounded-lg overflow-hidden shadow-md h-64">
                   <img 
-                    src="https://source.unsplash.com/photo-1625447205262-0dc98cf9ea53" 
+                    src="https://officebanao.com/wp-content/uploads/2023/08/Modern-Office-Design-Ideas-1024x723.jpg" 
                     alt="Customer receiving award" 
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="rounded-lg overflow-hidden shadow-md h-64">
                   <img 
-                    src="https://source.unsplash.com/photo-1560698848-59b577a3e7af" 
+                    src="https://www.ecobook.io/wp-content/uploads/2022/12/1273978367-Modern-Office-Layout-compress.jpg" 
                     alt="Modern office" 
                     className="w-full h-full object-cover"
                   />
@@ -214,35 +217,59 @@ const About = () => {
             <div className="text-center mb-12">
               <h2 className="section-title">Our Journey</h2>
               <p className="text-gray-600 max-w-3xl mx-auto">
-                Two decades of growth, innovation, and memorable journeys
+                Our growth, innovation, and memorable journeys
               </p>
             </div>
             
             <div className="relative">
-              {/* Timeline line */}
-              <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-travel-blue-dark"></div>
+              {/* Timeline line - hidden on mobile, visible on md screens and up */}
+              <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-travel-blue-dark"></div>
+              
+              {/* Mobile timeline line - visible only on mobile */}
+              <div className="md:hidden absolute left-4 top-0 bottom-0 w-1 bg-travel-blue-dark"></div>
               
               {/* Timeline items */}
-              <div className="space-y-12">
+              <div className="space-y-8 md:space-y-12">
                 {milestones.map((milestone, index) => (
-                  <div key={index} className={`relative flex items-center ${index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
-                    {/* Timeline point */}
-                    <div className="absolute left-1/2 transform -translate-x-1/2 w-8 h-8 rounded-full bg-travel-orange border-4 border-travel-blue-dark z-10"></div>
-                    
-                    {/* Content */}
-                    <div className={`w-5/12 ${index % 2 === 0 ? 'pr-8 text-right' : 'pl-8'}`}>
-                      <div className="bg-white p-6 rounded-lg shadow-md">
-                        <div className="flex items-center gap-2 mb-2 justify-end">
-                          <Calendar className="w-5 h-5 text-travel-orange" />
-                          <span className="text-travel-orange font-semibold">{milestone.year}</span>
+                  <div key={index} className="relative">
+                    {/* Desktop layout */}
+                    <div className={`hidden md:flex items-center ${index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
+                      {/* Timeline point for desktop */}
+                      <div className="absolute left-1/2 transform -translate-x-1/2 w-8 h-8 rounded-full bg-travel-orange border-4 border-travel-blue-dark z-10"></div>
+                      
+                      {/* Content for desktop */}
+                      <div className={`w-5/12 ${index % 2 === 0 ? 'pr-8 text-right' : 'pl-8'}`}>
+                        <div className="bg-white p-6 rounded-lg shadow-md">
+                          <div className={`flex items-center gap-2 mb-2 ${index % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+                            <Calendar className="w-5 h-5 text-travel-orange" />
+                            <span className="text-travel-orange font-semibold">{milestone.year}</span>
+                          </div>
+                          <h3 className="text-xl font-semibold text-travel-blue-dark mb-2">{milestone.title}</h3>
+                          <p className="text-gray-600">{milestone.description}</p>
                         </div>
-                        <h3 className="text-xl font-semibold text-travel-blue-dark mb-2">{milestone.title}</h3>
-                        <p className="text-gray-600">{milestone.description}</p>
                       </div>
+                      
+                      {/* Empty space for the other side */}
+                      <div className="w-5/12"></div>
                     </div>
                     
-                    {/* Empty space for the other side */}
-                    <div className="w-5/12"></div>
+                    {/* Mobile layout - only displays on small screens */}
+                    <div className="md:hidden flex">
+                      {/* Timeline point for mobile */}
+                      <div className="absolute left-4 transform -translate-x-1/2 w-6 h-6 rounded-full bg-travel-orange border-3 border-travel-blue-dark z-10"></div>
+                      
+                      {/* Content for mobile */}
+                      <div className="ml-10 w-full">
+                        <div className="bg-white p-4 rounded-lg shadow-md">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Calendar className="w-5 h-5 text-travel-orange" />
+                            <span className="text-travel-orange font-semibold">{milestone.year}</span>
+                          </div>
+                          <h3 className="text-lg font-semibold text-travel-blue-dark mb-2">{milestone.title}</h3>
+                          <p className="text-gray-600 text-sm">{milestone.description}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
