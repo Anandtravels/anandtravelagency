@@ -78,7 +78,8 @@ const Admin = () => {
     bookingCharge: '',
     totalAmount: '',
     additionalInfo: '',
-    bookingType: 'General Booking' // Add booking type with default value
+    bookingType: 'General Booking', // Add booking type with default value
+    passengerCount: 1 // Add passenger count with default value of 1
   });
   const [packageBookings, setPackageBookings] = useState<any[]>([]);
   const [packageBookingLoading, setPackageBookingLoading] = useState(true);
@@ -330,7 +331,7 @@ const Admin = () => {
         toast({
           title: "Error",
           description: "Failed to load agents data",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     );
@@ -429,7 +430,9 @@ const Admin = () => {
   };
 
   const deleteBookings = async (ids: string[]) => {
-    if (!window.confirm('Are you sure you want to delete the selected bookings?')) return;
+    // Custom confirmation dialog styled consistently with app
+    const confirmed = window.confirm(`Are you sure you want to delete ${ids.length > 1 ? 'these ' + ids.length + ' bookings' : 'this booking'}? This action cannot be undone.`);
+    if (!confirmed) return;
 
     try {
       // First verify admin auth
@@ -442,7 +445,7 @@ const Admin = () => {
       
       toast({
         title: "Deleted Successfully",
-        description: "Selected bookings have been deleted",
+        description: `${ids.length > 1 ? ids.length + ' bookings have' : 'Booking has'} been deleted`,
       });
     } catch (error) {
       console.error("Error deleting bookings:", error);
@@ -548,12 +551,19 @@ const Admin = () => {
       // Set the booking type from the customer's original selection if available
       const initialBookingType = booking.booking_type || 'General Booking';
       
+      // Get passenger count if available
+      let initialPassengerCount = 1;
+      if (Array.isArray(booking.passengers)) {
+        initialPassengerCount = booking.passengers.length;
+      }
+      
       setMessageDetails({
         ticketCost: '',
         bookingCharge: '',
         totalAmount: '',
         additionalInfo: '',
-        bookingType: initialBookingType
+        bookingType: initialBookingType,
+        passengerCount: initialPassengerCount
       });
     } else {
       // Direct WhatsApp chat without booking context
@@ -576,13 +586,15 @@ const Admin = () => {
   const calculateTotal = () => {
     const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
     let bookingCharge = parseFloat(messageDetails.bookingCharge) || 0;
+    const passengerCount = messageDetails.passengerCount || 1;
     
     // If booking charge was not manually set, calculate it based on booking type
     if (messageDetails.bookingCharge === '') {
       bookingCharge = calculateBookingCharge(messageDetails.bookingType, ticketCost);
     }
     
-    return (ticketCost + bookingCharge).toFixed(2);
+    // Multiply both ticket cost and booking charge by passenger count
+    return ((ticketCost * passengerCount) + (bookingCharge * passengerCount)).toFixed(2);
   };
 
   const handleBookingTypeChange = (type: string) => {
@@ -610,26 +622,29 @@ const Admin = () => {
       passengerInfo = `*Passengers:* ${currentBooking.passengers}\n`;
     }
     
-    // Build the formatted message  based on booking type
+    // Build the formatted message based on booking type
     let pricingDetails = '';
+    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
+    const bookingCharge = parseFloat(messageDetails.bookingCharge) || 0;
+    const passengerCount = messageDetails.passengerCount || 1;
     
     if (messageDetails.bookingType === 'Tatkal Booking') {
       pricingDetails = 
 `*Pricing Details:*
-Tatkal Cost: ₹${messageDetails.ticketCost}
-Tatkal Booking Charge: ₹${messageDetails.bookingCharge}
+Tatkal Cost: ₹${messageDetails.ticketCost} × ${passengerCount} passenger(s) = ₹${(ticketCost * passengerCount).toFixed(2)}
+Tatkal Booking Charge: ₹${messageDetails.bookingCharge} × ${passengerCount} passenger(s) = ₹${(bookingCharge * passengerCount).toFixed(2)}
 *Total Amount: ₹${calculateTotal()}*`;
     } else if (messageDetails.bookingType === 'Premium Booking') {
       pricingDetails = 
 `*Pricing Details:*
-Premium Ticket Cost: ₹${messageDetails.ticketCost}
-Premium Booking Charge: ₹${messageDetails.bookingCharge}
+Premium Ticket Cost: ₹${messageDetails.ticketCost} × ${passengerCount} passenger(s) = ₹${(ticketCost * passengerCount).toFixed(2)}
+Premium Booking Charge: ₹${messageDetails.bookingCharge} × ${passengerCount} passenger(s) = ₹${(bookingCharge * passengerCount).toFixed(2)}
 *Total Amount: ₹${calculateTotal()}*`;
     } else {
       pricingDetails = 
 `*Pricing Details:*
-Ticket Cost: ₹${messageDetails.ticketCost}
-Booking Charge: ₹${messageDetails.bookingCharge}
+Ticket Cost: ₹${messageDetails.ticketCost} × ${passengerCount} passenger(s) = ₹${(ticketCost * passengerCount).toFixed(2)}
+Booking Charge: ₹${messageDetails.bookingCharge} × ${passengerCount} passenger(s) = ₹${(bookingCharge * passengerCount).toFixed(2)}
 *Total Amount: ₹${calculateTotal()}*`;
     }
     
@@ -790,6 +805,20 @@ Thank you for choosing Anand Travels!`;
       const additionalInfo = booking.additional_requirements ? 
         `\n*Special Requirements:*\n${booking.additional_requirements}` : '';
       
+      // Format ticket details
+      let ticketDetails = '';
+      if (booking.train_booking_type || booking.train_class || booking.ticket_number || 
+          booking.pnr || booking.booking_reference || booking.fare_details) {
+        ticketDetails = `\n*Ticket Details:*\n`;
+        if (booking.train_booking_type) ticketDetails += `Booking Type: ${booking.train_booking_type}\n`;
+        if (booking.train_class) ticketDetails += `Class: ${booking.train_class}\n`;
+        if (booking.ticket_number) ticketDetails += `Ticket #: ${booking.ticket_number}\n`;
+        if (booking.pnr) ticketDetails += `PNR: ${booking.pnr}\n`;
+        if (booking.booking_reference) ticketDetails += `Reference: ${booking.booking_reference}\n`;
+        if (booking.fare_details) ticketDetails += `Fare: ${booking.fare_details}\n`;
+        if (booking.preferred_trains) ticketDetails += `Preferred Trains: ${booking.preferred_trains}\n`;
+      }
+      
       // Create a comprehensive message
       const message = `🚗 *NEW BOOKING ASSIGNED*\n\n` +
         `*Booking ID:* ${bookingId}\n` +
@@ -799,7 +828,7 @@ Thank you for choosing Anand Travels!`;
         `To: ${booking.to}\n` +
         `Date: ${booking.journey_date}\n` +
         `${passengerInfo}\n` +
-        
+        `${ticketDetails}` +
         `*Customer Details:*\n` +
         `Name: ${booking.name}\n` +
         `Phone: ${booking.phone}\n` +
@@ -1047,7 +1076,7 @@ Thank you for choosing Anand Travels!`;
                       >
                         <option value="all">All Statuses</option>
                         <option value="pending">Pending</option>
-                        <option value="completed">Completed</option>
+                        <option value="completed">Payment Done</option>
                         <option value="payment_done">Payment Done</option>
                         <option value="payment_not_done">Payment Not Done</option>
                         <option value="in_process">In Process</option>
@@ -1084,16 +1113,38 @@ Thank you for choosing Anand Travels!`;
                     </div>
                   </div>
                   
-                  {/* Delete selected button */}
-                  {selectedBookings.length > 0 && (
-                    <button
-                      onClick={() => deleteBookings(selectedBookings)}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-                    >
-                      <TrashIcon size={16} />
-                      Delete Selected ({selectedBookings.length})
-                    </button>
-                  )}
+                  {/* Select All and Delete selected buttons */}
+                  <div className="flex gap-2 items-center">
+                    <div className="flex items-center gap-2">
+                      <Checkbox 
+                        checked={filteredBookings.length > 0 && selectedBookings.length === filteredBookings.length}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedBookings(filteredBookings.map(b => b.id));
+                          } else {
+                            setSelectedBookings([]);
+                          }
+                        }}
+                        id="select-all-bookings"
+                      />
+                      <label 
+                        htmlFor="select-all-bookings" 
+                        className="text-sm font-medium whitespace-nowrap cursor-pointer"
+                      >
+                        Select All
+                      </label>
+                    </div>
+                    
+                    {selectedBookings.length > 0 && (
+                      <button
+                        onClick={() => deleteBookings(selectedBookings)}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 shadow-sm hover:shadow"
+                      >
+                        <TrashIcon size={16} className="animate-pulse" />
+                        <span className="font-medium">Delete ({selectedBookings.length})</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1131,7 +1182,7 @@ Thank you for choosing Anand Travels!`;
                                   ? 'bg-purple-100 text-purple-800'
                                   : 'bg-yellow-100 text-yellow-800'
                               }`}>
-                                {booking.status === 'completed' ? 'Completed' : booking.status === 'in_process' ? 'In Process' : booking.status === 'booked' ? 'Booked' : 'Pending'}
+                                {booking.status === 'completed' ? 'Payment Done' : booking.status === 'in_process' ? 'In Process' : booking.status === 'booked' ? 'Booked' : 'Pending'}
                               </span>
                             </div>
                           </div>
@@ -1152,7 +1203,7 @@ Thank you for choosing Anand Travels!`;
                           <option value="pending">Pending</option>
                           <option value="in_process">In Process</option>
                           <option value="booked">Booked</option>
-                          <option value="completed">Completed</option>
+                          <option value="completed">Payment Done</option>
                         </select>
                       </div>
 
@@ -1251,10 +1302,11 @@ Thank you for choosing Anand Travels!`;
                             </button>
                             <button
                               onClick={() => deleteBookings([booking.id])}
-                              className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-1"
+                              className="p-2 bg-gray-100 hover:bg-red-100 rounded-lg flex items-center gap-1 transition-colors duration-200 group"
+                              title="Delete this booking"
                             >
-                              <TrashIcon size={14} className="text-red-600" />
-                              <span className="text-xs">Delete</span>
+                              <TrashIcon size={14} className="text-gray-500 group-hover:text-red-600 transition-colors duration-200" />
+                              <span className="text-xs group-hover:text-red-600 transition-colors duration-200">Delete</span>
                             </button>
                           </div>
                         </div>
@@ -1308,7 +1360,7 @@ Thank you for choosing Anand Travels!`;
                             <option value="pending">Pending</option>
                             <option value="in_process">In Process</option>
                             <option value="booked">Booked</option>
-                            <option value="completed">Completed</option>
+                            <option value="completed">Payment Done</option>
                           </select>
                         </div>
 
@@ -1540,11 +1592,11 @@ Thank you for choosing Anand Travels!`;
                               </button>
                               <button
                                 onClick={() => deleteBookings([booking.id])}
-                                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-1"
-                                title="Delete"
+                                className="p-2 bg-gray-100 hover:bg-red-100 rounded-lg flex items-center gap-1 transition-colors duration-200 group"
+                                title="Delete this booking"
                               >
-                                <TrashIcon size={14} className="text-red-600" />
-                                <span className="text-xs font-medium">Delete</span>
+                                <TrashIcon size={14} className="text-gray-500 group-hover:text-red-600 transition-colors duration-200" />
+                                <span className="text-xs font-medium group-hover:text-red-600 transition-colors duration-200">Delete</span>
                               </button>
                             </div>
                           </div>
@@ -1592,20 +1644,42 @@ Thank you for choosing Anand Travels!`;
                     >
                       <option value="all">All Package Bookings ({packageBookingStats.total})</option>
                       <option value="pending">Pending ({packageBookingStats.pending})</option>
-                      <option value="completed">Completed ({packageBookingStats.completed})</option>
+                      <option value="completed">Payment Done ({packageBookingStats.completed})</option>
                     </select>
                   </div>
                   
-                  {/* Delete selected button */}
-                  {selectedPackageBookings.length > 0 && (
-                    <button
-                      onClick={() => deletePackageBookings(selectedPackageBookings)}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-                    >
-                      <TrashIcon size={16} />
-                      Delete Selected ({selectedPackageBookings.length})
-                    </button>
-                  )}
+                  {/* Select All and Delete selected buttons */}
+                  <div className="flex gap-2 items-center">
+                    <div className="flex items-center gap-2">
+                      <Checkbox 
+                        checked={filteredPackageBookings.length > 0 && selectedPackageBookings.length === filteredPackageBookings.length}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedPackageBookings(filteredPackageBookings.map(b => b.id));
+                          } else {
+                            setSelectedPackageBookings([]);
+                          }
+                        }}
+                        id="select-all-packages"
+                      />
+                      <label 
+                        htmlFor="select-all-packages" 
+                        className="text-sm font-medium whitespace-nowrap cursor-pointer"
+                      >
+                        Select All
+                      </label>
+                    </div>
+                    
+                    {selectedPackageBookings.length > 0 && (
+                      <button
+                        onClick={() => deletePackageBookings(selectedPackageBookings)}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 shadow-sm hover:shadow"
+                      >
+                        <TrashIcon size={16} className="animate-pulse" />
+                        <span className="font-medium">Delete ({selectedPackageBookings.length})</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1641,7 +1715,7 @@ Thank you for choosing Anand Travels!`;
                           }`}
                         >
                           <option value="pending">Pending</option>
-                          <option value="completed">Completed</option>
+                          <option value="completed">Payment Done</option>
                         </select>
                       </div>
 
@@ -1694,10 +1768,10 @@ Thank you for choosing Anand Travels!`;
                         <div>
                           <button
                             onClick={() => deletePackageBookings([booking.id])}
-                            className="p-2 hover:bg-gray-200 rounded-full"
-                            title="Delete"
+                            className="p-2 hover:bg-red-100 rounded-full transition-colors duration-200 group"
+                            title="Delete this package booking"
                           >
-                            <TrashIcon size={16} className="text-red-600" />
+                            <TrashIcon size={16} className="text-gray-500 group-hover:text-red-600 transition-colors duration-200" />
                           </button>
                         </div>
                       </div>
@@ -1732,7 +1806,7 @@ Thank you for choosing Anand Travels!`;
               <div className="hidden lg:grid grid-cols-3 gap-4">
                 {filteredPackageBookings.length > 0 ? (
                   filteredPackageBookings.map((booking) => (
-                    <div key={booking.id} className="bg-white rounded-lg shadow-sm p-4 hover:bg-gray-50 transition-colors">
+                    <div key={booking.id} className="bg-white border rounded-lg p-4">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-start gap-3">
                           <Checkbox 
@@ -1760,7 +1834,7 @@ Thank you for choosing Anand Travels!`;
                           }`}
                         >
                           <option value="pending">Pending</option>
-                          <option value="completed">Completed</option>
+                          <option value="completed">Payment Done</option>
                         </select>
                       </div>
 
@@ -1821,10 +1895,10 @@ Thank you for choosing Anand Travels!`;
                           <div>
                             <button
                               onClick={() => deletePackageBookings([booking.id])}
-                              className="p-2 hover:bg-gray-200 rounded-full"
-                              title="Delete"
+                              className="p-2 hover:bg-red-100 rounded-full transition-colors duration-200 group"
+                              title="Delete this package booking"
                             >
-                              <TrashIcon size={16} className="text-red-600" />
+                              <TrashIcon size={16} className="text-gray-500 group-hover:text-red-600 transition-colors duration-200" />
                             </button>
                           </div>
                         </div>
@@ -1862,15 +1936,38 @@ Thank you for choosing Anand Travels!`;
             <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h2 className="text-xl font-bold text-travel-blue-dark">Contact Messages</h2>
-                {selectedMessages.length > 0 && (
-                  <button
-                    onClick={() => deleteMessages(selectedMessages)}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-                  >
-                    <TrashIcon size={16} />
-                    Delete Selected ({selectedMessages.length})
-                  </button>
-                )}
+                
+                <div className="flex gap-2 items-center">
+                  <div className="flex items-center gap-2">
+                    <Checkbox 
+                      checked={contacts.length > 0 && selectedMessages.length === contacts.length}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedMessages(contacts.map(c => c.id));
+                        } else {
+                          setSelectedMessages([]);
+                        }
+                      }}
+                      id="select-all-messages"
+                    />
+                    <label 
+                      htmlFor="select-all-messages" 
+                      className="text-sm font-medium whitespace-nowrap cursor-pointer"
+                    >
+                      Select All
+                    </label>
+                  </div>
+                  
+                  {selectedMessages.length > 0 && (
+                    <button
+                      onClick={() => deleteMessages(selectedMessages)}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 shadow-sm hover:shadow"
+                    >
+                      <TrashIcon size={16} className="animate-pulse" />
+                      <span className="font-medium">Delete ({selectedMessages.length})</span>
+                    </button>
+                  )}
+                </div>
               </div>
               
               <div className="space-y-4">
@@ -1912,10 +2009,10 @@ Thank you for choosing Anand Travels!`;
                             </span>
                             <button
                               onClick={() => deleteMessages([contact.id])}
-                              className="p-1 hover:bg-red-100 rounded-full"
-                              title="Delete"
+                              className="p-1 hover:bg-red-100 rounded-full transition-colors duration-200 group"
+                              title="Delete this message"
                             >
-                              <TrashIcon size={16} className="text-red-600" />
+                              <TrashIcon size={16} className="text-gray-500 group-hover:text-red-600 transition-colors duration-200" />
                             </button>
                           </div>
                         </div>
@@ -2066,8 +2163,8 @@ Thank you for choosing Anand Travels!`;
                         <button onClick={() => handleEditAgent(agent)} className="p-2 hover:bg-gray-100 rounded-full">
                           <PencilIcon size={16} className="text-blue-600" />
                         </button>
-                        <button onClick={() => handleDeleteAgent(agent.id)} className="p-2 hover:bg-gray-100 rounded-full">
-                          <TrashIcon size={16} className="text-red-600" />
+                        <button onClick={() => handleDeleteAgent(agent.id)} className="p-2 hover:bg-red-100 rounded-full transition-colors duration-200 group" title="Delete this agent">
+                          <TrashIcon size={16} className="text-gray-500 group-hover:text-red-600 transition-colors duration-200" />
                         </button>
                       </div>
                     </div>
@@ -2122,6 +2219,21 @@ Thank you for choosing Anand Travels!`;
                   </p>
                 </div>
                 
+                <div>
+                  <Label htmlFor="passengerCount">Number of Passengers</Label>
+                  <Input
+                    id="passengerCount"
+                    type="number"
+                    min="1"
+                    value={messageDetails.passengerCount}
+                    onChange={(e) => setMessageDetails({
+                      ...messageDetails,
+                      passengerCount: parseInt(e.target.value) || 1
+                    })}
+                    className="w-full"
+                  />
+                </div>
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="ticketCost">Ticket Cost (₹)</Label>
@@ -2143,6 +2255,9 @@ Thank you for choosing Anand Travels!`;
                         });
                       }}
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Per passenger cost
+                    </p>
                   </div>
                   <div>
                     <Label htmlFor="bookingCharge">Booking Charge (₹)</Label>
@@ -2155,6 +2270,9 @@ Thank you for choosing Anand Travels!`;
                         bookingCharge: e.target.value
                       })}
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      One-time service charge
+                    </p>
                   </div>
                 </div>
                 
@@ -2167,6 +2285,9 @@ Thank you for choosing Anand Travels!`;
                     readOnly
                     className="bg-gray-50"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    (Ticket Cost × {messageDetails.passengerCount}) + (Booking Charge × {messageDetails.passengerCount})
+                  </p>
                 </div>
                 
                 <div>
@@ -2211,7 +2332,7 @@ Thank you for choosing Anand Travels!`;
               </div>
               <div className="bg-white/20 rounded-lg p-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 00-2 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </div>
             </div>
