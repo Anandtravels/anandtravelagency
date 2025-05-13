@@ -3,8 +3,8 @@ const TestimonialsSection = () => {
   const testimonials = [
     {
       id: 1,
-      name: "Priya Sharma",
-      location: "Delhi",
+      name: "Priya",
+      location: "Visakapatnam",
       text: "Anand Travel Agency made my family trip to Kashmir absolutely hassle-free. The Tatkal train tickets they arranged saved us a lot of money compared to flights. Highly recommended!",
       image: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg",
       rating: 5
@@ -12,15 +12,15 @@ const TestimonialsSection = () => {
     {
       id: 2,
       name: "Rajesh Kumar",
-      location: "Mumbai",
+      location: "Kakinada",
       text: "I've been using their services for all my business travels. Their prompt response and ability to secure Tatkal tickets even at the last minute has been a lifesaver for me multiple times.",
       image: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg",
       rating: 5
     },
     {
       id: 3,
-      name: "Anita Desai",
-      location: "Pune",
+      name: "K Raju",
+      location: "Bhimavaram",
       text: "Our international trip to Thailand was perfectly organized. Everything from flights to hotel bookings and local tours was well-coordinated. Will definitely book through them again!",
       image: "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg",
       rating: 4
