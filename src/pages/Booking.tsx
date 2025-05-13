@@ -6,6 +6,7 @@ import Footer from "../components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import BookingSuccess from "@/components/BookingSuccess";
 
 const Booking = () => {
   const [bookingType, setBookingType] = useState("train");
@@ -16,6 +17,7 @@ const Booking = () => {
     { name: '', age: '', gender: 'male' }
   ]);
   const [flightTripType, setFlightTripType] = useState("one_way");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm({
     defaultValues: {
@@ -110,10 +112,8 @@ const Booking = () => {
       
       const docRef = await addDoc(collection(db, 'bookings'), bookingData);
       
-      toast({
-        title: "Booking Submitted Successfully",
-        description: "We've received your booking request. Our team will contact you shortly!",
-      });
+      // Show success overlay instead of toast
+      setShowSuccess(true);
       
       reset({
         phone: "",
@@ -153,6 +153,13 @@ const Booking = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
+      
+      {/* Add Success Overlay */}
+      <BookingSuccess 
+        show={showSuccess}
+        onClose={() => setShowSuccess(false)}
+      />
+      
       <main className="flex-grow">
         <div className="relative h-[40vh] min-h-[300px] bg-cover bg-center flex items-center" 
              style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://source.unsplash.com/photo-1544620347-c4fd4a3d5957')" }}>
