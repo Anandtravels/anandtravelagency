@@ -19,7 +19,7 @@ const TestimonialsSection = () => {
     },
     {
       id: 3,
-      name: "K Raju",
+      name: "Keerthi",
       location: "Bhimavaram",
       text: "Our international trip to Thailand was perfectly organized. Everything from flights to hotel bookings and local tours was well-coordinated. Will definitely book through them again!",
       image: "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg",

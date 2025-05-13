@@ -80,7 +80,7 @@ const ServicesSection = () => {
             </ul>
             <blockquote className="italic text-gray-200 border-l-4 border-travel-orange pl-4">
               "Anand Travel Agency has been our go-to for all Tatkal bookings. They've never let us down!"
-              <footer className="text-right text-travel-orange mt-2">— Rajesh Kumar, Mumbai</footer>
+              <footer className="text-right text-travel-orange mt-2">—  Suresh, kakinada</footer>
             </blockquote>
           </div>
         </div>
