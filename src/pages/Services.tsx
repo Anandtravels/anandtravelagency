@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Plane, Train, Bus, Car, Package, MapPin } from "lucide-react";
 import Navbar from "../components/Navbar";
@@ -22,7 +21,7 @@ const Services = () => {
         "Senior citizen and special quota applications",
         "Last-minute travel solutions"
       ],
-      image: "https://images.pexels.com/photos/2031758/pexels-photo-2031758.jpeg"
+      image: "https://res.cloudinary.com/dicfrzgfz/image/upload/v1747154007/TRAINS_IMAGE_z1bywn.png"
     },
     {
       id: "bus",
@@ -36,7 +35,7 @@ const Services = () => {
         "Door pickup available for select routes",
         "Group discounts available"
       ],
-      image: "https://images.pexels.com/photos/68629/pexels-photo-68629.jpeg"
+      image: "https://res.cloudinary.com/dicfrzgfz/image/upload/v1747154260/bus_eicjjc.png"
     },
     {
       id: "flight",
@@ -50,7 +49,7 @@ const Services = () => {
         "Group booking discounts",
         "Emergency booking assistance"
       ],
-      image: "https://images.pexels.com/photos/358319/pexels-photo-358319.jpeg"
+      image: "https://res.cloudinary.com/dicfrzgfz/image/upload/v1747154008/flights_image_yi5jac.png"
     },
     {
       id: "cab",
@@ -64,7 +63,7 @@ const Services = () => {
         "Corporate travel solutions",
         "24/7 customer support"
       ],
-      image: "https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg"
+      image: "https://res.cloudinary.com/dicfrzgfz/image/upload/v1747154007/CABS_IMAGE_i8zzv9.png"
     },
     {
       id: "tour",

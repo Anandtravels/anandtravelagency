@@ -785,11 +785,12 @@ const Booking = () => {
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <h4 className="font-medium text-travel-blue-dark mb-2">Popular Bus Routes</h4>
                         <ul className="text-sm text-gray-600 space-y-1">
-                          <li>Mumbai - Pune</li>
-                          <li>Delhi - Jaipur</li>
-                          <li>Bangalore - Chennai</li>
-                          <li>Hyderabad - Bangalore</li>
-                          <li>Ahmedabad - Mumbai</li>
+                          <li>Kakinada - Hyderabad </li>
+                          <li>Kakinada - Tirupati </li>
+                          <li>kakinda - Vijayawada</li>
+                          <li>Kakinada - Vizag</li>
+                          <li>Kakinada - Bangalore</li>
+                          <li>Kakinada - Chennai</li>
                         </ul>
                       </div>
                     </div>
