@@ -110,12 +110,12 @@ const Admin = () => {
         filtered = filtered.filter(b => b.status === 'completed');
       } else if (statusFilter === 'payment_done') {
         filtered = filtered.filter(b => b.payment_status === 'completed');
-      } else if (statusFilter === 'payment_not_done') {
-        filtered = filtered.filter(b => !b.payment_status || b.payment_status === 'pending');
       } else if (statusFilter === 'in_process') {
         filtered = filtered.filter(b => b.status === 'in_process');
       } else if (statusFilter === 'booked') {
         filtered = filtered.filter(b => b.status === 'booked');
+      } else if (statusFilter === 'hold') {
+        filtered = filtered.filter(b => b.status === 'hold');
       }
     }
     
@@ -132,6 +132,9 @@ const Admin = () => {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       
+      const dayAfterTomorrow = new Date(today);
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+      
       // Format the dates as strings to match the journey_date format (YYYY-MM-DD)
       const formatDate = (date: Date) => {
         const year = date.getFullYear();
@@ -142,11 +145,14 @@ const Admin = () => {
       
       const todayStr = formatDate(today);
       const tomorrowStr = formatDate(tomorrow);
+      const dayAfterTomorrowStr = formatDate(dayAfterTomorrow);
       
       if (dateFilter === 'today') {
         filtered = filtered.filter(b => b.journey_date === todayStr);
       } else if (dateFilter === 'tomorrow') {
         filtered = filtered.filter(b => b.journey_date === tomorrowStr);
+      } else if (dateFilter === 'dayAfterTomorrow') {
+        filtered = filtered.filter(b => b.journey_date === dayAfterTomorrowStr);
       }
     }
     
@@ -402,7 +408,7 @@ const Admin = () => {
     }
   };
 
-  const updateBookingStatus = async (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked') => {
+  const updateBookingStatus = async (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold') => {
     try {
       // First verify admin auth
       if (!user || user.email !== 'admin@anandtravels.com') {
@@ -1077,10 +1083,9 @@ Thank you for choosing Anand Travels!`;
                         <option value="all">All Statuses</option>
                         <option value="pending">Pending</option>
                         <option value="completed">Payment Done</option>
-                        <option value="payment_done">Payment Done</option>
-                        <option value="payment_not_done">Payment Not Done</option>
                         <option value="in_process">In Process</option>
                         <option value="booked">Booked</option>
+                        <option value="hold">Hold</option>
                       </select>
                     </div>
                     
@@ -1109,6 +1114,7 @@ Thank you for choosing Anand Travels!`;
                         <option value="all">All Dates</option>
                         <option value="today">Today</option>
                         <option value="tomorrow">Tomorrow</option>
+                        <option value="dayAfterTomorrow">Day After Tomorrow</option>
                       </select>
                     </div>
                   </div>
@@ -1180,16 +1186,18 @@ Thank you for choosing Anand Travels!`;
                                   ? 'bg-blue-100 text-blue-800'
                                   : booking.status === 'booked'
                                   ? 'bg-purple-100 text-purple-800'
+                                  : booking.status === 'hold'
+                                  ? 'bg-amber-100 text-amber-800'
                                   : 'bg-yellow-100 text-yellow-800'
                               }`}>
-                                {booking.status === 'completed' ? 'Payment Done' : booking.status === 'in_process' ? 'In Process' : booking.status === 'booked' ? 'Booked' : 'Pending'}
+                                {booking.status === 'completed' ? 'Payment Done' : booking.status === 'in_process' ? 'In Process' : booking.status === 'booked' ? 'Booked' : booking.status === 'hold' ? 'Hold' : 'Pending'}
                               </span>
                             </div>
                           </div>
                         </div>
                         <select
                           value={booking.status || 'pending'}
-                          onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked')}
+                          onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold')}
                           className={`px-3 py-1 rounded-full text-xs font-medium border ${
                             booking.status === 'completed' 
                               ? 'bg-green-100 text-green-800 border-green-200' 
@@ -1197,12 +1205,15 @@ Thank you for choosing Anand Travels!`;
                               ? 'bg-blue-100 text-blue-800 border-blue-200'
                               : booking.status === 'booked'
                               ? 'bg-purple-100 text-purple-800 border-purple-200'
+                              : booking.status === 'hold'
+                              ? 'bg-amber-100 text-amber-800 border-amber-200'
                               : 'bg-yellow-100 text-yellow-800 border-yellow-200'
                           }`}
                         >
                           <option value="pending">Pending</option>
                           <option value="in_process">In Process</option>
                           <option value="booked">Booked</option>
+                          <option value="hold">Hold</option>
                           <option value="completed">Payment Done</option>
                         </select>
                       </div>
@@ -1249,6 +1260,26 @@ Thank you for choosing Anand Travels!`;
                             </div>
                           </div>
                         </details>
+                        
+                        {/* New Additional Details Section */}
+                        {(booking.travel_class || booking.class_preference || booking.train_booking_type || 
+                          booking.train_class || booking.ticket_number || booking.pnr || 
+                          booking.booking_reference || booking.fare_details || booking.preferred_trains) && (
+                          <details className="bg-white p-3 rounded-md shadow-sm border border-gray-100">
+                            <summary className="font-medium text-sm cursor-pointer">Additional Details</summary>
+                            <div className="mt-2 pt-2 border-t text-sm">
+                              {booking.travel_class && <p className="mb-1.5"><span className="font-medium text-gray-500">Travel Class:</span> {booking.travel_class}</p>}
+                              {booking.class_preference && <p className="mb-1.5"><span className="font-medium text-gray-500">Class Preference:</span> {booking.class_preference}</p>}
+                              {booking.train_booking_type && <p className="mb-1.5"><span className="font-medium text-gray-500">Train Booking Type:</span> {booking.train_booking_type}</p>}
+                              {booking.train_class && <p className="mb-1.5"><span className="font-medium text-gray-500">Train Class:</span> {booking.train_class}</p>}
+                              {booking.preferred_trains && <p className="mb-1.5"><span className="font-medium text-gray-500">Preferred Trains:</span> {booking.preferred_trains}</p>}
+                              {booking.ticket_number && <p className="mb-1.5"><span className="font-medium text-gray-500">Ticket Number:</span> {booking.ticket_number}</p>}
+                              {booking.pnr && <p className="mb-1.5"><span className="font-medium text-gray-500">PNR:</span> {booking.pnr}</p>}
+                              {booking.booking_reference && <p className="mb-1.5"><span className="font-medium text-gray-500">Booking Reference:</span> {booking.booking_reference}</p>}
+                              {booking.fare_details && <p className="mb-1.5"><span className="font-medium text-gray-500">Fare Details:</span> {booking.fare_details}</p>}
+                            </div>
+                          </details>
+                        )}
                         
                         {booking.additional_requirements && (
                           <details className="bg-white p-3 rounded-md shadow-sm border border-gray-100">
@@ -1346,7 +1377,7 @@ Thank you for choosing Anand Travels!`;
                         <div className="absolute right-4 top-4">
                           <select
                             value={booking.status || 'pending'}
-                            onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked')}
+                            onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold')}
                             className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
                               booking.status === 'completed' 
                                 ? 'bg-green-100 text-green-800 border-green-200' 
@@ -1354,12 +1385,15 @@ Thank you for choosing Anand Travels!`;
                                 ? 'bg-blue-100 text-blue-800 border-blue-200'
                                 : booking.status === 'booked'
                                 ? 'bg-purple-100 text-purple-800 border-purple-200'
+                                : booking.status === 'hold'
+                                ? 'bg-amber-100 text-amber-800 border-amber-200'
                                 : 'bg-yellow-100 text-yellow-800 border-yellow-200'
                             }`}
                           >
                             <option value="pending">Pending</option>
                             <option value="in_process">In Process</option>
                             <option value="booked">Booked</option>
+                            <option value="hold">Hold</option>
                             <option value="completed">Payment Done</option>
                           </select>
                         </div>
