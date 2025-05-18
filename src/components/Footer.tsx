@@ -169,7 +169,18 @@ const Footer = () => {
 
         {/* Copyright */}
         <div className="border-t border-travel-blue-medium mt-12 pt-6 text-center text-gray-400">
-          <p>© {new Date().getFullYear()} Anand Travel Agency. All Rights Reserved.</p>
+          <p>
+            © {new Date().getFullYear()} Anand Travel Agency. All Rights Reserved. <br />
+            Designed & Developed By{" "}
+            <a 
+              href="https://thedreamteamservices.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-travel-orange hover:text-white transition-colors"
+            >
+              DREAM TEAM SERVICES
+            </a>
+          </p>
           <div className="mt-2 text-sm space-x-4">
             <Link to="/privacy" className="hover:text-travel-orange transition-colors">
               Privacy Policy
