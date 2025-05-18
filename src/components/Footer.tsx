@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Phone, Mail, MapPin, Instagram, Facebook, Twitter } from "lucide-react";
+import { Phone, Mail, MapPin, Instagram, Facebook, Twitter, Linkedin, Globe, MessageSquare } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -14,14 +14,20 @@ const Footer = () => {
               bus bookings, flight tickets, and curated travel packages for the perfect journey.
             </p>
             <div className="flex space-x-4 mt-4">
-              <a href="#" className="text-white hover:text-travel-orange transition-colors">
+              <a href="https://www.facebook.com/profile.php?id=61575167457124" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
                 <Facebook size={20} />
               </a>
-              <a href="#" className="text-white hover:text-travel-orange transition-colors">
+              <a href="https://www.instagram.com/anandtravelsagency/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
                 <Instagram size={20} />
               </a>
-              <a href="#" className="text-white hover:text-travel-orange transition-colors">
+              <a href="https://x.com/anandtravelss" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
                 <Twitter size={20} />
+              </a>
+              <a href="https://www.linkedin.com/in/anand-pinisetty-656583359/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
+                <Linkedin size={20} />
+              </a>
+              <a href="https://g.co/kgs/xk43d2S" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
+                <Globe size={20} />
               </a>
             </div>
           </div>
@@ -117,12 +123,32 @@ const Footer = () => {
                 </a>
               </li>
               <li className="flex items-center gap-3">
+                <MessageSquare className="text-travel-orange flex-shrink-0" size={18} />
+                <a href="https://wa.me/918985816481" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-travel-orange transition-colors">
+                  WhatsApp: +91 8985816481
+                </a>
+              </li>
+              <li className="flex items-center gap-3">
                 <Mail className="text-travel-orange flex-shrink-0" size={18} />
                 <a href="mailto:anandtravelsguide@gmail.com" className="text-gray-300 hover:text-travel-orange transition-colors">
                   anandtravelsguide@gmail.com
                 </a>
               </li>
             </ul>
+
+            {/* Google Review */}
+            <div className="mt-6">
+              <h4 className="text-lg font-medium mb-2">Leave a Review</h4>
+              <a 
+                href="https://g.page/r/CRF3AUEXTuzdEAE/review" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-travel-orange hover:bg-travel-orange/90 text-white px-4 py-2 rounded-md transition-colors"
+              >
+                <Globe size={18} />
+                <span>Google Review</span>
+              </a>
+            </div>
 
             {/* Newsletter */}
             <div className="mt-6">

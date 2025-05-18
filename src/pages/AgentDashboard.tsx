@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
+import { CouponInput } from "@/components/CouponSystem/CouponInput";
 
 const AgentDashboard = () => {
   const { user, isAgent, signOut, loading } = useAuth();
@@ -27,7 +28,11 @@ const AgentDashboard = () => {
     bookingCharge: '',
     totalAmount: '',
     additionalInfo: '',
-    bookingType: 'General Booking'
+    bookingType: 'General Booking',
+    // Add coupon related fields
+    couponCode: '',
+    couponDiscount: 0,
+    couponType: null as 'fixed' | 'percentage' | null
   });
   
   // Check authentication and fetch agent's bookings
@@ -172,12 +177,29 @@ const AgentDashboard = () => {
         bookingCharge: '',
         totalAmount: '',
         additionalInfo: '',
-        bookingType: initialBookingType
+        bookingType: initialBookingType,
+        // Include the coupon fields with default values
+        couponCode: '',
+        couponDiscount: 0,
+        couponType: null
       });
     } else {
       // Direct WhatsApp chat without booking context
       window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
     }
+  };
+
+  // Add the missing handleBookingTypeChange function
+  const handleBookingTypeChange = (newType: string) => {
+    // Calculate the booking charge based on the new booking type
+    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
+    const bookingCharge = calculateBookingCharge(newType, ticketCost).toFixed(2);
+    
+    setMessageDetails({
+      ...messageDetails,
+      bookingType: newType,
+      bookingCharge: bookingCharge
+    });
   };
 
   const calculateBookingCharge = (bookingType: string, basePrice: number): number => {
@@ -201,18 +223,28 @@ const AgentDashboard = () => {
       bookingCharge = calculateBookingCharge(messageDetails.bookingType, ticketCost);
     }
     
-    return (ticketCost + bookingCharge).toFixed(2);
-  };
-
-  const handleBookingTypeChange = (type: string) => {
-    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
-    const bookingCharge = calculateBookingCharge(type, ticketCost);
+    // Calculate the base amount
+    const baseAmount = ticketCost + bookingCharge;
     
-    setMessageDetails({
-      ...messageDetails,
-      bookingType: type,
-      bookingCharge: bookingCharge.toString()
-    });
+    // Apply coupon discount if available
+    let discountAmount = 0;
+    if (messageDetails.couponType && messageDetails.couponDiscount > 0) {
+      discountAmount = messageDetails.couponType === 'percentage' 
+        ? baseAmount * (messageDetails.couponDiscount / 100) 
+        : Math.min(messageDetails.couponDiscount, baseAmount); // Fixed discount capped at base amount
+    }
+    
+    return (baseAmount - discountAmount).toFixed(2);
+  };
+  
+  // Handle applying a coupon
+  const handleApplyCoupon = (discount: number, code: string, type: 'fixed' | 'percentage') => {
+    setMessageDetails(prev => ({
+      ...prev,
+      couponCode: code,
+      couponDiscount: discount,
+      couponType: type
+    }));
   };
 
   const sendWhatsappMessage = () => {
@@ -229,6 +261,22 @@ const AgentDashboard = () => {
       passengerInfo = `*Passengers:* ${currentBooking.passengers}\n`;
     }
     
+    // Calculate discount amount for display
+    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
+    let bookingCharge = parseFloat(messageDetails.bookingCharge) || 0;
+    if (messageDetails.bookingCharge === '') {
+      bookingCharge = calculateBookingCharge(messageDetails.bookingType, ticketCost);
+    }
+    
+    const baseAmount = ticketCost + bookingCharge;
+    let discountAmount = 0;
+    
+    if (messageDetails.couponType && messageDetails.couponDiscount > 0) {
+      discountAmount = messageDetails.couponType === 'percentage' 
+        ? baseAmount * (messageDetails.couponDiscount / 100) 
+        : Math.min(messageDetails.couponDiscount, baseAmount);
+    }
+    
     // Build the formatted message based on booking type
     let pricingDetails = '';
     
@@ -237,18 +285,21 @@ const AgentDashboard = () => {
 `*Pricing Details:*
 Tatkal Cost: ₹${messageDetails.ticketCost}
 Tatkal Booking Charge: ₹${messageDetails.bookingCharge}
+${discountAmount > 0 ? `Coupon Discount (${messageDetails.couponCode}): -₹${discountAmount.toFixed(2)}` : ''}
 *Total Amount: ₹${calculateTotal()}*`;
     } else if (messageDetails.bookingType === 'Premium Booking') {
       pricingDetails = 
 `*Pricing Details:*
 Premium Ticket Cost: ₹${messageDetails.ticketCost}
 Premium Booking Charge: ₹${messageDetails.bookingCharge}
+${discountAmount > 0 ? `Coupon Discount (${messageDetails.couponCode}): -₹${discountAmount.toFixed(2)}` : ''}
 *Total Amount: ₹${calculateTotal()}*`;
     } else {
       pricingDetails = 
 `*Pricing Details:*
 Ticket Cost: ₹${messageDetails.ticketCost}
 Booking Charge: ₹${messageDetails.bookingCharge}
+${discountAmount > 0 ? `Coupon Discount (${messageDetails.couponCode}): -₹${discountAmount.toFixed(2)}` : ''}
 *Total Amount: ₹${calculateTotal()}*`;
     }
     
@@ -283,7 +334,7 @@ Thank you for choosing Anand Travels!`;
     window.open(`https://wa.me/${currentBooking.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
     setWhatsappModal(false);
   };
-
+  
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -517,14 +568,28 @@ Thank you for choosing Anand Travels!`;
                   </div>
                 </div>
                 
+                <div className="border-t border-gray-200 pt-3 mt-2">
+                  <Label htmlFor="couponCode" className="text-sm font-medium mb-2 block">Apply Coupon</Label>
+                  <CouponInput onApplyCoupon={handleApplyCoupon} />
+                </div>
+                
                 <div>
-                  <Label htmlFor="totalAmount">Total Amount (₹)</Label>
+                  <Label htmlFor="totalAmount" className="flex justify-between">
+                    <span>Total Amount (₹)</span>
+                    {messageDetails.couponDiscount > 0 && (
+                      <span className="text-green-600 text-sm font-medium">
+                        Discount: {messageDetails.couponType === 'percentage' 
+                          ? `${messageDetails.couponDiscount}%` 
+                          : `₹${messageDetails.couponDiscount}`}
+                      </span>
+                    )}
+                  </Label>
                   <Input
                     id="totalAmount"
                     type="text"
                     value={calculateTotal()}
                     readOnly
-                    className="bg-gray-50"
+                    className={`bg-gray-50 ${messageDetails.couponDiscount > 0 ? 'border-green-500 shadow-sm' : ''}`}
                   />
                 </div>
                 

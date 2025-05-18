@@ -24,6 +24,7 @@ import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import LoadingScreen from "@/components/LoadingScreen";
 import AuthAccountCreator from './components/AuthAccountCreator';
+import CouponManager from "./pages/admin/CouponManager";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +79,9 @@ const App = () => {
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/faq" element={<FAQ />} />
+                
+                {/* Add Coupon Manager route */}
+                <Route path="/admin/coupons" element={<CouponManager />} />
                 
                 {/* Add a redirect for /agent to /agent-login */}
                 <Route path="/agent" element={<Navigate to="/agent-login" replace />} />

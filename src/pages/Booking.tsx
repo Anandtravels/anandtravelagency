@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Calendar, MapPin, User, Phone, Mail, Train, Bus, Plane, Car } from "lucide-react";
+import { Calendar, MapPin, User, Phone, Mail, Train, Bus, Plane, Car, Check } from "lucide-react";
+import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useToast } from "@/hooks/use-toast";
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import BookingSuccess from "@/components/BookingSuccess";
+import { CouponInput } from "@/components/CouponSystem/CouponInput";
 
 const Booking = () => {
   const [bookingType, setBookingType] = useState("train");
@@ -18,7 +19,31 @@ const Booking = () => {
   ]);
   const [flightTripType, setFlightTripType] = useState("one_way");
   const [showSuccess, setShowSuccess] = useState(false);
-
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponType, setCouponType] = useState<'fixed' | 'percentage' | null>(null);
+  const [bookingCharge, setBookingCharge] = useState(50); // Default booking charge
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discount: number;
+    type: 'fixed' | 'percentage';
+    originalAmount: number;
+    discountAmount: number;
+    finalAmount: number;
+  } | null>(null);
+  const [bookingDetails, setBookingDetails] = useState<{
+    coupon?: {
+      code: string;
+      discount: number;
+      type: 'fixed' | 'percentage';
+      originalAmount: number;
+      discountAmount: number;
+      finalAmount: number;
+    } | null;
+  }>({
+    coupon: null
+  });
+  
   const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm({
     defaultValues: {
       phone: "",
@@ -97,47 +122,109 @@ const Booking = () => {
     setPassengers(updatedPassengers);
   };
   
+  // Calculate booking charge based on booking type
+  const calculateBookingCharge = (type: string) => {
+    switch(type) {
+      case 'tatkal':
+        return 200;
+      case 'premium_tatkal':
+        return 250;
+      default:
+        return 50;
+    }
+  };
+
+  // Function to handle applying a coupon
+  const handleApplyCoupon = (discount: number, code: string, type: 'fixed' | 'percentage') => {
+    const originalAmount = bookingCharge;
+    const discountAmount = type === 'percentage' 
+      ? (originalAmount * discount / 100) 
+      : discount;
+    const finalAmount = Math.max(0, originalAmount - discountAmount);
+
+    setAppliedCoupon({
+      code,
+      discount,
+      type,
+      originalAmount,
+      discountAmount,
+      finalAmount
+    });
+    setCouponDiscount(discount);
+    setCouponCode(code);
+    setCouponType(type);
+  };
+
   const onSubmit = async (data) => {
     setIsLoading(true);
-    
     try {
+      // Calculate final booking charge
+      const baseCharge = calculateBookingCharge(data.train_booking_type || 'general');
+      const finalCharge = appliedCoupon ? appliedCoupon.finalAmount : baseCharge;
+
       const bookingData = {
         ...data,
         phone: "+91" + data.phone,
         booking_type: bookingType,
-        passengers: passengers,
+        passengers,
         status: "pending",
-        created_at: serverTimestamp()
+        created_at: serverTimestamp(),
+        booking_charge: {
+          original: baseCharge,
+          final: finalCharge,
+          currency: 'INR'
+        },
+        coupon: appliedCoupon ? {
+          ...appliedCoupon,
+          appliedAt: serverTimestamp()
+        } : null
       };
-      
+
       const docRef = await addDoc(collection(db, 'bookings'), bookingData);
-      
-      // Show success overlay instead of toast
+
+      // Update coupon usage
+      if (couponCode) {
+        const couponsRef = collection(db, 'coupons');
+        const q = query(couponsRef, where('code', '==', couponCode));
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+          const couponDoc = snapshot.docs[0];
+          const couponData = couponDoc.data();
+          
+          // Convert booking type for display
+          let displayBookingType = "General Booking";
+          if (data.train_booking_type === "tatkal") {
+            displayBookingType = "Tatkal Booking";
+          } else if (data.train_booking_type === "premium_tatkal") {
+            displayBookingType = "Premium Booking";
+          }
+          
+          // Create a new redemption object with the correct amount based on booking type
+          const redemptionData = {
+            bookingId: docRef.id,
+            bookingType: displayBookingType, // Store user-friendly booking type
+            appliedAt: new Date().toISOString(),
+            originalAmount: baseCharge, // Use the correct base charge calculated above
+            discountAmount: appliedCoupon?.discountAmount,
+            finalAmount: finalCharge,
+            personName: data.name, // Add person information as requested
+            personPhone: "+91" + data.phone
+          };
+
+          await updateDoc(doc(db, 'coupons', couponDoc.id), {
+            usedCount: (couponData.usedCount || 0) + 1,
+            redemptions: [...(couponData.redemptions || []), redemptionData],
+            lastUsed: serverTimestamp() // Use serverTimestamp only for the top-level field
+          });
+        }
+      }
+
       setShowSuccess(true);
-      
-      reset({
-        phone: "",
-        name: "",
-        email: "",
-        from: "",
-        to: "",
-        journey_date: "",
-        passengers: "",
-        additional_requirements: "",
-        train_booking_type: "general",
-        train_class: "SL",
-        preferred_trains: "",
-        flight_trip_type: "one_way",
-        flight_class: "economy",
-        return_date: "",
-        preferred_airlines: "",
-        bus_type: "ac_seater",
-        boarding_point: "",
-        drop_point: "", // Add this new field
-        cab_type: "sedan",
-        cab_trip_type: "one_way",
-        pickup_address: ""
+      setBookingDetails({
+        coupon: appliedCoupon
       });
+
     } catch (error) {
       console.error("Error submitting booking:", error);
       toast({
@@ -693,6 +780,12 @@ const Booking = () => {
                     </div>
                     
                     <div className="border-t border-gray-200 pt-6">
+                      {/* Add the Coupon Input component here */}
+                      <h3 className="text-xl font-semibold text-travel-blue-dark mb-4">Apply Coupon</h3>
+                      <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                        <CouponInput onApplyCoupon={handleApplyCoupon} />
+                      </div>
+                      
                       <button
                         type="submit"
                         disabled={isLoading}
@@ -707,6 +800,20 @@ const Booking = () => {
                           <span>Submit Booking Request</span>
                         )}
                       </button>
+                      
+                      {/* Display coupon discount if applied */}
+                      {couponDiscount > 0 && couponType && (
+                        <div className="mt-4 p-3 bg-green-50 border border-green-100 rounded-md">
+                          <p className="flex items-center text-green-700">
+                            <Check className="mr-2 h-4 w-4" />
+                            <span className="font-medium">
+                              Coupon applied: {couponType === 'percentage' 
+                                ? `${couponDiscount}% off on booking charge` 
+                                : `₹${couponDiscount} off on booking charge`}
+                            </span>
+                          </p>
+                        </div>
+                      )}
                       
                       <p className="text-sm text-gray-500 mt-4">
                         * By submitting this form, you agree to our Terms & Conditions and Privacy Policy.

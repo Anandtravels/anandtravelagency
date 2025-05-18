@@ -78,8 +78,12 @@ const Admin = () => {
     bookingCharge: '',
     totalAmount: '',
     additionalInfo: '',
-    bookingType: 'General Booking', // Add booking type with default value
-    passengerCount: 1 // Add passenger count with default value of 1
+    bookingType: 'General Booking',
+    passengerCount: 1,
+    // Include the required coupon fields
+    couponCode: '',
+    couponDiscount: 0,
+    couponType: null as 'fixed' | 'percentage' | null
   });
   const [packageBookings, setPackageBookings] = useState<any[]>([]);
   const [packageBookingLoading, setPackageBookingLoading] = useState(true);
@@ -446,7 +450,7 @@ const Admin = () => {
         throw new Error('Unauthorized access');
       }
 
-      await Promise.all(ids.map(id => deleteDoc(doc(db, 'bookings', id))));
+      await Promise.all(ids.map((id) => deleteDoc(doc(db, 'bookings', id))));
       setSelectedBookings([]);
       
       toast({
@@ -554,107 +558,115 @@ const Admin = () => {
       setCurrentBooking(booking);
       setWhatsappModal(true);
       
-      // Set the booking type from the customer's original selection if available
-      const initialBookingType = booking.booking_type || 'General Booking';
+      // Get the booking type from the original booking request
+      const initialBookingType = (() => {
+        // First try to get train-specific booking type
+        if (booking.booking_type === 'train' && booking.train_booking_type) {
+          // Convert from backend format to display format
+          switch (booking.train_booking_type) {
+            case 'general': return 'General Booking';
+            case 'tatkal': return 'Tatkal Booking';
+            case 'premium_tatkal': return 'Premium Booking';
+            default: return booking.train_booking_type;
+          }
+        }
+        // Otherwise use the main booking type or default
+        return booking.booking_type ? 
+          booking.booking_type.charAt(0).toUpperCase() + booking.booking_type.slice(1) + ' Booking' 
+          : 'General Booking';
+      })();
       
-      // Get passenger count if available
       let initialPassengerCount = 1;
       if (Array.isArray(booking.passengers)) {
         initialPassengerCount = booking.passengers.length;
       }
-      
-      setMessageDetails({
-        ticketCost: '',
-        bookingCharge: '',
-        totalAmount: '',
-        additionalInfo: '',
-        bookingType: initialBookingType,
-        passengerCount: initialPassengerCount
-      });
+
+      // Calculate the correct initial booking charge based on type
+      const initialBookingCharge = calculateBookingCharge(initialBookingType, 0);
+
+      // If booking has a coupon, initialize coupon details
+      if (booking.coupon) {
+        setMessageDetails({
+          ticketCost: '',
+          bookingCharge: initialBookingCharge.toString(), // Use the correct initial booking charge
+          totalAmount: '',
+          additionalInfo: '',
+          bookingType: initialBookingType,
+          passengerCount: initialPassengerCount,
+          couponCode: booking.coupon.code,
+          couponDiscount: booking.coupon.discount,
+          couponType: booking.coupon.type
+        });
+      } else {
+        setMessageDetails({
+          ticketCost: '',
+          bookingCharge: initialBookingCharge.toString(), // Use the correct initial booking charge
+          totalAmount: '',
+          additionalInfo: '',
+          bookingType: initialBookingType,
+          passengerCount: initialPassengerCount,
+          couponCode: '',
+          couponDiscount: 0,
+          couponType: null
+        });
+      }
     } else {
-      // Direct WhatsApp chat without booking context
       window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
     }
   };
 
-  const calculateBookingCharge = (bookingType: string, basePrice: number): number => {
-    switch(bookingType) {
-      case 'Tatkal Booking':
-        return 200; // Fixed ₹200 for Tatkal
-      case 'Premium Booking':
-        return Math.max(200, basePrice * 0.15); // Minimum ₹200 or 15% whichever is higher
-      case 'General Booking':
-      default:
-        return 50; // Fixed ₹50 for General
-    }
-  };
-
-  const calculateTotal = () => {
-    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
-    let bookingCharge = parseFloat(messageDetails.bookingCharge) || 0;
-    const passengerCount = messageDetails.passengerCount || 1;
-    
-    // If booking charge was not manually set, calculate it based on booking type
-    if (messageDetails.bookingCharge === '') {
-      bookingCharge = calculateBookingCharge(messageDetails.bookingType, ticketCost);
-    }
-    
-    // Multiply both ticket cost and booking charge by passenger count
-    return ((ticketCost * passengerCount) + (bookingCharge * passengerCount)).toFixed(2);
-  };
-
-  const handleBookingTypeChange = (type: string) => {
-    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
-    const bookingCharge = calculateBookingCharge(type, ticketCost);
-    
-    setMessageDetails({
-      ...messageDetails,
-      bookingType: type,
-      bookingCharge: bookingCharge.toString()
-    });
-  };
-
   const sendWhatsappMessage = () => {
     if (!currentBooking) return;
-    
-    // Format passengers data
-    let passengerInfo = '';
-    if (Array.isArray(currentBooking.passengers)) {
-      passengerInfo = `*Passengers:* ${currentBooking.passengers.length}\n`;
-      currentBooking.passengers.forEach((passenger: any, index: number) => {
-        passengerInfo += `   ${index + 1}. ${passenger.name} (${passenger.age} yrs, ${passenger.gender})\n`;
-      });
-    } else {
-      passengerInfo = `*Passengers:* ${currentBooking.passengers}\n`;
-    }
-    
-    // Build the formatted message based on booking type
-    let pricingDetails = '';
+
+    const formatPassengerInfo = () => {
+      if (Array.isArray(currentBooking.passengers)) {
+        let info = `*Passengers:* ${currentBooking.passengers.length}\n`;
+        currentBooking.passengers.forEach((passenger: any, index: number) => {
+          info += `   ${index + 1}. ${passenger.name} (${passenger.age} yrs, ${passenger.gender})\n`;
+        });
+        return info;
+      }
+      return `*Passengers:* ${currentBooking.passengers}\n`;
+    };
+
+    const passengerInfo = formatPassengerInfo();
+    const bookingCharge = parseFloat(messageDetails.bookingCharge) || calculateBookingCharge(messageDetails.bookingType, parseFloat(messageDetails.ticketCost) || 0);
     const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
-    const bookingCharge = parseFloat(messageDetails.bookingCharge) || 0;
-    const passengerCount = messageDetails.passengerCount || 1;
-    
-    if (messageDetails.bookingType === 'Tatkal Booking') {
-      pricingDetails = 
+
+    // Format base pricing details
+    let pricingDetails = 
 `*Pricing Details:*
-Tatkal Cost: ₹${messageDetails.ticketCost} × ${passengerCount} passenger(s) = ₹${(ticketCost * passengerCount).toFixed(2)}
-Tatkal Booking Charge: ₹${messageDetails.bookingCharge} × ${passengerCount} passenger(s) = ₹${(bookingCharge * passengerCount).toFixed(2)}
-*Total Amount: ₹${calculateTotal()}*`;
-    } else if (messageDetails.bookingType === 'Premium Booking') {
-      pricingDetails = 
-`*Pricing Details:*
-Premium Ticket Cost: ₹${messageDetails.ticketCost} × ${passengerCount} passenger(s) = ₹${(ticketCost * passengerCount).toFixed(2)}
-Premium Booking Charge: ₹${messageDetails.bookingCharge} × ${passengerCount} passenger(s) = ₹${(bookingCharge * passengerCount).toFixed(2)}
-*Total Amount: ₹${calculateTotal()}*`;
+${messageDetails.bookingType} Cost: ₹${ticketCost.toFixed(2)} × ${messageDetails.passengerCount} passenger(s) = ₹${(ticketCost * messageDetails.passengerCount).toFixed(2)}
+${messageDetails.bookingType} Charge: ₹${bookingCharge.toFixed(2)} × ${messageDetails.passengerCount} passenger(s) = ₹${(bookingCharge * messageDetails.passengerCount).toFixed(2)}`;
+
+    // Add coupon details if available
+    if (messageDetails.couponCode && messageDetails.couponDiscount > 0) {
+      const originalCharge = bookingCharge * messageDetails.passengerCount;
+      const discountAmount = messageDetails.couponType === 'percentage' 
+        ? (originalCharge * messageDetails.couponDiscount / 100)
+        : messageDetails.couponDiscount;
+      const finalCharge = Math.max(0, originalCharge - discountAmount);
+
+      pricingDetails += `
+-----------------
+*Coupon Applied:* ${messageDetails.couponCode}
+Discount: ${messageDetails.couponType === 'percentage' 
+  ? `${messageDetails.couponDiscount}% OFF on booking charge`
+  : `₹${messageDetails.couponDiscount} OFF on booking charge`}
+Original Booking Charge: ₹${originalCharge.toFixed(2)}
+Savings: ₹${discountAmount.toFixed(2)}
+Final Booking Charge: ₹${finalCharge.toFixed(2)}`;
+
+      // Update total to include coupon discount
+      const total = (ticketCost * messageDetails.passengerCount) + finalCharge;
+      pricingDetails += `\n*Total Amount: ₹${total.toFixed(2)}*`;
     } else {
-      pricingDetails = 
-`*Pricing Details:*
-Ticket Cost: ₹${messageDetails.ticketCost} × ${passengerCount} passenger(s) = ₹${(ticketCost * passengerCount).toFixed(2)}
-Booking Charge: ₹${messageDetails.bookingCharge} × ${passengerCount} passenger(s) = ₹${(bookingCharge * passengerCount).toFixed(2)}
-*Total Amount: ₹${calculateTotal()}*`;
+      // Calculate total without coupon
+      const total = (ticketCost * messageDetails.passengerCount) + (bookingCharge * messageDetails.passengerCount);
+      pricingDetails += `\n*Total Amount: ₹${total.toFixed(2)}*`;
     }
-    
-    // Build the complete message
+
+    // Rest of the message
     const message = 
 `Dear *${currentBooking.name}*,
 
@@ -681,7 +693,6 @@ For any queries, feel free to contact us.
 
 Thank you for choosing Anand Travels!`;
 
-    // Open WhatsApp with the message
     window.open(`https://wa.me/${currentBooking.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
     setWhatsappModal(false);
   };
@@ -864,59 +875,6 @@ Thank you for choosing Anand Travels!`;
     }
   };
 
-  const handleEditAgent = (agent: any) => {
-    // Set the agent ID we're editing
-    setEditingAgentId(agent.id);
-    
-    setAgentFormData({
-      name: agent.name,
-      age: agent.age,
-      gender: agent.gender,
-      phone: agent.phone,
-      address: agent.address,
-      email: agent.email,
-      password: '' // Don't populate password for security
-    });
-    setShowAgentForm(true);
-  };
-
-  const handleAddNewAgent = () => {
-    // Reset the agent ID to null to indicate we're adding a new agent
-    setEditingAgentId(null);
-    
-    // Reset the form data
-    setAgentFormData({
-      name: '',
-      age: '',
-      gender: 'male',
-      phone: '',
-      address: '',
-      email: '',
-      password: ''
-    });
-    
-    // Show the form
-    setShowAgentForm(true);
-  };
-
-  const handleDeleteAgent = async (agentId: string) => {
-    if (!window.confirm('Are you sure you want to delete this agent?')) return;
-
-    try {
-      await deleteDoc(doc(db, 'agents', agentId));
-      toast({
-        title: "Agent Deleted",
-        description: "Agent has been deleted successfully"
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete agent",
-        variant: "destructive"
-      });
-    }
-  };
-
   const deletePackageBookings = async (ids: string[]) => {
     if (!window.confirm('Are you sure you want to delete the selected package bookings?')) return;
 
@@ -1032,6 +990,120 @@ Thank you for choosing Anand Travels!`;
     }
   };
 
+  // Add these new handler functions before the return statement
+  const handleAddNewAgent = () => {
+    setEditingAgentId(null);
+    setAgentFormData({
+      name: '',
+      age: '',
+      gender: 'male',
+      phone: '',
+      address: '',
+      email: '',
+      password: ''
+    });
+    setShowAgentForm(true);
+  };
+
+  const handleEditAgent = (agent: any) => {
+    setEditingAgentId(agent.id);
+    setAgentFormData({
+      name: agent.name,
+      age: agent.age,
+      gender: agent.gender,
+      phone: agent.phone,
+      address: agent.address,
+      email: agent.email,
+      password: '' // Don't populate password for security
+    });
+    setShowAgentForm(true);
+  };
+
+  const handleDeleteAgent = async (agentId: string) => {
+    if (!window.confirm('Are you sure you want to delete this agent?')) return;
+
+    try {
+      await deleteDoc(doc(db, 'agents', agentId));
+      toast({
+        title: "Agent Deleted",
+        description: "Agent has been deleted successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete agent",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const calculateBookingCharge = (bookingType: string, ticketCost: number): number => {
+    switch(bookingType) {
+      case 'Tatkal Booking':
+        return 200;
+      case 'Premium Booking':
+        return 250; // Changed from dynamic calculation to fixed ₹250
+      case 'General Booking':
+      default:
+        return 50;
+    }
+  };
+
+  const handleBookingTypeChange = (type: string) => {
+    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
+    const bookingCharge = calculateBookingCharge(type, ticketCost).toFixed(2);
+    
+    setMessageDetails({
+      ...messageDetails,
+      bookingType: type,
+      bookingCharge: bookingCharge
+    });
+  };
+
+  const calculateTotal = (): { amount: string; details: string } => {
+    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
+    const bookingCharge = parseFloat(messageDetails.bookingCharge) || 
+      calculateBookingCharge(messageDetails.bookingType, ticketCost);
+    const passengerCount = messageDetails.passengerCount || 1;
+    
+    // If no ticket cost is entered, return empty amount
+    if (!messageDetails.ticketCost) {
+      return {
+        amount: '',
+        details: ''
+      };
+    }
+    
+    // Calculate base amounts
+    const totalTicketCost = ticketCost * passengerCount;
+    const totalBookingCharge = bookingCharge * passengerCount;
+    let finalBookingCharge = totalBookingCharge;
+    let details = '';
+    
+    // Apply coupon discount if available
+    if (messageDetails.couponType && messageDetails.couponDiscount > 0) {
+      const discountAmount = messageDetails.couponType === 'percentage' 
+        ? (totalBookingCharge * messageDetails.couponDiscount / 100)
+        : messageDetails.couponDiscount;
+      
+      finalBookingCharge = Math.max(0, totalBookingCharge - discountAmount);
+      
+      details = `Coupon Applied: ${messageDetails.couponCode}\n` +
+        `Original Booking Charge: ₹${totalBookingCharge.toFixed(2)}\n` +
+        `Discount: ${messageDetails.couponType === 'percentage' 
+          ? `${messageDetails.couponDiscount}% (₹${discountAmount.toFixed(2)})` 
+          : `₹${messageDetails.couponDiscount}`}\n` +
+        `Final Booking Charge: ₹${finalBookingCharge.toFixed(2)}`;
+    }
+    
+    const finalTotal = totalTicketCost + finalBookingCharge;
+    
+    return {
+      amount: finalTotal.toFixed(2),
+      details: details
+    };
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1044,12 +1116,20 @@ Thank you for choosing Anand Travels!`;
                 {user?.email}
               </span> 
             </div>
-            <Button 
-              variant="outline"
-              onClick={handleSignOut}
-            >
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button 
+                onClick={() => navigate('/admin/coupons')}
+                className="bg-travel-orange hover:bg-travel-orange/90"
+              >
+                Coupons
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={handleSignOut}
+              >
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -1477,16 +1557,16 @@ Thank you for choosing Anand Travels!`;
                               <div className="grid grid-cols-2 gap-2">
                                 <div className="bg-gray-50 p-2 rounded">
                                   <span className="text-xs font-medium text-gray-500 block">From</span>
-                                  <span className="font-medium text-gray-900">{booking.from}</span>
+                                  <span className="font-medium text-gray-900 block">{booking.from}</span>
                                 </div>
                                 <div className="bg-gray-50 p-2 rounded">
                                   <span className="text-xs font-medium text-gray-500 block">To</span>
-                                  <span className="font-medium text-gray-900">{booking.to}</span>
+                                  <span className="font-medium text-gray-900 block">{booking.to}</span>
                                 </div>
                               </div>
                               <div className="bg-gray-50 p-2 rounded">
                                 <span className="text-xs font-medium text-gray-500 block">Date</span>
-                                <span className="font-medium text-gray-900">{booking.journey_date}</span>
+                                <span className="font-medium text-gray-900 block">{booking.journey_date}</span>
                               </div>
                               
                               {(booking.station_name || booking.boarding_point || booking.drop_point) && (
@@ -1567,7 +1647,7 @@ Thank you for choosing Anand Travels!`;
                             <summary id={`notes-${booking.id}`} className="cursor-pointer list-none font-medium text-sm text-gray-700 flex items-center">
                               <span className="bg-amber-50 p-1 rounded mr-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 00-2 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                               </span>
                               Admin Notes
@@ -1624,7 +1704,7 @@ Thank you for choosing Anand Travels!`;
                                 <PencilIcon size={14} className="text-blue-600" />
                                 <span className="text-xs font-medium">Edit</span>
                               </button>
-                              <button
+                                                           <button
                                 onClick={() => deleteBookings([booking.id])}
                                 className="p-2 bg-gray-100 hover:bg-red-100 rounded-lg flex items-center gap-1 transition-colors duration-200 group"
                                 title="Delete this booking"
@@ -1636,7 +1716,7 @@ Thank you for choosing Anand Travels!`;
                           </div>
                           
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">Assign to Agent</label>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Assign to Agent</label>
                             <select
                               className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-travel-blue-dark focus:border-travel-blue-dark"
                               value={booking.assignedAgent || ''}
@@ -1696,7 +1776,7 @@ Thank you for choosing Anand Travels!`;
                         }}
                         id="select-all-packages"
                       />
-                      <label 
+                                           <label 
                         htmlFor="select-all-packages" 
                         className="text-sm font-medium whitespace-nowrap cursor-pointer"
                       >
@@ -1762,7 +1842,7 @@ Thank you for choosing Anand Travels!`;
                           <p><span className="font-medium">Special Requests:</span> {booking.special_requests}</p>
                         )}
                         <div className="mt-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Admin Notes</label>
+                          <label className="block text-sm font-medium mb-1.5 text-gray-700">Admin Notes</label>
                           <Textarea
                             value={adminNotes[booking.id] || ''}
                             onChange={(e) => handleNoteChange(booking.id, e.target.value)}
@@ -1777,21 +1857,21 @@ Thank you for choosing Anand Travels!`;
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleCall(booking.phone)}
-                            className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
+                            className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
                             title="Call"
                           >
                             <Phone size={16} />
                           </button>
                           <button
                             onClick={() => handleWhatsapp(booking.phone, booking)}
-                            className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
+                            className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200"
                             title="WhatsApp"
                           >
                             <MessageSquare size={16} />
                           </button>
                           <button
                             onClick={() => handleEmail(booking.email)}
-                            className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                            className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
                             title="Email"
                           >
                             <Mail size={16} />
@@ -1811,10 +1891,10 @@ Thank you for choosing Anand Travels!`;
                       </div>
 
                       <div className="mt-4 border-t pt-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
+                        <label className="block text-sm font-medium mb-1.5 text-gray-700">Assign to Agent</label>
                         <div className="w-full max-w-full overflow-hidden">
                           <select
-                            className="w-full px-3 py-2 border rounded-md text-sm"
+                            className="w-full px-3 py-2 border rounded-md"
                             value={booking.assignedAgent || ''}
                             onChange={(e) => assignPackageTicket(booking.id, e.target.value)}
                           >
@@ -1831,134 +1911,6 @@ Thank you for choosing Anand Travels!`;
                   ))
                 ) : (
                   <div className="text-center py-8 text-gray-500">
-                    <p>No {packageStatusFilter === 'all' ? '' : packageStatusFilter} package bookings found</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop View for Package Bookings */}
-              <div className="hidden lg:grid grid-cols-3 gap-4">
-                {filteredPackageBookings.length > 0 ? (
-                  filteredPackageBookings.map((booking) => (
-                    <div key={booking.id} className="bg-white border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-start gap-3">
-                          <Checkbox 
-                            checked={selectedPackageBookings.includes(booking.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedPackageBookings([...selectedPackageBookings, booking.id]);
-                              } else {
-                                setSelectedPackageBookings(selectedPackageBookings.filter(id => id !== booking.id));
-                              }
-                            }}
-                          />
-                          <div>
-                            <h3 className="font-medium">{booking.name}</h3>
-                            <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
-                          </div>
-                        </div>
-                        <select
-                          value={booking.status || 'pending'}
-                          onChange={(e) => updatePackageBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
-                          className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            booking.status === 'completed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="completed">Payment Done</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Phone size={16} className="text-gray-400" />
-                          <span>{booking.phone}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Mail size={16} className="text-gray-400" />
-                          <span>{booking.email}</span>
-                        </div>
-                        <div className="border-t border-gray-100 pt-3">
-                          <p><span className="font-medium">Package:</span> {booking.package_name}</p>
-                          <p><span className="font-medium">Date:</span> {booking.travel_date}</p>
-                          <p><span className="font-medium">Travelers:</span> {booking.adults_count} Adults, {booking.children_count} Children</p>
-                          {booking.special_requests && (
-                            <div className="mt-2">
-                              <span className="font-medium">Special Requests:</span>
-                              <p className="mt-1 text-sm bg-gray-50 p-2 rounded">{booking.special_requests}</p>
-                            </div>
-                          )}
-                        </div>
-                        <div className="border-t border-gray-100 pt-3">
-                          <Textarea
-                            value={adminNotes[booking.id] || ''}
-                            onChange={(e) => handleNoteChange(booking.id, e.target.value)}
-                            placeholder="Add notes..."
-                            className="w-full min-h-[80px] text-sm"
-                          />
-                        </div>
-
-                        <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleCall(booking.phone)}
-                              className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
-                              title="Call"
-                            >
-                              <Phone size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleWhatsapp(booking.phone, booking)}
-                              className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
-                              title="WhatsApp"
-                            >
-                              <MessageSquare size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleEmail(booking.email)}
-                              className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
-                              title="Email"
-                            >
-                              <Mail size={16} />
-                            </button>
-                          </div>
-
-                          <div>
-                            <button
-                              onClick={() => deletePackageBookings([booking.id])}
-                              className="p-2 hover:bg-red-100 rounded-full transition-colors duration-200 group"
-                              title="Delete this package booking"
-                            >
-                              <TrashIcon size={16} className="text-gray-500 group-hover:text-red-600 transition-colors duration-200" />
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div className="mt-4 border-t pt-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Agent</label>
-                          <div className="w-full max-w-full overflow-hidden">
-                            <select
-                              className="w-full px-3 py-2 border rounded-md"
-                              value={booking.assignedAgent || ''}
-                              onChange={(e) => assignPackageTicket(booking.id, e.target.value)}
-                            >
-                              <option value="">Select Agent</option>
-                              {agents.map((agent: any) => (
-                                <option key={agent.id} value={agent.email}>
-                                  {agent.name} ({agent.email})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="col-span-3 text-center py-8 text-gray-500">
                     <p>No {packageStatusFilter === 'all' ? '' : packageStatusFilter} package bookings found</p>
                   </div>
                 )}
@@ -2054,7 +2006,7 @@ Thank you for choosing Anand Travels!`;
                           {contact.message}
                         </p>
                         <div className="mt-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Admin Notes</label>
+                          <label className="block text-sm font-medium mb-1">Admin Notes</label>
                           <Textarea
                             value={adminNotes[contact.id] || ''}
                             onChange={(e) => handleMessageNoteChange(contact.id, e.target.value)}
@@ -2218,25 +2170,39 @@ Thank you for choosing Anand Travels!`;
 
       {/* WhatsApp Message Modal */}
       <Dialog open={whatsappModal} onOpenChange={setWhatsappModal}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] w-[95%] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Send Booking Information</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Send Booking Information</DialogTitle>
           </DialogHeader>
           {currentBooking && (
             <div className="space-y-4 my-4">
               <div className="bg-gray-50 p-3 rounded-md text-sm">
-                <p><span className="font-medium">Customer:</span> {currentBooking.name}</p>
-                <p><span className="font-medium">Journey:</span> {currentBooking.from} to {currentBooking.to}</p>
-                <p><span className="font-medium">Date:</span> {currentBooking.journey_date}</p>
-                <p><span className="font-medium">Original Service:</span> {currentBooking.booking_type || 'Not specified'}</p>
+                <div className="grid gap-1">
+                  <p className="flex items-start">
+                    <span className="font-medium min-w-[80px] inline-block">Customer:</span> 
+                    <span className="break-all">{currentBooking.name}</span>
+                  </p>
+                  <p className="flex items-start">
+                    <span className="font-medium min-w-[80px] inline-block">Journey:</span>
+                    <span className="break-all">{currentBooking.from} to {currentBooking.to}</span>
+                  </p>
+                  <p className="flex items-start">
+                    <span className="font-medium min-w-[80px] inline-block">Date:</span>
+                    <span>{currentBooking.journey_date}</span>
+                  </p>
+                  <p className="flex items-start">
+                    <span className="font-medium min-w-[80px] inline-block">Service:</span>
+                    <span>{currentBooking.booking_type || 'Not specified'}</span>
+                  </p>
+                </div>
               </div>
               
               <div className="space-y-3">
                 <div>
-                  <Label htmlFor="bookingType">Booking Type</Label>
+                  <Label htmlFor="bookingType" className="text-sm">Booking Type</Label>
                   <select
                     id="bookingType"
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 text-sm border rounded-md mt-1"
                     value={messageDetails.bookingType}
                     onChange={(e) => handleBookingTypeChange(e.target.value)}
                   >
@@ -2248,29 +2214,29 @@ Thank you for choosing Anand Travels!`;
                     {messageDetails.bookingType === 'Tatkal Booking' ? 
                       'Tatkal bookings have a fixed charge of ₹200.' : 
                       messageDetails.bookingType === 'Premium Booking' ? 
-                      'Premium bookings have a minimum charge of ₹200.' : 
+                      'Premium bookings have a fixed charge of ₹250.' : 
                       'General bookings have a fixed charge of ₹50.'}
                   </p>
                 </div>
                 
-                <div>
-                  <Label htmlFor="passengerCount">Number of Passengers</Label>
-                  <Input
-                    id="passengerCount"
-                    type="number"
-                    min="1"
-                    value={messageDetails.passengerCount}
-                    onChange={(e) => setMessageDetails({
-                      ...messageDetails,
-                      passengerCount: parseInt(e.target.value) || 1
-                    })}
-                    className="w-full"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label htmlFor="ticketCost">Ticket Cost (₹)</Label>
+                    <Label htmlFor="passengerCount" className="text-sm">Passengers</Label>
+                    <Input
+                      id="passengerCount"
+                      type="number"
+                      min="1"
+                      value={messageDetails.passengerCount}
+                      onChange={(e) => setMessageDetails({
+                        ...messageDetails,
+                        passengerCount: parseInt(e.target.value) || 1
+                      })}
+                      className="mt-1 text-sm"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="ticketCost" className="text-sm">Ticket Cost (₹)</Label>
                     <Input
                       id="ticketCost"
                       type="number"
@@ -2288,13 +2254,14 @@ Thank you for choosing Anand Travels!`;
                           bookingCharge: bookingCharge
                         });
                       }}
+                      className="mt-1 text-sm"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Per passenger cost
-                    </p>
                   </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label htmlFor="bookingCharge">Booking Charge (₹)</Label>
+                    <Label htmlFor="bookingCharge" className="text-sm">Booking Charge (₹)</Label>
                     <Input
                       id="bookingCharge"
                       type="number"
@@ -2303,29 +2270,36 @@ Thank you for choosing Anand Travels!`;
                         ...messageDetails,
                         bookingCharge: e.target.value
                       })}
+                      className="mt-1 text-sm"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Service charge per passenger</p>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="totalAmount" className="text-sm">Total Amount (₹)</Label>
+                    <Input
+                      id="totalAmount"
+                      type="text"
+                      value={calculateTotal().amount}
+                      readOnly
+                      className={`mt-1 text-sm ${!messageDetails.ticketCost ? 'bg-gray-100 text-gray-400' : 'bg-gray-50'}`}
+                      placeholder={!messageDetails.ticketCost ? "Enter ticket cost first" : ""}
+                    />
+                    {calculateTotal().details && (
+                      <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded whitespace-pre-line">
+                        {calculateTotal().details}
+                      </div>
+                    )}
                     <p className="text-xs text-gray-500 mt-1">
-                      One-time service charge
+                      {messageDetails.ticketCost ? 
+                        `Including ticket cost and ${messageDetails.couponCode ? 'discounted ' : ''}booking charges` : 
+                        "Enter ticket cost to calculate total"}
                     </p>
                   </div>
                 </div>
                 
                 <div>
-                  <Label htmlFor="totalAmount">Total Amount (₹)</Label>
-                  <Input
-                    id="totalAmount"
-                    type="text"
-                    value={calculateTotal()}
-                    readOnly
-                    className="bg-gray-50"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    (Ticket Cost × {messageDetails.passengerCount}) + (Booking Charge × {messageDetails.passengerCount})
-                  </p>
-                </div>
-                
-                <div>
-                  <Label htmlFor="additionalInfo">Additional Information</Label>
+                  <Label htmlFor="additionalInfo" className="text-sm">Additional Information</Label>
                   <Textarea
                     id="additionalInfo"
                     value={messageDetails.additionalInfo}
@@ -2334,17 +2308,24 @@ Thank you for choosing Anand Travels!`;
                       additionalInfo: e.target.value
                     })}
                     placeholder="Any additional details or instructions..."
-                    className="min-h-[80px]"
+                    className="mt-1 text-sm min-h-[80px]"
                   />
                 </div>
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setWhatsappModal(false)}>
+          <DialogFooter className="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setWhatsappModal(false)}
+              className="w-full sm:w-auto order-2 sm:order-1"
+            >
               Cancel
             </Button>
-            <Button onClick={sendWhatsappMessage}>
+            <Button 
+              onClick={sendWhatsappMessage}
+              className="w-full sm:w-auto order-1 sm:order-2"
+            >
               Send to WhatsApp
             </Button>
           </DialogFooter>
@@ -2366,7 +2347,7 @@ Thank you for choosing Anand Travels!`;
               </div>
               <div className="bg-white/20 rounded-lg p-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 00-2 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
             </div>
@@ -2386,7 +2367,7 @@ Thank you for choosing Anand Travels!`;
                 >
                   <div className="rounded-full bg-travel-blue-dark p-2 mb-1.5 group-hover:bg-travel-blue">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                     </svg>
                   </div>
                   <span className="text-xs font-medium text-gray-800">Customer</span>
@@ -2450,7 +2431,7 @@ Thank you for choosing Anand Travels!`;
                 <div className="flex items-center gap-3 mb-5">
                   <div className="p-2 bg-travel-blue-dark rounded-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                     </svg>
                   </div>
                   <h3 className="text-lg font-semibold text-travel-blue-dark">Customer Details</h3>
@@ -2473,7 +2454,7 @@ Thank you for choosing Anand Travels!`;
                       type="tel"
                       value={editFormData.phone}
                       onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-travel-blue-dark focus:border-travel-blue-dark"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Phone"
                     />
                   </div>
@@ -2483,7 +2464,7 @@ Thank you for choosing Anand Travels!`;
                       type="email"
                       value={editFormData.email}
                       onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-travel-blue-dark focus:border-travel-blue-dark"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Email"
                     />
                   </div>

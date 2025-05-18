@@ -6,10 +6,40 @@ import '@/styles/bookingSuccess.css';
 interface BookingSuccessProps {
   show: boolean;
   onClose: () => void;
+  bookingDetails?: {
+    bookingType?: string; // Added to track booking type
+    coupon?: {
+      code: string;
+      discount: number;
+      type: 'fixed' | 'percentage';
+      originalAmount: number;
+      discountAmount: number;
+      finalAmount: number;
+    };
+  };
 }
 
-const BookingSuccess = ({ show, onClose }: BookingSuccessProps) => {
+const BookingSuccess = ({ show, onClose, bookingDetails }: BookingSuccessProps) => {
   const [progress, setProgress] = useState(100);
+
+  // Function to get the correct booking charge based on booking type
+  const getBookingChargeByType = (bookingType?: string): number => {
+    if (!bookingType) return 50; // Default to General Booking
+    
+    switch (bookingType) {
+      case 'Tatkal Booking':
+        return 200;
+      case 'Premium Booking':
+        return 250;
+      case 'General Booking':
+      default:
+        return 50;
+    }
+  };
+
+  // Calculate the correct original amount based on booking type
+  const originalAmount = bookingDetails?.coupon?.originalAmount || 
+                        getBookingChargeByType(bookingDetails?.bookingType);
 
   useEffect(() => {
     if (show) {
@@ -156,6 +186,26 @@ const BookingSuccess = ({ show, onClose }: BookingSuccessProps) => {
                     We've received your booking request. Our team will contact you shortly!
                   </p>
                 </motion.div>
+
+                {/* Coupon details */}
+                {bookingDetails?.coupon && (
+                  <div className="mt-4 bg-green-50 p-4 rounded-lg border border-green-100">
+                    <h4 className="text-sm font-semibold text-green-800">Coupon Applied Successfully!</h4>
+                    <p className="text-sm text-green-700 mt-1">
+                      Coupon code: {bookingDetails.coupon.code}
+                      <br />
+                      Discount: {bookingDetails.coupon.type === 'percentage' 
+                        ? `${bookingDetails.coupon.discount}% off` 
+                        : `₹${bookingDetails.coupon.discount} off`}
+                      <br />
+                      Original Amount: ₹{bookingDetails.bookingType ? getBookingChargeByType(bookingDetails.bookingType).toFixed(2) : bookingDetails.coupon.originalAmount.toFixed(2)}
+                      <br />
+                      Savings: ₹{bookingDetails.coupon.discountAmount.toFixed(2)}
+                      <br />
+                      Final Amount: ₹{bookingDetails.coupon.finalAmount.toFixed(2)}
+                    </p>
+                  </div>
+                )}
 
                 {/* Progress bar */}
                 <motion.div 
