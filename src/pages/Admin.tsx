@@ -71,6 +71,8 @@ const Admin = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [bookingTypeFilter, setBookingTypeFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
+  const [sortByJourneyDate, setSortByJourneyDate] = useState<boolean>(false);
+  const [trainClassFilter, setTrainClassFilter] = useState<string>('all'); // New state for train class filtering
   const [whatsappModal, setWhatsappModal] = useState(false);
   const [currentBooking, setCurrentBooking] = useState<any>(null);
   const [messageDetails, setMessageDetails] = useState({
@@ -160,8 +162,38 @@ const Admin = () => {
       }
     }
     
+    // Apply train class filter
+    if (trainClassFilter !== 'all') {
+      if (trainClassFilter === 'ac') {
+        filtered = filtered.filter(b => 
+          b.train_class === '3A' || 
+          b.train_class === '2A' || 
+          b.train_class === '1A' || 
+          b.train_class === 'CC' || 
+          b.train_class === 'EC'
+        );
+      } else if (trainClassFilter === 'sleeper') {
+        filtered = filtered.filter(b => 
+          b.train_class === 'SL' || 
+          b.train_class === '2S'
+        );
+      }
+    }
+    
+    // Sort by journey date if enabled
+    if (sortByJourneyDate) {
+      filtered = [...filtered].sort((a, b) => {
+        // Handle missing journey_date values
+        if (!a.journey_date) return 1;
+        if (!b.journey_date) return -1;
+        
+        // Compare dates
+        return a.journey_date.localeCompare(b.journey_date);
+      });
+    }
+    
     return filtered;
-  }, [bookings, statusFilter, bookingTypeFilter, dateFilter]);
+  }, [bookings, statusFilter, bookingTypeFilter, dateFilter, sortByJourneyDate, trainClassFilter]);
 
   const packageBookingStats = useMemo(() => {
     const pending = packageBookings.filter(b => !b.status || b.status === 'pending').length;
@@ -1152,7 +1184,7 @@ Thank you for choosing Anand Travels!`;
                 
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   {/* Enhanced filter section */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 w-full">
                     {/* Status filter dropdown */}
                     <div className="relative">
                       <select
@@ -1197,6 +1229,43 @@ Thank you for choosing Anand Travels!`;
                         <option value="dayAfterTomorrow">Day After Tomorrow</option>
                       </select>
                     </div>
+                    
+                    {/* Train Class filter dropdown - NEW */}
+                    <div className="relative">
+                      <select
+                        className="pl-3 pr-10 py-2 text-sm border rounded-md bg-white w-full"
+                        value={trainClassFilter}
+                        onChange={(e) => setTrainClassFilter(e.target.value)}
+                      >
+                        <option value="all">All Classes</option>
+                        <option value="ac">AC (3A, 2A, 1A, CC, EC)</option>
+                        <option value="sleeper">Sleeper (SL, 2S)</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  {/* Sort toggle button */}
+                  <div className="flex items-center mb-2 sm:mb-0">
+                    <button
+                      onClick={() => setSortByJourneyDate(prev => !prev)}
+                      className={`px-2.5 py-1.5 text-xs font-medium border rounded-md flex items-center gap-1.5 transition-all hover:shadow-sm ${
+                        sortByJourneyDate 
+                          ? 'bg-blue-50 text-blue-600 border-blue-200' 
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                      }`}
+                      title="Sort by journey date (earliest first)"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                      </svg>
+                      <span className="hidden sm:inline">Sort by Date</span>
+                      {sortByJourneyDate && (
+                        <span className="flex h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" aria-hidden="true"></span>
+                      )}
+                    </button>
                   </div>
                   
                   {/* Select All and Delete selected buttons */}
@@ -1554,28 +1623,21 @@ Thank you for choosing Anand Travels!`;
                               Journey Information
                             </summary>
                             <div className="pl-8 pt-2 text-sm space-y-2">
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="bg-gray-50 p-2 rounded">
-                                  <span className="text-xs font-medium text-gray-500 block">From</span>
-                                  <span className="font-medium text-gray-900 block">{booking.from}</span>
-                                </div>
-                                <div className="bg-gray-50 p-2 rounded">
-                                  <span className="text-xs font-medium text-gray-500 block">To</span>
-                                  <span className="font-medium text-gray-900 block">{booking.to}</span>
-                                </div>
+                              <div className="grid gap-1">
+                                <p className="flex items-start">
+                                  <span className="font-medium min-w-[80px] inline-block">From:</span> 
+                                  <span className="break-all">{booking.from}</span>
+                                </p>
+                                <p className="flex items-start">
+                                  <span className="font-medium min-w-[80px] inline-block">To:</span>
+                                  <span className="break-all">{booking.to}</span>
+                                </p>
+                                <p className="flex items-start">
+                                  <span className="font-medium min-w-[80px] inline-block">Date:</span>
+                                  <span>{booking.journey_date}</span>
+                                </p>
+                                {booking.station_name && <p><span className="font-medium min-w-[80px] inline-block">Station:</span> <span className="break-all">{booking.station_name}</span></p>}
                               </div>
-                              <div className="bg-gray-50 p-2 rounded">
-                                <span className="text-xs font-medium text-gray-500 block">Date</span>
-                                <span className="font-medium text-gray-900 block">{booking.journey_date}</span>
-                              </div>
-                              
-                              {(booking.station_name || booking.boarding_point || booking.drop_point) && (
-                                <div className="bg-blue-50 p-2 rounded border border-blue-100">
-                                  {booking.station_name && <p><span className="text-xs text-blue-700">Station:</span> <span className="text-sm">{booking.station_name}</span></p>}
-                                  {booking.boarding_point && <p><span className="text-xs text-blue-700">Boarding:</span> <span className="text-sm">{booking.boarding_point}</span></p>}
-                                  {booking.drop_point && <p><span className="text-xs text-blue-700">Drop:</span> <span className="text-sm">{booking.drop_point}</span></p>}
-                                </div>
-                              )}
                             </div>
                           </details>
                           
@@ -1667,7 +1729,7 @@ Thank you for choosing Anand Travels!`;
                       {/* Card Footer */}
                       <div className="p-4 bg-gray-50 border-t border-gray-100">
                         <div className="flex flex-col gap-3">
-                          <div className="flex justify-between items-center">
+                                                   <div className="flex justify-between items-center">
                             <div className="flex gap-1.5">
                               <button
                                 onClick={() => handleCall(booking.phone)}
