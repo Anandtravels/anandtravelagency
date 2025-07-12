@@ -5,8 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { TrashIcon, PencilIcon, Check, X, Phone, Mail, MessageSquare } from "lucide-react";
+import { TrashIcon, PencilIcon, Check, X, Phone, Mail, MessageSquare, Download } from "lucide-react";
 import { debounce } from 'lodash';
+import ExcelExportButton from "@/components/admin/ExcelExportButton";
 
 interface BookingsTabProps {
   user: any;
@@ -170,7 +171,17 @@ const BookingsTab = ({
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h2 className="text-xl font-bold text-travel-blue-dark">Booking Requests</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <h2 className="text-xl font-bold text-travel-blue-dark">Booking Requests</h2>
+          
+          {/* Excel Export Button */}
+          <ExcelExportButton 
+            bookings={bookings} 
+            filteredBookings={filteredBookings}
+            agents={agents}
+            className="text-sm"
+          />
+        </div>
         
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {/* Enhanced filter section */}

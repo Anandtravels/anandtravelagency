@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -26,12 +26,22 @@ import LoadingScreen from "@/components/LoadingScreen";
 import AuthAccountCreator from './components/AuthAccountCreator';
 import CouponManager from "./pages/admin/CouponManager";
 import VisitorTracker from "@/services/visitorTracker";
+import { initializeAppCoupons } from "@/services/appCouponService";
+import AppDownloadPopup from "@/components/AppDownloadPopup";
+import ConditionalAppDownloadPopup from "@/components/ConditionalAppDownloadPopup";
+import { useAppDownloadPopup } from "@/hooks/useAppDownloadPopup";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [loading, setLoading] = useState(true);
   const [visitorTracker, setVisitorTracker] = useState<VisitorTracker | null>(null);
+  
+  // App download popup hook
+  const { isPopupOpen, closePopup, dismissPopupPermanently } = useAppDownloadPopup({
+    delay: 5000, // Show popup after 5 seconds
+    storageKey: 'anand-travel-app-popup-dismissed'
+  });
 
   useEffect(() => {
     // Hide body scroll during loading
@@ -62,6 +72,9 @@ const App = () => {
       const tracker = new VisitorTracker();
       setVisitorTracker(tracker);
 
+      // Initialize app coupons
+      initializeAppCoupons().catch(console.error);
+
       // Cleanup on unmount
       return () => {
         tracker.destroy();
@@ -80,7 +93,15 @@ const App = () => {
             <Toaster />
             <Sonner />
             <AuthAccountCreator />
+            
+            {/* Global App Download Popup - appears on all pages except admin */}
             <BrowserRouter>
+              <ConditionalAppDownloadPopup 
+                isOpen={isPopupOpen} 
+                onClose={closePopup}
+                onDismissPermanently={dismissPopupPermanently}
+              />
+              
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/services" element={<Services />} />

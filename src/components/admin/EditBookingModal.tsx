@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { EditFormData } from "@/types/admin";
+import ProfitCalculator from "./ProfitCalculator";
 
 interface EditBookingModalProps {
   isOpen: boolean;
@@ -46,17 +47,24 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
               <h3 className="text-lg font-semibold text-travel-blue-dark mb-5">Customer Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 text-gray-700">Full Name</label>
-                  <input type="text" name="name" value={formData.name} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                  <label className="block text-sm font-medium mb-1.5 text-gray-700">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <input type="text" name="name" value={formData.name} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 text-gray-700">Phone Number</label>
-                  <input type="tel" name="phone" value={formData.phone} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                  <label className="block text-sm font-medium mb-1.5 text-gray-700">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input type="tel" name="phone" value={formData.phone} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" required />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1.5 text-gray-700">Email Address</label>
-                  <input type="email" name="email" value={formData.email} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                  <label className="block text-sm font-medium mb-1.5 text-gray-700">Email Address (Optional)</label>
+                  <input type="email" name="email" value={formData.email} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="Enter email address (optional)" />
                 </div>
+              </div>
+              <div className="mt-4 text-xs text-gray-500">
+                <span className="text-red-500">*</span> Required fields
               </div>
             </section>
 
@@ -142,13 +150,54 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
                         <input type="text" name="pnr" value={formData.pnr} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
                     </div>
                     <div>
+                        <label className="block text-sm font-medium mb-1.5 text-gray-700">Train Number</label>
+                        <input type="text" name="train_number" value={formData.train_number} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                    </div>
+                    <div>
                         <label className="block text-sm font-medium mb-1.5 text-gray-700">Booking Reference</label>
                         <input type="text" name="booking_reference" value={formData.booking_reference} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5 text-gray-700">Tatkal Booking Date</label>
+                        <input type="date" name="tatkal_booking_date" value={formData.tatkal_booking_date} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
                     </div>
                     <div className="md:col-span-3">
                         <label className="block text-sm font-medium mb-1.5 text-gray-700">Fare Details</label>
                         <textarea name="fare_details" value={formData.fare_details} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" rows={3}></textarea>
                     </div>
+                </div>
+            </section>
+
+            {/* Pricing & Commission Details */}
+            <section id="pricing-section" className="scroll-mt-32 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-5">Pricing & Commission Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5 text-gray-700">Ticket Cost (₹)</label>
+                        <input type="number" name="ticket_cost" value={formData.ticket_cost} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" step="0.01" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5 text-gray-700">Actual Price (₹)</label>
+                        <input type="number" name="actual_price" value={formData.actual_price} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" step="0.01" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5 text-gray-700">Commission Amount (₹)</label>
+                        <input type="number" name="commission_amount" value={formData.commission_amount} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" step="0.01" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5 text-gray-700">Profit Amount (₹)</label>
+                        <input type="number" name="profit_amount" value={formData.profit_amount} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" step="0.01" />
+                    </div>
+                </div>
+                
+                {/* Real-time Profit Calculator */}
+                <ProfitCalculator formData={formData} className="mb-4" />
+                
+                <div className="p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                        <strong>Note:</strong> Commission can be manually entered or will be automatically calculated based on booking type if left empty. 
+                        Profit = Actual Price - Ticket Cost - Commission Amount.
+                    </p>
                 </div>
             </section>
           </div>

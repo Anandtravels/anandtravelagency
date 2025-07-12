@@ -34,6 +34,13 @@ export interface Booking {
     discount: number;
     type: 'fixed' | 'percentage';
   };
+  // New pricing fields
+  ticket_cost?: number;
+  actual_price?: number;
+  commission_amount?: number;
+  profit_amount?: number;
+  train_number?: string;
+  tatkal_booking_date?: string;
 }
 
 export interface Agent {
@@ -79,4 +86,11 @@ export interface EditFormData {
   train_booking_type: string;
   train_class: string;
   preferred_trains: string;
+  // New pricing fields
+  ticket_cost: string;
+  actual_price: string;
+  commission_amount: string;
+  profit_amount: string;
+  train_number: string;
+  tatkal_booking_date: string;
 }

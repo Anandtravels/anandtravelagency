@@ -68,6 +68,14 @@ export function CouponInput({ onApplyCoupon }: CouponInputProps) {
         return;
       }
       
+      // Check if this is an app-only coupon
+      if (couponData.appOnly === true) {
+        setStatus('error');
+        setMessage('This coupon is only available for mobile app users. Download our app to use this offer!');
+        setLoading(false);
+        return;
+      }
+      
       // Coupon is valid
       const discountValue = couponData.value;
       const discountType = couponData.type as 'fixed' | 'percentage';
