@@ -6,6 +6,7 @@ import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, orderBy,
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow, format } from 'date-fns';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 
 // Icons
-import { Ticket, Plus, Trash2, Edit, Copy, CalendarDays, Users, PercentIcon, DollarSign, Check, X, RefreshCw } from 'lucide-react';
+import { Ticket, Plus, Trash2, Edit, Copy, CalendarDays, Users, PercentIcon, DollarSign, Check, X, RefreshCw, ArrowLeft } from 'lucide-react';
 
 interface Coupon {
   id?: string;
@@ -60,9 +61,27 @@ interface UsageDetails {
 
 const CouponManager = () => {
   // Authentication and navigation
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed Out",
+        description: "You have been successfully signed out",
+      });
+      navigate("/admin-login");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      });
+    }
+  };
   
   // State management
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -572,38 +591,40 @@ const CouponManager = () => {
   const hasRedemptions = activeCoupon?.redemptions && activeCoupon.redemptions.length > 0;
   
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <AdminLayout userEmail={user?.email} onSignOut={handleSignOut}>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/admin')}
+              className="p-2 hover:bg-gray-100"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
             <div className="flex items-center gap-2">
-              <Ticket className="h-6 w-6 text-travel-orange" />
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Ticket className="h-5 w-5 text-orange-600" />
+              </div>
               <div>
-                <h1 className="text-xl font-bold text-travel-blue-dark">Coupon Management</h1>
+                <h1 className="text-xl font-bold text-gray-900">Coupon Management</h1>
                 <p className="text-sm text-gray-500">Create and manage promotional coupons</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => navigate('/admin')} className="w-full sm:w-auto">
-                Back to Dashboard
-              </Button>
-              <Button 
-                onClick={() => {
-                  resetForm();
-                  setShowCreateModal(true);
-                }}
-                className="bg-travel-blue-dark hover:bg-travel-blue-dark/90 w-full sm:w-auto"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Coupon
-              </Button>
-            </div>
           </div>
+          <Button 
+            onClick={() => {
+              resetForm();
+              setShowCreateModal(true);
+            }}
+            className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Coupon
+          </Button>
         </div>
-      </header>
 
-      <main className="container mx-auto px-4 py-8">
         {/* Stats Cards - Improved responsiveness */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <motion.div 
@@ -857,15 +878,14 @@ const CouponManager = () => {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 px-2 border-gray-300"
-                                  onClick={() => handleToggleActive(coupon)}
-                                >
-                                  <Switch checked={coupon.active} className="mr-2 h-4" />
-                                  <span>{coupon.active ? 'Active' : 'Inactive'}</span>
-                                </Button>
+                                <div className="flex items-center h-8 px-2 border border-gray-300 rounded-md">
+                                  <Switch 
+                                    checked={coupon.active} 
+                                    onCheckedChange={() => handleToggleActive(coupon)}
+                                    className="mr-2 h-4" 
+                                  />
+                                  <span className="text-sm">{coupon.active ? 'Active' : 'Inactive'}</span>
+                                </div>
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -894,7 +914,6 @@ const CouponManager = () => {
             </motion.div>
           )}
         </div>
-      </main>
       
       {/* Create/Edit Coupon Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
@@ -1237,7 +1256,8 @@ const CouponManager = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AdminLayout>
   );
 };
 

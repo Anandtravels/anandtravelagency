@@ -25,11 +25,13 @@ import { AnimatePresence } from "framer-motion";
 import LoadingScreen from "@/components/LoadingScreen";
 import AuthAccountCreator from './components/AuthAccountCreator';
 import CouponManager from "./pages/admin/CouponManager";
+import VisitorTracker from "@/services/visitorTracker";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [loading, setLoading] = useState(true);
+  const [visitorTracker, setVisitorTracker] = useState<VisitorTracker | null>(null);
 
   useEffect(() => {
     // Hide body scroll during loading
@@ -53,6 +55,19 @@ const App = () => {
       document.body.style.overflow = 'auto';
     };
   }, [loading]);
+
+  // Initialize visitor tracking when app is loaded
+  useEffect(() => {
+    if (!loading && !visitorTracker) {
+      const tracker = new VisitorTracker();
+      setVisitorTracker(tracker);
+
+      // Cleanup on unmount
+      return () => {
+        tracker.destroy();
+      };
+    }
+  }, [loading, visitorTracker]);
 
   return (
     <QueryClientProvider client={queryClient}>
