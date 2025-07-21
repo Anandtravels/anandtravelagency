@@ -1,12 +1,14 @@
 import { useToast } from '@/hooks/use-toast';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth';
 import { Agent, Booking } from '@/types/admin';
+import { useAgentNotification } from '@/hooks/useAgentNotification';
 
 export const useTicketAssignment = (bookings: Booking[], agents: Agent[]) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { sendBookingAssignmentNotification, sendPackageAssignmentNotification } = useAgentNotification();
 
   const assignTicket = async (bookingId: string, agentEmail: string) => {
     if (!user || user.email !== 'admin@anandtravels.com') {
@@ -25,6 +27,18 @@ export const useTicketAssignment = (bookings: Booking[], agents: Agent[]) => {
         return;
       }
 
+      const selectedAgent = agents.find((a) => a.email === agentEmail);
+      
+      // Validate agent has phone number for notifications
+      if (selectedAgent && (!selectedAgent.phone || selectedAgent.phone.replace(/\D/g, '').length < 10)) {
+        const proceed = window.confirm(
+          `Agent ${selectedAgent.name} doesn't have a valid phone number. They won't receive WhatsApp notifications. Assign anyway?`
+        );
+        if (!proceed) {
+          return;
+        }
+      }
+
       await updateDoc(doc(db, 'bookings', bookingId), {
         assignedAgent: agentEmail,
         assignedAt: serverTimestamp(),
@@ -33,10 +47,22 @@ export const useTicketAssignment = (bookings: Booking[], agents: Agent[]) => {
       });
 
       const booking = bookings.find((b) => b.id === bookingId);
-      const agent = agents.find((a) => a.email === agentEmail);
 
-      if (booking && agent) {
-        toast({ title: "Booking Assigned", description: `Booking for ${booking.name} has been assigned to ${agent.name}.` });
+      if (booking && selectedAgent) {
+        toast({ title: "Booking Assigned", description: `Booking for ${booking.name} has been assigned to ${selectedAgent.name}.` });
+        
+        // Send WhatsApp notification to the agent
+        setTimeout(() => {
+          const notificationSent = sendBookingAssignmentNotification(selectedAgent, booking);
+          if (!notificationSent && !selectedAgent.phone) {
+            // Additional notification for missing phone
+            toast({
+              title: "Action Required",
+              description: `Agent ${selectedAgent.name} needs a phone number for WhatsApp notifications. Please update their profile.`,
+              variant: "destructive",
+            });
+          }
+        }, 1000); // Small delay to ensure the toast appears first
       } else {
         toast({ title: "Booking Assigned", description: "Booking assigned successfully." });
       }
@@ -63,6 +89,18 @@ export const useTicketAssignment = (bookings: Booking[], agents: Agent[]) => {
         return;
       }
 
+      const selectedAgent = agents.find((a) => a.email === agentEmail);
+      
+      // Validate agent has phone number for notifications
+      if (selectedAgent && (!selectedAgent.phone || selectedAgent.phone.replace(/\D/g, '').length < 10)) {
+        const proceed = window.confirm(
+          `Agent ${selectedAgent.name} doesn't have a valid phone number. They won't receive WhatsApp notifications. Assign anyway?`
+        );
+        if (!proceed) {
+          return;
+        }
+      }
+
       await updateDoc(doc(db, 'package_bookings', bookingId), {
         assignedAgent: agentEmail,
         assignedAt: serverTimestamp(),
@@ -70,9 +108,46 @@ export const useTicketAssignment = (bookings: Booking[], agents: Agent[]) => {
         updated_by: user.email,
       });
 
-      const agent = agents.find((a) => a.email === agentEmail);
-      if (agent) {
-        toast({ title: "Package Assigned", description: `Package booking assigned to ${agent.name}.` });
+      if (selectedAgent) {
+        toast({ title: "Package Assigned", description: `Package booking assigned to ${selectedAgent.name}.` });
+        
+        // Fetch package booking details and send WhatsApp notification
+        setTimeout(async () => {
+          try {
+            const packageBookingDoc = await getDoc(doc(db, 'package_bookings', bookingId));
+            if (packageBookingDoc.exists()) {
+              const packageData = packageBookingDoc.data();
+              
+              // Create a booking-like object for the notification
+              const packageBookingForNotification = {
+                id: bookingId,
+                name: packageData.name || 'Package Customer',
+                phone: packageData.phone || packageData.contact_phone || '',
+                email: packageData.email || packageData.contact_email || '',
+                from: packageData.departure_location || '',
+                to: packageData.destination || packageData.package_destination || '',
+                journey_date: packageData.travel_date || packageData.departure_date || '',
+                passengers: packageData.travelers || packageData.passenger_count || '1',
+                booking_type: 'package' as const,
+                status: 'pending' as const,
+                created_at: packageData.created_at?.toDate() || new Date(),
+                additional_requirements: packageData.special_requests || packageData.requirements || ''
+              };
+              
+              const notificationSent = sendPackageAssignmentNotification(selectedAgent, packageBookingForNotification);
+              if (!notificationSent && !selectedAgent.phone) {
+                // Additional notification for missing phone
+                toast({
+                  title: "Action Required",
+                  description: `Agent ${selectedAgent.name} needs a phone number for WhatsApp notifications. Please update their profile.`,
+                  variant: "destructive",
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching package booking details for notification:', error);
+          }
+        }, 1000);
       } else {
         toast({ title: "Package Assigned", description: "Package booking assigned successfully." });
       }

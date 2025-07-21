@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -13,7 +13,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Home
+  Home,
+  FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -35,11 +36,22 @@ interface MenuItem {
   description?: string;
   badge?: string | number;
   isExternal?: boolean;
+  children?: MenuItem[];
+  isOpen?: boolean;
 }
 
 const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: AdminSidebarProps) => {
   const location = useLocation();
   const { counts, loading: countsLoading } = useAdminSidebarData();
+
+  const [menuState, setMenuState] = useState<Record<string, boolean>>({});
+
+  const toggleDropdown = (title: string) => {
+    setMenuState(prev => ({
+      ...prev,
+      [title]: !prev[title]
+    }));
+  };
 
   const menuItems: MenuItem[] = [
     {
@@ -56,11 +68,54 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
       badge: counts.bookings > 0 ? counts.bookings : undefined
     },
     {
-      title: 'Package Bookings',
-      href: '/admin#packages',
+      title: 'Packages',
+      href: '#',
       icon: Package,
-      description: 'Tour Packages',
-      badge: counts.packageBookings > 0 ? counts.packageBookings : undefined
+      description: 'Package Management',
+      isOpen: menuState['Packages'] || false,
+      children: [
+        {
+          title: 'Package Bookings',
+          href: '/admin#package-bookings',
+          icon: Ticket,
+          description: 'Package Bookings',
+          badge: counts.packageBookings > 0 ? counts.packageBookings : undefined
+        },
+        {
+          title: 'Package Management',
+          href: '/admin#package-management',
+          icon: Package,
+          description: 'Manage Packages',
+        }
+      ]
+    },
+    {
+      title: 'Hotels',
+      href: '#',
+      icon: Home,
+      description: 'Hotel Management',
+      isOpen: menuState['Hotels'] || false,
+      children: [
+        {
+          title: 'Hotel Bookings',
+          href: '/admin#hotel-bookings',
+          icon: Calendar,
+          description: 'Hotel Bookings',
+          badge: counts.hotelBookings > 0 ? counts.hotelBookings : undefined
+        },
+        {
+          title: 'Hotel Management',
+          href: '/admin#hotel-management',
+          icon: Home,
+          description: 'Manage Hotels',
+        },
+        {
+          title: 'Hotel Agents',
+          href: '/admin#hotel-agents',
+          icon: UserCheck,
+          description: 'Hotel Agents',
+        }
+      ]
     },
     {
       title: 'Messages',
@@ -68,6 +123,13 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
       icon: MessageSquare,
       description: 'Customer Messages',
       badge: counts.messages > 0 ? counts.messages : undefined
+    },
+    {
+      title: 'E-Services',
+      href: '/admin#eservices',
+      icon: FileText,
+      description: 'E-Service Requests',
+      badge: counts.eservices > 0 ? counts.eservices : undefined
     },
     {
       title: 'Agents',
@@ -85,6 +147,7 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
   ];
 
   const isActive = (href: string) => {
+    if (href === '#') return false; // Parent dropdown items are never "active"
     if (href === '/admin') {
       return location.pathname === '/admin' && (!location.hash || location.hash === '');
     }
@@ -94,16 +157,51 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
     return location.pathname === href;
   };
 
+  const hasActiveChild = (item: MenuItem) => {
+    if (!item.children) return false;
+    return item.children.some(child => isActive(child.href));
+  };
+
   const getCurrentSectionTitle = () => {
     const hash = location.hash.replace('#', '');
+    
+    // First check top-level items
     const currentItem = menuItems.find(item => {
       if (item.href === '/admin' && !hash) return true;
       if (item.href.includes('#') && item.href.split('#')[1] === hash) return true;
       if (item.href === location.pathname) return true;
       return false;
     });
-    return currentItem?.title || 'Dashboard';
+    
+    if (currentItem) return currentItem.title;
+    
+    // Then check children items
+    for (const item of menuItems) {
+      if (item.children) {
+        const activeChild = item.children.find(child => {
+          if (child.href.includes('#') && child.href.split('#')[1] === hash) return true;
+          if (child.href === location.pathname) return true;
+          return false;
+        });
+        
+        if (activeChild) return activeChild.title;
+      }
+    }
+    
+    return 'Dashboard';
   };
+
+  // Auto-open dropdown when a child is active
+  useEffect(() => {
+    menuItems.forEach(item => {
+      if (item.children && item.children.some(child => isActive(child.href))) {
+        setMenuState(prev => ({
+          ...prev,
+          [item.title]: true
+        }));
+      }
+    });
+  }, [location.hash, location.pathname]);
 
   const handleMenuClick = (href: string) => {
     if (href.includes('#')) {
@@ -182,84 +280,198 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
           {menuItems.map((item, index) => {
             const Icon = item.icon;
             const active = isActive(item.href);
+            const hasChildren = item.children && item.children.length > 0;
+            const isOpen = item.isOpen;
             
             return (
-              <motion.div
-                key={item.href}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Link
-                  to={item.href}
-                  onClick={() => handleMenuClick(item.href)}
-                  className={cn(
-                    'group relative flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-                    'hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                    active
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
-                      : 'text-gray-600'
-                  )}
-                  title={isCollapsed ? `${item.title} - ${item.description}` : undefined}
+              <div key={item.title}>
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
                 >
-                  <Icon
-                    className={cn(
-                      'w-5 h-5 transition-colors duration-200',
-                      active ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-600'
-                    )}
-                  />
-                  
-                  {/* Badge for collapsed state */}
-                  {isCollapsed && item.badge && (
-                    <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                      {typeof item.badge === 'number' && item.badge > 99 ? '99+' : item.badge}
-                    </div>
-                  )}
-                  
-                  {!isCollapsed && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="ml-3 flex-1 flex items-center justify-between"
-                    >
-                      <div>
-                        <span className="block">{item.title}</span>
-                        {item.description && (
-                          <span className="text-xs text-gray-500 block">
-                            {item.description}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {item.badge && (
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            'text-xs px-2 py-0.5 font-medium',
-                            active 
-                              ? 'bg-blue-100 text-blue-700 border-blue-200' 
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors'
-                          )}
-                        >
-                          {typeof item.badge === 'number' && item.badge > 999 
-                            ? `${Math.floor(item.badge / 1000)}k` 
-                            : item.badge}
-                        </Badge>
+                  {hasChildren ? (
+                    <button
+                      onClick={() => toggleDropdown(item.title)}
+                      className={cn(
+                        'group w-full relative flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                        'hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                        isOpen || hasActiveChild(item)
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
+                          : 'text-gray-600'
                       )}
-                    </motion.div>
-                  )}
+                      title={isCollapsed ? `${item.title} - ${item.description}` : undefined}
+                    >
+                      <Icon
+                        className={cn(
+                          'w-5 h-5 transition-colors duration-200',
+                          isOpen || hasActiveChild(item) ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-600'
+                        )}
+                      />
+                      
+                      {!isCollapsed && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="ml-3 flex-1 flex items-center justify-between"
+                        >
+                          <div>
+                            <span className="block">{item.title}</span>
+                            {item.description && (
+                              <span className="text-xs text-gray-500 block">
+                                {item.description}
+                              </span>
+                            )}
+                          </div>
+                          
+                          <ChevronRight className={cn(
+                            'w-4 h-4 transition-transform duration-200',
+                            isOpen ? 'transform rotate-90' : ''
+                          )} />
+                        </motion.div>
+                      )}
+                    </button>
+                  ) : (
+                    <Link
+                      to={item.href}
+                      onClick={() => handleMenuClick(item.href)}
+                      className={cn(
+                        'group relative flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                        'hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                        active
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
+                          : 'text-gray-600'
+                      )}
+                      title={isCollapsed ? `${item.title} - ${item.description}` : undefined}
+                    >
+                      <Icon
+                        className={cn(
+                          'w-5 h-5 transition-colors duration-200',
+                          active ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-600'
+                        )}
+                      />
+                      
+                      {/* Badge for collapsed state */}
+                      {isCollapsed && item.badge && (
+                        <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                          {typeof item.badge === 'number' && item.badge > 99 ? '99+' : item.badge}
+                        </div>
+                      )}
+                      
+                      {!isCollapsed && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="ml-3 flex-1 flex items-center justify-between"
+                        >
+                          <div>
+                            <span className="block">{item.title}</span>
+                            {item.description && (
+                              <span className="text-xs text-gray-500 block">
+                                {item.description}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {item.badge && (
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                'text-xs px-2 py-0.5 font-medium',
+                                active 
+                                  ? 'bg-blue-100 text-blue-700 border-blue-200' 
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors'
+                              )}
+                            >
+                              {typeof item.badge === 'number' && item.badge > 999 
+                                ? `${Math.floor(item.badge / 1000)}k` 
+                                : item.badge}
+                            </Badge>
+                          )}
+                        </motion.div>
+                      )}
 
-                  {/* Active indicator */}
-                  {active && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute left-0 w-1 h-8 bg-blue-600 rounded-r-full"
-                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    />
+                      {/* Active indicator */}
+                      {active && (
+                        <motion.div
+                          layoutId="activeTab"
+                          className="absolute left-0 w-1 h-8 bg-blue-600 rounded-r-full"
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        />
+                      )}
+                    </Link>
                   )}
-                </Link>
-              </motion.div>
+                </motion.div>
+
+                {/* Dropdown children */}
+                {hasChildren && isOpen && !isCollapsed && (
+                  <div className="ml-7 pl-2 border-l border-gray-200 mt-1 space-y-1">
+                    {item.children?.map((child, childIndex) => {
+                      const ChildIcon = child.icon;
+                      const childActive = isActive(child.href);
+                      
+                      return (
+                        <motion.div
+                          key={child.title}
+                          initial={{ opacity: 0, y: -5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: childIndex * 0.05 }}
+                        >
+                          <Link
+                            to={child.href}
+                            onClick={() => handleMenuClick(child.href)}
+                            className={cn(
+                              'group relative flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200',
+                              'hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                              childActive
+                                ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
+                                : 'text-gray-600'
+                            )}
+                          >
+                            <ChildIcon className={cn(
+                              'w-4 h-4 transition-colors duration-200',
+                              childActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-600'
+                            )} />
+                            
+                            <div className="ml-3 flex-1 flex items-center justify-between">
+                              <div>
+                                <span className="block text-sm">{child.title}</span>
+                              </div>
+                              
+                              {child.badge && (
+                                <Badge
+                                  variant="secondary"
+                                  className={cn(
+                                    'text-xs px-2 py-0.5 font-medium',
+                                    childActive 
+                                      ? 'bg-blue-100 text-blue-700 border-blue-200' 
+                                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors'
+                                  )}
+                                >
+                                  {typeof child.badge === 'number' && child.badge > 999 
+                                    ? `${Math.floor(child.badge / 1000)}k` 
+                                    : child.badge}
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Active indicator */}
+                            {childActive && (
+                              <motion.div
+                                layoutId="activeChildTab"
+                                className="absolute left-0 w-1 h-6 bg-blue-600 rounded-r-full"
+                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                              />
+                            )}
+                          </Link>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>

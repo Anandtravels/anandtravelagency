@@ -30,6 +30,25 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
   // Agent functions
   const createAgent = async (data: any) => {
     try {
+      // Validate phone number
+      const cleanPhone = data.phone.replace(/\D/g, '');
+      if (cleanPhone.length < 10) {
+        toast({
+          title: "Invalid Phone Number",
+          description: "Please provide a valid 10-digit phone number for WhatsApp notifications",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Normalize phone number to ensure it starts with country code
+      let normalizedPhone = cleanPhone;
+      if (cleanPhone.length === 10) {
+        normalizedPhone = '+91' + cleanPhone; // Add India country code
+      } else if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+        normalizedPhone = '+' + cleanPhone;
+      }
+
       // First check if the email already exists
       const agentsQuery = query(
         collection(db, 'agents'),
@@ -50,7 +69,7 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
         await updateDoc(doc(db, 'agents', editingAgentId), {
           name: data.name,
           email: data.email.toLowerCase(),
-          phone: data.phone,
+          phone: normalizedPhone,
           age: data.age.toString(),
           gender: data.gender,
           address: data.address,
@@ -68,7 +87,7 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
         const agentData = {
           name: data.name,
           email: data.email.toLowerCase(),
-          phone: data.phone,
+          phone: normalizedPhone,
           age: data.age.toString(),
           gender: data.gender,
           address: data.address,
@@ -198,6 +217,37 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
         </Button>
       </div>
 
+      {/* Warning for agents without phone numbers */}
+      {(() => {
+        const agentsWithoutPhone = agents.filter(agent => !agent.phone || agent.phone.replace(/\D/g, '').length < 10);
+        if (agentsWithoutPhone.length > 0) {
+          return (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <h3 className="text-sm font-medium text-yellow-800 mb-2">⚠️ Agents Missing Valid Phone Numbers</h3>
+              <p className="text-sm text-yellow-700 mb-2">
+                The following agents cannot receive WhatsApp notifications when bookings are assigned:
+              </p>
+              <div className="space-y-1">
+                {agentsWithoutPhone.map(agent => (
+                  <div key={agent.id} className="text-sm text-yellow-700 flex justify-between items-center">
+                    <span>• {agent.name} ({agent.email})</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleEditAgent(agent)}
+                      className="text-xs"
+                    >
+                      Update Phone
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+        return null;
+      })()}
+
       {/* Agent Form Modal */}
       {showAgentForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -243,14 +293,27 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Phone</label>
-                <input
-                  type="tel"
-                  required
-                  value={agentFormData.phone}
-                  onChange={(e) => setAgentFormData({...agentFormData, phone: e.target.value})}
-                  className="w-full px-3 py-2 border rounded"
-                />
+                <label className="block text-sm font-medium mb-1">Phone Number *</label>
+                <div className="flex">
+                  <div className="bg-gray-100 flex items-center px-3 border border-r-0 border-gray-300 rounded-l">
+                    <span className="text-gray-600 font-medium">+91</span>
+                  </div>
+                  <input
+                    type="tel"
+                    required
+                    value={agentFormData.phone}
+                    onChange={(e) => {
+                      // Only allow numbers and limit to 10 digits
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setAgentFormData({...agentFormData, phone: value});
+                    }}
+                    placeholder="10-digit number"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-r flex-1"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Required for WhatsApp notifications when bookings are assigned
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Address</label>

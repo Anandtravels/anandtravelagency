@@ -16,7 +16,12 @@ import BookingsTab from "@/components/BookingsTab";
 import PackageBookingsTab from "@/components/PackageBookingsTab";
 import MessagesManagementTab from "@/components/MessagesManagementTab";
 import AgentManagementTab from "@/components/AgentManagementTab";
+import EServicesManagementTab from "@/components/EServicesManagementTab";
+import PackageManagementTab from "@/components/admin/PackageManagementTab";
 import VisitorAnalytics from "@/components/admin/VisitorAnalytics";
+import HotelBookingsTab from "@/components/admin/HotelBookingsTab";
+import HotelManagementTab from "@/components/admin/HotelManagementTab";
+import HotelAgentsTab from "@/components/admin/HotelAgentsTab";
 import { BarChart3 } from "lucide-react";
 
 const Admin = () => {
@@ -101,7 +106,7 @@ const Admin = () => {
             />
           </TabsContent>
 
-          <TabsContent value="packages" className="space-y-6">
+          <TabsContent value="package-bookings" className="space-y-6">
             <PackageBookingsTab
               user={user}
               agents={agents}
@@ -112,6 +117,12 @@ const Admin = () => {
               handleWhatsapp={handleWhatsapp}
               formatFirebaseTimestamp={formatFirebaseTimestamp}
               assignPackageTicket={assignPackageTicket}
+            />
+          </TabsContent>
+
+          <TabsContent value="package-management" className="space-y-6">
+            <PackageManagementTab 
+              user={user}
             />
           </TabsContent>
 
@@ -126,6 +137,31 @@ const Admin = () => {
             <AgentManagementTab 
               user={user} 
               formatFirebaseTimestamp={formatFirebaseTimestamp}
+            />
+          </TabsContent>
+
+          <TabsContent value="eservices" className="space-y-6">
+            <EServicesManagementTab 
+              user={user} 
+              formatFirebaseTimestamp={formatFirebaseTimestamp}
+            />
+          </TabsContent>
+
+          <TabsContent value="hotel-bookings" className="space-y-6">
+            <HotelBookingsTab 
+              user={user}
+            />
+          </TabsContent>
+
+          <TabsContent value="hotel-management" className="space-y-6">
+            <HotelManagementTab 
+              user={user}
+            />
+          </TabsContent>
+
+          <TabsContent value="hotel-agents" className="space-y-6">
+            <HotelAgentsTab 
+              user={user}
             />
           </TabsContent>
         </Tabs>

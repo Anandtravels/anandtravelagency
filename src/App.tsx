@@ -11,7 +11,7 @@ import Packages from "./pages/Packages";
 import Booking from "./pages/Booking";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
-import PackageDetail from "./pages/PackageDetail";
+import PackageDetail from "./pages/DynamicPackageDetail";
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
 import Privacy from "./pages/Privacy";
@@ -19,6 +19,13 @@ import Terms from "./pages/Terms";
 import FAQ from "./pages/FAQ";
 import AgentLogin from "./pages/AgentLogin";
 import AgentDashboard from "./pages/AgentDashboard";
+import EServices from "./pages/EServices";
+import EServiceApplication from "./pages/EServiceApplication";
+import EServiceSuccess from "./pages/EServiceSuccess";
+// Hotel related imports
+import Hotels from "./pages/Hotels";
+import HotelDetail from "./pages/HotelDetail";
+import HotelBookingSuccess from "./pages/HotelBookingSuccess";
 import logo from './assets/poster.png';
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -110,6 +117,15 @@ const App = () => {
                 <Route path="/booking" element={<Booking />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/eservices" element={<EServices />} />
+                <Route path="/eservices/apply/:serviceType" element={<EServiceApplication />} />
+                <Route path="/eservices/success" element={<EServiceSuccess />} />
+                
+                {/* Hotel routes */}
+                <Route path="/hotels" element={<Hotels />} />
+                <Route path="/hotels/:id" element={<HotelDetail />} />
+                <Route path="/hotel-booking-success" element={<HotelBookingSuccess />} />
+                
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/admin-login" element={<AdminLogin />} />
                 <Route path="/privacy" element={<Privacy />} />

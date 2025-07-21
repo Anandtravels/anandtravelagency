@@ -17,7 +17,7 @@ const Footer = () => {
               <a href="https://www.facebook.com/profile.php?id=61575167457124" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
                 <Facebook size={20} />
               </a>
-              <a href="https://www.instagram.com/anandtravelsagency/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
+              <a href="https://www.instagram.com/anandtravels.agency/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
                 <Instagram size={20} />
               </a>
               <a href="https://x.com/anandtravelss" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
@@ -44,6 +44,11 @@ const Footer = () => {
               <li>
                 <Link to="/services" className="text-gray-300 hover:text-travel-orange transition-colors">
                   Services
+                </Link>
+              </li>
+              <li>
+                <Link to="/eservices" className="text-gray-300 hover:text-travel-orange transition-colors">
+                  E-Services
                 </Link>
               </li>
               <li>

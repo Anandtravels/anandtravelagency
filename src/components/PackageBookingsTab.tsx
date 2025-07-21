@@ -5,8 +5,11 @@ import { format } from "date-fns";
 import { collection, orderBy, query, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Checkbox } from "@/components/ui/checkbox";
-import { TrashIcon, Phone, Mail, MessageSquare } from "lucide-react";
+import { TrashIcon, Phone, Mail, MessageSquare, Edit3, Calendar, Users, MapPin, DollarSign } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import debounce from 'lodash/debounce';
 
 interface PackageBookingsTabProps {
@@ -39,6 +42,9 @@ const PackageBookingsTab = ({
   const [packageBookingLoading, setPackageBookingLoading] = useState(true);
   const [selectedPackageBookings, setSelectedPackageBookings] = useState<string[]>([]);
   const [packageStatusFilter, setPackageStatusFilter] = useState<string>('all');
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editBooking, setEditBooking] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState<any>({});
 
   // Memoized values for package bookings
   const packageBookingStats = useMemo(() => {
@@ -133,6 +139,61 @@ const PackageBookingsTab = ({
       toast({
         title: "Update Failed",
         description: "Failed to update package booking status. Please check your permissions.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Edit booking functions
+  const openEditModal = (booking: any) => {
+    setEditBooking(booking);
+    setEditFormData({
+      fullName: booking.fullName || booking.name || '',
+      email: booking.email || '',
+      phone: booking.phone || '',
+      numberOfPeople: booking.numberOfPeople || booking.adults_count || 1,
+      departureDate: booking.departureDate || booking.travel_date || '',
+      message: booking.message || booking.special_requests || '',
+      packageTitle: booking.packageTitle || booking.package_name || '',
+      totalAmount: booking.totalAmount || 0
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editBooking) return;
+
+    try {
+      if (!user || user.email !== 'admin@anandtravels.com') {
+        throw new Error('Unauthorized access');
+      }
+
+      await updateDoc(doc(db, 'package_bookings', editBooking.id), {
+        fullName: editFormData.fullName,
+        email: editFormData.email,
+        phone: editFormData.phone,
+        numberOfPeople: parseInt(editFormData.numberOfPeople),
+        departureDate: editFormData.departureDate,
+        message: editFormData.message,
+        packageTitle: editFormData.packageTitle,
+        totalAmount: parseFloat(editFormData.totalAmount),
+        updated_at: serverTimestamp(),
+        updated_by: user.email
+      });
+
+      toast({
+        title: "Booking Updated",
+        description: "Package booking has been updated successfully",
+      });
+
+      setEditModalOpen(false);
+      setEditBooking(null);
+      setEditFormData({});
+    } catch (error) {
+      console.error("Error updating booking:", error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update package booking. Please check your permissions.",
         variant: "destructive"
       });
     }
@@ -240,11 +301,16 @@ const PackageBookingsTab = ({
         </div>
       </div>
 
-      {/* Package bookings list */}
-      <div className="block lg:hidden space-y-4">
-        {filteredPackageBookings.length > 0 ? (
-          filteredPackageBookings.map((booking) => (
-            <div key={booking.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
+      {/* Package Bookings Grid View - All Screen Sizes */}
+      {packageBookingLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-travel-blue-dark border-r-transparent"></div>
+        </div>
+      ) : filteredPackageBookings.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+          {filteredPackageBookings.map((booking) => (
+            <div key={booking.id} className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 hover:shadow-lg transition-all duration-300 relative">
+              {/* Header with Checkbox and Status */}
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
                   <Checkbox
@@ -256,19 +322,25 @@ const PackageBookingsTab = ({
                         setSelectedPackageBookings(selectedPackageBookings.filter(id => id !== booking.id));
                       }
                     }}
+                    className="mt-1"
                   />
-                  <div>
-                    <h3 className="font-medium">{booking.name}</h3>
-                    <p className="text-sm text-gray-500">{formatFirebaseTimestamp(booking.created_at)}</p>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-lg text-gray-900 mb-1">
+                      {booking.fullName || booking.name}
+                    </h3>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <Calendar size={14} />
+                      {formatFirebaseTimestamp(booking.created_at)}
+                    </p>
                   </div>
                 </div>
                 <select
                   value={booking.status || 'pending'}
                   onChange={(e) => updatePackageBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border-0 ${
                     booking.status === 'completed' 
                       ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
+                      : 'bg-amber-100 text-amber-800'
                   }`}
                 >
                   <option value="pending">Pending</option>
@@ -276,88 +348,256 @@ const PackageBookingsTab = ({
                 </select>
               </div>
 
-              <div className="text-sm space-y-2">
-                <p><span className="font-medium">Contact:</span> {booking.email} | {booking.phone}</p>
-                <p><span className="font-medium">Package:</span> {booking.package_name}</p>
-                <p><span className="font-medium">Date:</span> {booking.travel_date}</p>
-                <p><span className="font-medium">Travelers:</span> {booking.adults_count} Adults, {booking.children_count} Children</p>
-                {booking.special_requests && (
-                  <p><span className="font-medium">Special Requests:</span> {booking.special_requests}</p>
+              {/* Package Info */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <MapPin size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">
+                      {booking.packageTitle || booking.package_name}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-gray-500" />
+                    <span className="text-gray-700">{booking.departureDate || booking.travel_date}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users size={14} className="text-gray-500" />
+                    <span className="text-gray-700">
+                      {booking.numberOfPeople || `${booking.adults_count} Adults`}
+                    </span>
+                  </div>
+                </div>
+
+                {booking.totalAmount && (
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    <DollarSign size={16} className="text-green-600" />
+                    <span className="font-bold text-green-600 text-lg">
+                      ₹{booking.totalAmount.toLocaleString('en-IN')}
+                    </span>
+                  </div>
                 )}
-                <div className="mt-4">
-                  <label className="block text-sm font-medium mb-1.5 text-gray-700">Admin Notes</label>
-                  <Textarea
-                    value={adminNotes[booking.id] || ''}
-                    onChange={(e) => handleNoteChange(booking.id, e.target.value)}
-                    placeholder="Add notes about this booking..."
-                    className="w-full min-h-[100px] text-sm"
-                  />
+              </div>
+
+              {/* Contact Information */}
+              <div className="space-y-2">
+                <h4 className="font-semibold text-gray-900 text-sm">Contact Information</h4>
+                <div className="text-sm space-y-1">
+                  <p className="flex items-center gap-2">
+                    <Mail size={14} className="text-gray-500" />
+                    <span className="text-gray-700">{booking.email}</span>
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Phone size={14} className="text-gray-500" />
+                    <span className="text-gray-700">{booking.phone}</span>
+                  </p>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center pt-2">
-                {/* Action Buttons */}
+              {/* Message/Special Requests */}
+              {(booking.message || booking.special_requests) && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-gray-900 text-sm">Message</h4>
+                  <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                    {booking.message || booking.special_requests}
+                  </p>
+                </div>
+              )}
+
+              {/* Agent Assignment */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-900">Assign to Agent</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={booking.assignedAgent || ''}
+                  onChange={(e) => assignPackageTicket && assignPackageTicket(booking.id, e.target.value)}
+                >
+                  <option value="">Select Agent</option>
+                  {agents.map((agent: any) => {
+                    const hasValidPhone = agent.phone && agent.phone.replace(/\D/g, '').length >= 10;
+                    return (
+                      <option key={agent.id} value={agent.email}>
+                        {agent.name}{!hasValidPhone ? ' ⚠️ (No WhatsApp)' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* Admin Notes */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-900">Admin Notes</label>
+                <Textarea
+                  value={adminNotes[booking.id] || ''}
+                  onChange={(e) => handleNoteChange(booking.id, e.target.value)}
+                  placeholder="Add notes about this booking..."
+                  className="w-full text-sm resize-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-between items-center pt-4 border-t">
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleCall(booking.phone)}
-                    className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
+                    className="p-2.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors duration-200"
                     title="Call"
                   >
                     <Phone size={16} />
                   </button>
                   <button
                     onClick={() => handleWhatsapp(booking.phone, booking)}
-                    className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200"
+                    className="p-2.5 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors duration-200"
                     title="WhatsApp"
                   >
                     <MessageSquare size={16} />
                   </button>
                   <button
                     onClick={() => handleEmail(booking.email)}
-                    className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                    className="p-2.5 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-colors duration-200"
                     title="Email"
                   >
                     <Mail size={16} />
                   </button>
-                </div>
-
-                {/* Delete Button */}
-                <div>
                   <button
-                    onClick={() => deletePackageBookings([booking.id])}
-                    className="p-2 hover:bg-red-100 rounded-full transition-colors duration-200 group"
-                    title="Delete this package booking"
+                    onClick={() => openEditModal(booking)}
+                    className="p-2.5 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-colors duration-200"
+                    title="Edit Booking"
                   >
-                    <TrashIcon size={16} className="text-gray-500 group-hover:text-red-600 transition-colors duration-200" />
+                    <Edit3 size={16} />
                   </button>
                 </div>
-              </div>
 
-              <div className="mt-4 border-t pt-4">
-                <label className="block text-sm font-medium mb-1.5 text-gray-700">Assign to Agent</label>
-                <div className="w-full max-w-full overflow-hidden">
-                  <select
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={booking.assignedAgent || ''}
-                    onChange={(e) => assignPackageTicket && assignPackageTicket(booking.id, e.target.value)}
-                  >
-                    <option value="">Select Agent</option>
-                    {agents.map((agent: any) => (
-                      <option key={agent.id} value={agent.email} className="truncate">
-                        {agent.name.length > 15 ? agent.name.substring(0, 15) + '...' : agent.name} ({agent.email.substring(0, 15)}...)
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <button
+                  onClick={() => deletePackageBookings([booking.id])}
+                  className="p-2.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors duration-200"
+                  title="Delete this package booking"
+                >
+                  <TrashIcon size={16} />
+                </button>
               </div>
             </div>
-          ))
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <p>No {packageStatusFilter === 'all' ? '' : packageStatusFilter} package bookings found</p>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <div className="max-w-md mx-auto">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Calendar size={32} className="text-gray-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">No Package Bookings Found</h3>
+            <p className="text-gray-500">
+              No {packageStatusFilter === 'all' ? '' : packageStatusFilter} package bookings available at the moment.
+            </p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Edit Booking Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Package Booking</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-fullName">Full Name *</Label>
+                <Input
+                  id="edit-fullName"
+                  value={editFormData.fullName || ''}
+                  onChange={(e) => setEditFormData({...editFormData, fullName: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-email">Email *</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editFormData.email || ''}
+                  onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-phone">Phone *</Label>
+                <Input
+                  id="edit-phone"
+                  value={editFormData.phone || ''}
+                  onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-numberOfPeople">Number of People *</Label>
+                <Input
+                  id="edit-numberOfPeople"
+                  type="number"
+                  min="1"
+                  value={editFormData.numberOfPeople || 1}
+                  onChange={(e) => setEditFormData({...editFormData, numberOfPeople: e.target.value})}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="edit-packageTitle">Package Title *</Label>
+              <Input
+                id="edit-packageTitle"
+                value={editFormData.packageTitle || ''}
+                onChange={(e) => setEditFormData({...editFormData, packageTitle: e.target.value})}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-departureDate">Departure Date *</Label>
+                <Input
+                  id="edit-departureDate"
+                  type="date"
+                  value={editFormData.departureDate || ''}
+                  onChange={(e) => setEditFormData({...editFormData, departureDate: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-totalAmount">Total Amount</Label>
+                <Input
+                  id="edit-totalAmount"
+                  type="number"
+                  min="0"
+                  value={editFormData.totalAmount || ''}
+                  onChange={(e) => setEditFormData({...editFormData, totalAmount: e.target.value})}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="edit-message">Message/Special Requests</Label>
+              <Textarea
+                id="edit-message"
+                placeholder="Any special requirements or questions..."
+                value={editFormData.message || ''}
+                onChange={(e) => setEditFormData({...editFormData, message: e.target.value})}
+                rows={3}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -4,172 +4,32 @@ import { MapPin, Calendar, Users, Star } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import QuoteSection from "../components/QuoteSection";
-
-// This would normally come from the database
-const packagesData = {
-  domestic: [
-    {
-      id: 1,
-      title: "Jammu & Kashmir",
-      image: "https://media.istockphoto.com/id/1323846766/photo/a-beautiful-view-of-dal-lake-in-winter-srinagar-kashmir-india.jpg?s=612x612&w=0&k=20&c=Dp3peie2t-jdLEmqe4W-DD09GACu2Cr-JjHHeB6rpBc=",
-      days: "5N/6D",
-      price: "₹35,999",
-      location: "Srinagar, Gulmarg, Pahalgam",
-      rating: 4.8,
-      reviews: 124,
-      highlights: "Shikara Ride, Mughal Gardens, Gondola Ride, Betaab Valley, Chandanwari",
-      category: "domestic"
-    },
-    {
-      id: 2,
-      title: "Kerala Backwaters",
-      image: "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2c/f3/1b/4a/alleppey-backwater-cruise.jpg?w=1200&h=-1&s=1",
-      days: "4N/5D",
-      price: "₹18,999",
-      location: "Kochi, Munnar, Alleppey",
-      rating: 4.9,
-      reviews: 186,
-      highlights: "Houseboat Stay, Tea Plantations, Kathakali Show, Spice Gardens, Periyar Wildlife",
-      category: "domestic"
-    },
-    {
-      id: 3,
-      title: "Taj Mahal",
-      image: "https://images.pexels.com/photos/1603650/pexels-photo-1603650.jpeg",
-      days: "6N/7D",
-      price: "₹18,999",
-      location: "Agra",
-      rating: 4.7,
-      reviews: 152,
-      highlights: "Taj Mahal, Red Fort, Amber Fort, Qutub Minar, Hawa Mahal, City Palace",
-      category: "domestic"
-    },
-    {
-      id: 4,
-      title: "Goa",
-      image: "https://lp-cms-production.imgix.net/2022-03/India%20Varkala%20andrijosef%20shutterstock_1902816124%20RFC.jpg?auto=format&w=1440&h=810&fit=crop&q=75",
-      days: "3N/4D",
-      price: "₹18,999",
-      location: "North & South Goa",
-      rating: 4.6,
-      reviews: 210,
-      highlights: "Beach Activities, Sunset Cruise, Old Goa Churches, Dudhsagar Falls, Water Sports",
-      category: "domestic"
-    },
-    {
-      id: 5,
-      title: "Andaman Islands",
-      image: "https://static.theprint.in/wp-content/uploads/2020/08/Untitled-design-2020-08-09T193331.340.jpg",
-      days: "5N/6D",
-      price: "₹32,999",
-      location: "Port Blair, Havelock, Neil Island",
-      rating: 4.9,
-      reviews: 96,
-      highlights: "Radhanagar Beach, Cellular Jail, Scuba Diving, Glass Bottom Boat, Ross Island",
-      category: "domestic"
-    },
-    {
-      id: 6,
-      title: "MANALI",
-      image: "https://s7ap1.scene7.com/is/image/incredibleindia/The-Best-Adventure-Experiences-in-Manali1-hero?qlt=82&ts=1726731002736",
-      days: "7N/8D",
-      price: "₹32,999",
-      location: "Manali, Shimla, Dharamshala",
-      rating: 4.7,
-      reviews: 78,
-      highlights: "Solang Valley, Mall Road, Hidimba Temple, McLeodganj, Paragliding, Rohtang Pass",
-      category: "domestic"
-    }
-  ],
-  international: [
-    {
-      id: 7,
-      title: "Bangkok, Thailand",
-      image: "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0e/43/44/db/photo0jpg.jpg?w=900&h=500&s=1",
-      days: "6N/7D",
-      price: "₹45,999",
-      location: "Bangkok, Pattaya, Phuket",
-      rating: 4.8,
-      reviews: 156,
-      highlights: "Phi Phi Islands, Buddha Temple, Floating Market, Coral Island, Safari World",
-      category: "international"
-    },
-    {
-      id: 8,
-      title: "Dubai",
-      image: "https://media.tacdn.com/media/attractions-splice-spp-674x446/10/71/94/a2.jpg",
-      days: "5N/6D",
-      price: "₹65,999",
-      location: "Dubai, Abu Dhabi",
-      rating: 4.9,
-      reviews: 143,
-      highlights: "Desert Safari, Burj Khalifa, Ferrari World, Dubai Mall, Miracle Garden",
-      category: "international"
-    },
-    {
-      id: 9,
-      title: "Malaysia & Langkawi",
-      image: "https://cdn.pixabay.com/photo/2016/11/13/12/52/kuala-lumpur-1820944_960_720.jpg",
-      days: "7N/8D",
-      price: "₹55,999",
-      location: "Kuala Lumpur, Langkawi",
-      rating: 4.7,
-      reviews: 124,
-      highlights: "Petronas Towers, Langkawi Cable Car, Island Hopping, Night Markets",
-      category: "international"
-    },
-    {
-      id: 10,
-      title: "Bali, Indonesia",
-      image: "https://www.outlooktravelmag.com/media/bali-tg.png",
-      days: "6N/7D",
-      price: "₹70,999",
-      location: "Kuta, Ubud, Nusa Dua",
-      rating: 4.8,
-      reviews: 189,
-      highlights: "Tanah Lot Temple, Ubud Monkey Forest, Kuta Beach, Rice Terraces, Water Sports",
-      category: "international"
-    },
-    {
-      id: 11,
-      title: "European Dreams",
-      image: "https://images.pexels.com/photos/532826/pexels-photo-532826.jpeg",
-      days: "10N/11D",
-      price: "₹1,25,999",
-      location: "Paris, Switzerland, Rome",
-      rating: 4.9,
-      reviews: 86,
-      highlights: "Eiffel Tower, Swiss Alps, Colosseum, Vatican City, Seine River Cruise",
-      category: "international"
-    },
-    {
-      id: 12,
-      title: "Vietnam",
-      image: "https://images.squarespace-cdn.com/content/v1/5c3824e246d6976392372cd9/1560106931611-VVF5OJ34KV28ZNBPRQRS/Vietnam+visitor+visa.jpg?format=2500w",
-      days: "8N/9D",
-      price: "₹70,999",
-      location: "Hanoi, Ho Chi Minh",
-      rating: 4.7,
-      reviews: 72,
-      highlights: "Ha Long Bay, Cu Chi Tunnels, Mekong Delta, War Remnants Museum",
-      category: "international"
-    }
-  ]
-};
+import { useDynamicPackages } from "@/hooks/useDynamicPackages";
 
 const Packages = () => {
   const [activeTab, setActiveTab] = useState("domestic");
   const [searchTerm, setSearchTerm] = useState("");
   const [durationFilter, setDurationFilter] = useState("all");
   
+  const { packages, loading, error, getDomesticPackages, getInternationalPackages } = useDynamicPackages();
+  
+  // Get packages based on active tab
+  const getTabPackages = () => {
+    if (activeTab === "domestic") {
+      return getDomesticPackages();
+    } else {
+      return getInternationalPackages();
+    }
+  };
+  
   // Filter packages based on search term and duration filter
-  const filteredPackages = packagesData[activeTab === "domestic" ? "domestic" : "international"].filter(pkg => {
+  const filteredPackages = getTabPackages().filter(pkg => {
     const matchesSearch = pkg.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                         pkg.location.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (durationFilter === "all") return matchesSearch;
     
-    const numDays = parseInt(pkg.days.split("N/")[1].replace("D", ""));
+    const numDays = parseInt(pkg.days.split("N/")[1]?.replace("D", "") || "0");
     
     if (durationFilter === "short" && numDays <= 5) return matchesSearch;
     if (durationFilter === "medium" && numDays > 5 && numDays <= 8) return matchesSearch;
@@ -269,13 +129,28 @@ const Packages = () => {
               {activeTab === "domestic" ? "Explore India's Best Destinations" : "Discover International Wonders"}
             </h2>
             
-            {filteredPackages.length > 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-travel-blue-dark border-r-transparent"></div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-16">
+                <h3 className="text-2xl text-red-600 mb-4">Error loading packages</h3>
+                <p className="text-gray-600 mb-6">Please try again later</p>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="btn-primary"
+                >
+                  Reload Page
+                </button>
+              </div>
+            ) : filteredPackages.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredPackages.map((pkg) => (
                   <div key={pkg.id} className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
                     <div className="h-56 overflow-hidden">
                       <img 
-                        src={pkg.image} 
+                        src={pkg.images[0] || '/placeholder.svg'} 
                         alt={pkg.title} 
                         className="w-full h-full object-cover transition-transform hover:scale-110 duration-700"
                       />
@@ -295,18 +170,18 @@ const Packages = () => {
                       
                       <div className="flex items-center gap-1 mb-3">
                         <Star size={16} className="text-yellow-500 fill-yellow-500" />
-                        <span className="font-medium">{pkg.rating}</span>
-                        <span className="text-gray-500 text-sm">({pkg.reviews} reviews)</span>
+                        <span className="font-medium">{pkg.rating || 4.5}</span>
+                        <span className="text-gray-500 text-sm">({pkg.reviews || 0} reviews)</span>
                       </div>
                       
                       <p className="text-gray-600 mb-4">
-                        <span className="font-medium">Highlights:</span> {pkg.highlights}
+                        <span className="font-medium">Highlights:</span> {pkg.highlights.slice(0, 3).join(', ')}
                       </p>
                       
                       <div className="flex justify-between items-center pt-4 border-t border-gray-100">
                         <div className="text-travel-blue-dark">
                           <span className="text-sm">Starting from</span>
-                          <p className="text-xl font-bold">{pkg.price}</p>
+                          <p className="text-xl font-bold">₹{pkg.price.toLocaleString('en-IN')}</p>
                         </div>
                         <Link 
                           to={`/packages/${pkg.id}`} 

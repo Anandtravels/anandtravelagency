@@ -47,6 +47,10 @@ export interface Agent {
   id: string;
   name: string;
   email: string;
+  phone: string; // Made required for WhatsApp notifications
+  age?: string;
+  gender?: string;
+  address?: string;
   created_at: any;
 }
 

@@ -500,11 +500,15 @@ const BookingsTab = ({
                     onChange={(e) => assignTicket(booking.id, e.target.value)}
                   >
                     <option value="">Select Agent</option>
-                    {agents.map((agent: any) => (
-                      <option key={agent.id} value={agent.email} className="truncate">
-                        {agent.name.length > 15 ? agent.name.substring(0, 15) + '...' : agent.name}
-                      </option>
-                    ))}
+                    {agents.map((agent: any) => {
+                      const hasValidPhone = agent.phone && agent.phone.replace(/\D/g, '').length >= 10;
+                      return (
+                        <option key={agent.id} value={agent.email} className="truncate">
+                          {agent.name.length > 15 ? agent.name.substring(0, 15) + '...' : agent.name}
+                          {!hasValidPhone ? ' ⚠️ (No WhatsApp)' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
@@ -786,11 +790,14 @@ const BookingsTab = ({
                       onChange={(e) => assignTicket(booking.id, e.target.value)}
                     >
                       <option value="">Select Agent</option>
-                      {agents.map((agent: any) => (
-                        <option key={agent.id} value={agent.email}>
-                          {agent.name} ({agent.email})
-                        </option>
-                      ))}
+                      {agents.map((agent: any) => {
+                        const hasValidPhone = agent.phone && agent.phone.replace(/\D/g, '').length >= 10;
+                        return (
+                          <option key={agent.id} value={agent.email}>
+                            {agent.name} ({agent.email}){!hasValidPhone ? ' ⚠️ (No WhatsApp)' : ''}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                 </div>

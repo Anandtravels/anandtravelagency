@@ -9,7 +9,7 @@ export const useAdminNavigation = () => {
   useEffect(() => {
     // Get tab from URL hash
     const hash = location.hash.replace('#', '');
-    if (hash && ['bookings', 'packages', 'messages', 'agents'].includes(hash)) {
+    if (hash && ['bookings', 'package-bookings', 'package-management', 'hotel-bookings', 'hotel-management', 'hotel-agents', 'messages', 'agents', 'eservices'].includes(hash)) {
       setActiveTab(hash);
     } else {
       // When on /admin without hash, show dashboard instead of redirecting

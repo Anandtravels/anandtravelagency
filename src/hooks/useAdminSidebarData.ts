@@ -5,8 +5,10 @@ import { db } from '@/lib/firebase';
 interface SidebarCounts {
   bookings: number;
   packageBookings: number;
+  hotelBookings: number;
   messages: number;
   agents: number;
+  eservices: number;
   pendingBookings: number;
   todayBookings: number;
 }
@@ -15,8 +17,10 @@ export const useAdminSidebarData = () => {
   const [counts, setCounts] = useState<SidebarCounts>({
     bookings: 0,
     packageBookings: 0,
+    hotelBookings: 0,
     messages: 0,
     agents: 0,
+    eservices: 0,
     pendingBookings: 0,
     todayBookings: 0
   });
@@ -71,6 +75,15 @@ export const useAdminSidebarData = () => {
       });
       unsubscribes.push(unsubPackageBookings);
 
+      // Hotel bookings count
+      const hotelBookingsQuery = query(collection(db, 'hotel_bookings'));
+      const unsubHotelBookings = onSnapshot(hotelBookingsQuery, (snapshot) => {
+        setCounts(prev => ({ ...prev, hotelBookings: snapshot.docs.length }));
+      }, (error) => {
+        console.error('Error fetching hotel bookings:', error);
+      });
+      unsubscribes.push(unsubHotelBookings);
+
       // Messages count
       const messagesQuery = query(collection(db, 'contact_messages'));
       const unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
@@ -79,6 +92,15 @@ export const useAdminSidebarData = () => {
         console.error('Error fetching messages:', error);
       });
       unsubscribes.push(unsubMessages);
+
+      // E-Services count
+      const eservicesQuery = query(collection(db, 'eservice_requests'));
+      const unsubEservices = onSnapshot(eservicesQuery, (snapshot) => {
+        setCounts(prev => ({ ...prev, eservices: snapshot.docs.length }));
+      }, (error) => {
+        console.error('Error fetching e-service requests:', error);
+      });
+      unsubscribes.push(unsubEservices);
 
       // Agents count
       const agentsQuery = query(collection(db, 'agents'));
