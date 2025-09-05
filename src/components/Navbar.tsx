@@ -33,6 +33,9 @@ const Navbar = () => {
             <Link to="/eservices" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
               E-Services
             </Link>
+            <Link to="/visa-services" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
+              Visa Services
+            </Link>
             <Link to="/packages" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
               Packages
             </Link>
@@ -92,6 +95,13 @@ const Navbar = () => {
               onClick={() => setIsMenuOpen(false)}
             >
               E-Services
+            </Link>
+            <Link 
+              to="/visa-services" 
+              className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors py-2 border-b border-gray-100"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Visa Services
             </Link>
             <Link 
               to="/packages" 

@@ -22,6 +22,7 @@ import AgentDashboard from "./pages/AgentDashboard";
 import EServices from "./pages/EServices";
 import EServiceApplication from "./pages/EServiceApplication";
 import EServiceSuccess from "./pages/EServiceSuccess";
+import VisaServices from "./pages/VisaServices";
 // Hotel related imports
 import Hotels from "./pages/Hotels";
 import HotelDetail from "./pages/HotelDetail";
@@ -117,6 +118,7 @@ const App = () => {
                 <Route path="/booking" element={<Booking />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/visa-services" element={<VisaServices />} />
                 <Route path="/eservices" element={<EServices />} />
                 <Route path="/eservices/apply/:serviceType" element={<EServiceApplication />} />
                 <Route path="/eservices/success" element={<EServiceSuccess />} />

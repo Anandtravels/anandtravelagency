@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Home,
-  FileText
+  FileText,
+  FileCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -130,6 +131,13 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
       icon: FileText,
       description: 'E-Service Requests',
       badge: counts.eservices > 0 ? counts.eservices : undefined
+    },
+    {
+      title: 'Visa Applications',
+      href: '/admin#visa-applications',
+      icon: FileCheck,
+      description: 'Visa Service Requests',
+      badge: counts.visaApplications > 0 ? counts.visaApplications : undefined
     },
     {
       title: 'Agents',

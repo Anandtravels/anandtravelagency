@@ -17,6 +17,7 @@ import PackageBookingsTab from "@/components/PackageBookingsTab";
 import MessagesManagementTab from "@/components/MessagesManagementTab";
 import AgentManagementTab from "@/components/AgentManagementTab";
 import EServicesManagementTab from "@/components/EServicesManagementTab";
+import VisaApplicationsTab from "@/components/admin/VisaApplicationsTab";
 import PackageManagementTab from "@/components/admin/PackageManagementTab";
 import VisitorAnalytics from "@/components/admin/VisitorAnalytics";
 import HotelBookingsTab from "@/components/admin/HotelBookingsTab";
@@ -142,6 +143,13 @@ const Admin = () => {
 
           <TabsContent value="eservices" className="space-y-6">
             <EServicesManagementTab 
+              user={user} 
+              formatFirebaseTimestamp={formatFirebaseTimestamp}
+            />
+          </TabsContent>
+
+          <TabsContent value="visa-applications" className="space-y-6">
+            <VisaApplicationsTab 
               user={user} 
               formatFirebaseTimestamp={formatFirebaseTimestamp}
             />

@@ -83,8 +83,13 @@ class VisitorTracker {
       
       // Record visit in analytics collection
       await this.recordVisit();
-    } catch (error) {
-      console.error('Error setting up visitor session:', error);
+    } catch (error: any) {
+      // Handle permission errors gracefully
+      if (error.code === 'permission-denied') {
+        console.warn('Visitor session tracking disabled (permission denied)');
+      } else {
+        console.error('Error setting up visitor session:', error);
+      }
     }
   }
 
@@ -103,8 +108,13 @@ class VisitorTracker {
         device: this.getDeviceInfo(),
         referrer: document.referrer || 'direct'
       });
-    } catch (error) {
-      console.error('Error recording visit:', error);
+    } catch (error: any) {
+      // Only log permission errors as warnings, not errors
+      if (error.code === 'permission-denied') {
+        console.warn('Visitor analytics recording disabled (permission denied)');
+      } else {
+        console.error('Error recording visit:', error);
+      }
     }
   }
 

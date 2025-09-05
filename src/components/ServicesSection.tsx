@@ -1,4 +1,5 @@
-import { Train, Bus, Plane, Car, Package } from "lucide-react";
+import { Train, Bus, Plane, Car, Package, FileCheck } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const ServicesSection = () => {
   const services = [
@@ -26,6 +27,12 @@ const ServicesSection = () => {
       icon: <Package className="w-12 h-12 text-travel-blue-dark" />,
       title: "Tour Packages",
       description: "Curated domestic and international tour packages with all-inclusive options."
+    },
+    {
+      icon: <FileCheck className="w-12 h-12 text-travel-blue-dark" />,
+      title: "Visa Services",
+      description: "Complete visa assistance and documentation support for international travel.",
+      isVisa: true
     }
   ];
 
@@ -43,14 +50,29 @@ const ServicesSection = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {services.map((service, index) => (
-            <div 
-              key={index} 
-              className="bg-white rounded-lg shadow-md p-8 flex flex-col items-center text-center transition-transform hover:scale-105"
-            >
-              <div className="mb-4">{service.icon}</div>
-              <h3 className="text-xl font-semibold mb-3 text-travel-blue-dark">{service.title}</h3>
-              <p className="text-gray-600">{service.description}</p>
-            </div>
+            service.isVisa ? (
+              <Link 
+                key={index}
+                to="/visa-services"
+                className="bg-white rounded-lg shadow-md p-8 flex flex-col items-center text-center transition-all duration-300 hover:scale-105 hover:shadow-lg group cursor-pointer"
+              >
+                <div className="mb-4 group-hover:text-travel-orange transition-colors">{service.icon}</div>
+                <h3 className="text-xl font-semibold mb-3 text-travel-blue-dark group-hover:text-travel-orange transition-colors">{service.title}</h3>
+                <p className="text-gray-600 group-hover:text-gray-700 transition-colors">{service.description}</p>
+                <div className="mt-4 text-travel-orange text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                  Apply Now →
+                </div>
+              </Link>
+            ) : (
+              <div 
+                key={index} 
+                className="bg-white rounded-lg shadow-md p-8 flex flex-col items-center text-center transition-transform hover:scale-105"
+              >
+                <div className="mb-4">{service.icon}</div>
+                <h3 className="text-xl font-semibold mb-3 text-travel-blue-dark">{service.title}</h3>
+                <p className="text-gray-600">{service.description}</p>
+              </div>
+            )
           ))}
         </div>
         
