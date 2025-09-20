@@ -215,41 +215,47 @@ const Booking = () => {
 
       const docRef = await addDoc(collection(db, 'bookings'), bookingData);
 
-      // Update coupon usage
-      if (couponCode) {
-        const couponsRef = collection(db, 'coupons');
-        const q = query(couponsRef, where('code', '==', couponCode));
-        const snapshot = await getDocs(q);
+      // Try to update coupon usage, but don't fail the booking if it fails
+      if (couponCode && appliedCoupon) {
+        try {
+          const couponsRef = collection(db, 'coupons');
+          const q = query(couponsRef, where('code', '==', couponCode));
+          const snapshot = await getDocs(q);
 
-        if (!snapshot.empty) {
-          const couponDoc = snapshot.docs[0];
-          const couponData = couponDoc.data();
-          
-          // Convert booking type for display
-          let displayBookingType = "General Booking";
-          if (data.train_booking_type === "tatkal") {
-            displayBookingType = "Tatkal Booking";
-          } else if (data.train_booking_type === "premium_tatkal") {
-            displayBookingType = "Premium Booking";
+          if (!snapshot.empty) {
+            const couponDoc = snapshot.docs[0];
+            const couponData = couponDoc.data();
+            
+            // Convert booking type for display
+            let displayBookingType = "General Booking";
+            if (data.train_booking_type === "tatkal") {
+              displayBookingType = "Tatkal Booking";
+            } else if (data.train_booking_type === "premium_tatkal") {
+              displayBookingType = "Premium Booking";
+            }
+            
+            // Create a new redemption object with the correct amount based on booking type
+            const redemptionData = {
+              bookingId: docRef.id,
+              bookingType: displayBookingType, // Store user-friendly booking type
+              appliedAt: new Date().toISOString(),
+              originalAmount: baseCharge, // Use the correct base charge calculated above
+              discountAmount: appliedCoupon?.discountAmount,
+              finalAmount: finalCharge,
+              personName: data.name, // Add person information as requested
+              personPhone: "+91" + data.phone
+            };
+
+            await updateDoc(doc(db, 'coupons', couponDoc.id), {
+              usedCount: (couponData.usedCount || 0) + 1,
+              redemptions: [...(couponData.redemptions || []), redemptionData],
+              lastUsed: serverTimestamp() // Use serverTimestamp only for the top-level field
+            });
           }
-          
-          // Create a new redemption object with the correct amount based on booking type
-          const redemptionData = {
-            bookingId: docRef.id,
-            bookingType: displayBookingType, // Store user-friendly booking type
-            appliedAt: new Date().toISOString(),
-            originalAmount: baseCharge, // Use the correct base charge calculated above
-            discountAmount: appliedCoupon?.discountAmount,
-            finalAmount: finalCharge,
-            personName: data.name, // Add person information as requested
-            personPhone: "+91" + data.phone
-          };
-
-          await updateDoc(doc(db, 'coupons', couponDoc.id), {
-            usedCount: (couponData.usedCount || 0) + 1,
-            redemptions: [...(couponData.redemptions || []), redemptionData],
-            lastUsed: serverTimestamp() // Use serverTimestamp only for the top-level field
-          });
+        } catch (couponError) {
+          // Log coupon update error but don't fail the booking
+          console.warn("Could not update coupon usage (this doesn't affect your booking):", couponError);
+          // Note: The booking was still successful, we just couldn't track coupon usage
         }
       }
 
@@ -260,9 +266,21 @@ const Booking = () => {
 
     } catch (error) {
       console.error("Error submitting booking:", error);
+      
+      // Provide more specific error messages based on the error type
+      let errorMessage = "There was an error processing your booking. Please try again later.";
+      
+      if (error.code === 'permission-denied') {
+        errorMessage = "Permission denied. Please check your internet connection and try again.";
+      } else if (error.code === 'unavailable') {
+        errorMessage = "Service temporarily unavailable. Please try again in a moment.";
+      } else if (error.code === 'network-request-failed') {
+        errorMessage = "Network error. Please check your internet connection and try again.";
+      }
+      
       toast({
         title: "Submission Error",
-        description: "There was an error processing your booking. Please try again later.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
