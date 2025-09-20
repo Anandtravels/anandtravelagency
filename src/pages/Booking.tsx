@@ -22,7 +22,6 @@ const Booking = () => {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponCode, setCouponCode] = useState('');
   const [couponType, setCouponType] = useState<'fixed' | 'percentage' | null>(null);
-  const [bookingCharge, setBookingCharge] = useState(50); // Default booking charge
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string;
     discount: number;
@@ -44,7 +43,7 @@ const Booking = () => {
     coupon: null
   });
   
-  const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm({
+  const { register, handleSubmit, reset, formState: { errors }, setValue, getValues } = useForm({
     defaultValues: {
       phone: "",
       name: "",
@@ -134,9 +133,43 @@ const Booking = () => {
     }
   };
 
+  // Function to handle booking type change and refresh coupon
+  const handleBookingTypeSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const newBookingType = event.target.value;
+    setValue("train_booking_type", newBookingType);
+    
+    // If a coupon is applied, recalculate it with the new booking charge
+    if (appliedCoupon) {
+      const newOriginalAmount = calculateBookingCharge(newBookingType);
+      const discountAmount = appliedCoupon.type === 'percentage' 
+        ? (newOriginalAmount * appliedCoupon.discount / 100) 
+        : appliedCoupon.discount;
+      const finalAmount = Math.max(0, newOriginalAmount - discountAmount);
+
+      setAppliedCoupon({
+        ...appliedCoupon,
+        originalAmount: newOriginalAmount,
+        discountAmount,
+        finalAmount
+      });
+    }
+  };
+
+  // Function to clear applied coupon
+  const clearAppliedCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    setCouponCode('');
+    setCouponType(null);
+  };
+
   // Function to handle applying a coupon
   const handleApplyCoupon = (discount: number, code: string, type: 'fixed' | 'percentage') => {
-    const originalAmount = bookingCharge;
+    // Get current form values to determine the correct booking charge
+    const currentFormValues = getValues();
+    const currentBookingType = currentFormValues.train_booking_type || 'general';
+    const originalAmount = calculateBookingCharge(currentBookingType);
+    
     const discountAmount = type === 'percentage' 
       ? (originalAmount * discount / 100) 
       : discount;
@@ -391,6 +424,7 @@ const Booking = () => {
                             <select
                               {...register("train_booking_type", { required: "Booking type is required" })}
                               defaultValue="general"
+                              onChange={handleBookingTypeSelectChange}
                               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
                             >
                               <option value="general">General Booking</option>
@@ -802,16 +836,30 @@ const Booking = () => {
                       </button>
                       
                       {/* Display coupon discount if applied */}
-                      {couponDiscount > 0 && couponType && (
-                        <div className="mt-4 p-3 bg-green-50 border border-green-100 rounded-md">
-                          <p className="flex items-center text-green-700">
-                            <Check className="mr-2 h-4 w-4" />
-                            <span className="font-medium">
-                              Coupon applied: {couponType === 'percentage' 
-                                ? `${couponDiscount}% off on booking charge` 
-                                : `₹${couponDiscount} off on booking charge`}
-                            </span>
-                          </p>
+                      {appliedCoupon && (
+                        <div className="mt-4 p-4 bg-green-50 border border-green-100 rounded-md">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-green-700">
+                              <Check className="mr-2 h-4 w-4" />
+                              <span className="font-medium">
+                                Coupon "{appliedCoupon.code}" applied successfully!
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={clearAppliedCoupon}
+                              className="text-green-600 hover:text-green-800 text-sm underline"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          <div className="mt-2 text-sm text-green-600">
+                            <p>Original Amount: ₹{appliedCoupon.originalAmount}</p>
+                            <p>Discount: {appliedCoupon.type === 'percentage' 
+                              ? `${appliedCoupon.discount}% (₹${appliedCoupon.discountAmount.toFixed(2)})` 
+                              : `₹${appliedCoupon.discount}`}</p>
+                            <p className="font-semibold">Final Amount: ₹{appliedCoupon.finalAmount.toFixed(2)}</p>
+                          </div>
                         </div>
                       )}
                       
