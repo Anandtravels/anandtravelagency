@@ -145,7 +145,16 @@ class VisitorTracker {
             isActive: true
           }, { merge: true });
         } catch (error) {
-          console.error('Error updating heartbeat:', error);
+          // Silently handle permission errors to avoid console spam
+          if (error instanceof Error && error.message.includes('permission')) {
+            // Stop the heartbeat if we have persistent permission issues
+            if (this.heartbeatInterval) {
+              clearInterval(this.heartbeatInterval);
+              this.heartbeatInterval = null;
+            }
+          } else {
+            console.error('Error updating heartbeat:', error);
+          }
         }
       }
     }, 30000);

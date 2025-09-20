@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Smartphone, Download, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 interface AppDownloadPopupProps {
   isOpen: boolean;
@@ -19,6 +20,11 @@ const AppDownloadPopup: React.FC<AppDownloadPopupProps> = ({ isOpen, onClose, on
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden border-0 bg-transparent shadow-none">
+        <DialogHeader>
+          <VisuallyHidden>
+            <DialogTitle>Download Mobile App</DialogTitle>
+          </VisuallyHidden>
+        </DialogHeader>
         <motion.div
           initial={{ scale: 0.8, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
