@@ -37,6 +37,7 @@ import VisitorTracker from "@/services/visitorTracker";
 import { initializeAppCoupons } from "@/services/appCouponService";
 import AppDownloadPopup from "@/components/AppDownloadPopup";
 import ConditionalAppDownloadPopup from "@/components/ConditionalAppDownloadPopup";
+import ConditionalChatBot from "@/components/ConditionalChatBot";
 import { useAppDownloadPopup } from "@/hooks/useAppDownloadPopup";
 
 const queryClient = new QueryClient();
@@ -104,6 +105,7 @@ const App = () => {
             
             {/* Global App Download Popup - appears on all pages except admin */}
             <BrowserRouter>
+              <ConditionalChatBot />
               <ConditionalAppDownloadPopup 
                 isOpen={isPopupOpen} 
                 onClose={closePopup}

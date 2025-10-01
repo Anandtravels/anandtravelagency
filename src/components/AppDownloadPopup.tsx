@@ -26,9 +26,9 @@ const AppDownloadPopup: React.FC<AppDownloadPopupProps> = ({ isOpen, onClose, on
           </VisuallyHidden>
         </DialogHeader>
         <motion.div
-          initial={{ scale: 0.8, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.8, opacity: 0, y: 20 }}
+          initial={{ x: -50, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: -50, opacity: 0 }}
           transition={{ type: "spring", duration: 0.5 }}
           className="bg-gradient-to-br from-travel-blue-dark to-travel-blue-medium rounded-2xl p-6 text-white relative overflow-hidden"
         >

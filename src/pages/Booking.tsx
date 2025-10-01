@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import BookingSuccess from "@/components/BookingSuccess";
 import { CouponInput } from "@/components/CouponSystem/CouponInput";
+import { StationAutocomplete } from "@/components/StationAutocomplete";
 
 const Booking = () => {
   const [bookingType, setBookingType] = useState("train");
@@ -43,6 +44,10 @@ const Booking = () => {
     coupon: null
   });
   
+  // State for train station autocomplete
+  const [trainFromStation, setTrainFromStation] = useState("");
+  const [trainToStation, setTrainToStation] = useState("");
+  
   const { register, handleSubmit, reset, formState: { errors }, setValue, getValues } = useForm({
     defaultValues: {
       phone: "",
@@ -75,6 +80,9 @@ const Booking = () => {
   
   const handleBookingTypeChange = (type) => {
     setBookingType(type);
+    // Reset station autocomplete values
+    setTrainFromStation("");
+    setTrainToStation("");
     reset({
       phone: "",
       name: "",
@@ -263,6 +271,14 @@ const Booking = () => {
       setBookingDetails({
         coupon: appliedCoupon
       });
+      
+      // Reset form and all state values after successful submission
+      reset();
+      setPassengerCount(1);
+      setPassengers([{ name: '', age: '', gender: 'male' }]);
+      setTrainFromStation("");
+      setTrainToStation("");
+      clearAppliedCoupon();
 
     } catch (error) {
       console.error("Error submitting booking:", error);
@@ -381,37 +397,83 @@ const Booking = () => {
                   
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-gray-700 font-medium mb-2">
-                          From <span className="text-rose-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                          <input
-                            type="text"
-                            {...register("from", { required: "Origin is required" })}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                            placeholder="City/Station/Airport"
-                          />
-                        </div>
-                        {errors.from && <p className="text-red-500 text-sm mt-1">{String(errors.from.message)}</p>}
-                      </div>
-                      
-                      <div>
-                        <label className="block text-gray-700 font-medium mb-2">
-                          To <span className="text-rose-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                          <input
-                            type="text"
-                            {...register("to", { required: "Destination is required" })}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                            placeholder="City/Station/Airport"
-                          />
-                        </div>
-                        {errors.to && <p className="text-red-500 text-sm mt-1">{String(errors.to.message)}</p>}
-                      </div>
+                      {bookingType === "train" ? (
+                        <>
+                          {/* Train booking with autocomplete */}
+                          <div>
+                            <StationAutocomplete
+                              label="From"
+                              required={true}
+                              value={trainFromStation}
+                              onChange={(value) => {
+                                setTrainFromStation(value);
+                                setValue("from", value, { shouldValidate: true });
+                              }}
+                              placeholder="Search station name or code..."
+                              error={errors.from ? String(errors.from.message) : undefined}
+                            />
+                            {/* Hidden input for form validation */}
+                            <input
+                              type="hidden"
+                              {...register("from", { required: "Origin is required" })}
+                            />
+                          </div>
+                          
+                          <div>
+                            <StationAutocomplete
+                              label="To"
+                              required={true}
+                              value={trainToStation}
+                              onChange={(value) => {
+                                setTrainToStation(value);
+                                setValue("to", value, { shouldValidate: true });
+                              }}
+                              placeholder="Search station name or code..."
+                              error={errors.to ? String(errors.to.message) : undefined}
+                            />
+                            {/* Hidden input for form validation */}
+                            <input
+                              type="hidden"
+                              {...register("to", { required: "Destination is required" })}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* Other booking types with regular input */}
+                          <div>
+                            <label className="block text-gray-700 font-medium mb-2">
+                              From <span className="text-rose-500">*</span>
+                            </label>
+                            <div className="relative">
+                              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                              <input
+                                type="text"
+                                {...register("from", { required: "Origin is required" })}
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                                placeholder="City/Station/Airport"
+                              />
+                            </div>
+                            {errors.from && <p className="text-red-500 text-sm mt-1">{String(errors.from.message)}</p>}
+                          </div>
+                          
+                          <div>
+                            <label className="block text-gray-700 font-medium mb-2">
+                              To <span className="text-rose-500">*</span>
+                            </label>
+                            <div className="relative">
+                              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                              <input
+                                type="text"
+                                {...register("to", { required: "Destination is required" })}
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                                placeholder="City/Station/Airport"
+                              />
+                            </div>
+                            {errors.to && <p className="text-red-500 text-sm mt-1">{String(errors.to.message)}</p>}
+                          </div>
+                        </>
+                      )}
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
