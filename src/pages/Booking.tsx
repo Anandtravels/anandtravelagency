@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase';
 import BookingSuccess from "@/components/BookingSuccess";
 import { CouponInput } from "@/components/CouponSystem/CouponInput";
 import { StationAutocomplete } from "@/components/StationAutocomplete";
+import { MultiSelectTrainAutocomplete } from "@/components/MultiSelectTrainAutocomplete";
 
 const Booking = () => {
   const [bookingType, setBookingType] = useState("train");
@@ -47,6 +48,7 @@ const Booking = () => {
   // State for train station autocomplete
   const [trainFromStation, setTrainFromStation] = useState("");
   const [trainToStation, setTrainToStation] = useState("");
+  const [preferredTrains, setPreferredTrains] = useState("");
   
   const { register, handleSubmit, reset, formState: { errors }, setValue, getValues } = useForm({
     defaultValues: {
@@ -83,6 +85,7 @@ const Booking = () => {
     // Reset station autocomplete values
     setTrainFromStation("");
     setTrainToStation("");
+    setPreferredTrains("");
     reset({
       phone: "",
       name: "",
@@ -278,6 +281,7 @@ const Booking = () => {
       setPassengers([{ name: '', age: '', gender: 'male' }]);
       setTrainFromStation("");
       setTrainToStation("");
+      setPreferredTrains("");
       clearAppliedCoupon();
 
     } catch (error) {
@@ -535,13 +539,21 @@ const Booking = () => {
                         </div>
                         
                         <div>
-                          <label className="block text-gray-700 font-medium mb-2">Preferred Trains (Optional)</label>
-                          <textarea
+                          <MultiSelectTrainAutocomplete
+                            label="Preferred Trains (Optional)"
+                            required={false}
+                            value={preferredTrains}
+                            onChange={(value) => {
+                              setPreferredTrains(value);
+                              setValue("preferred_trains", value);
+                            }}
+                            placeholder="Search by train number or name (e.g., 12345 or Rajdhani)"
+                          />
+                          {/* Hidden input for form registration */}
+                          <input
+                            type="hidden"
                             {...register("preferred_trains")}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                            placeholder="Enter train numbers or names if you have specific preferences"
-                            rows={2}
-                          ></textarea>
+                          />
                         </div>
                       </>
                     )}

@@ -1,0 +1,950 @@
+{
+  "7023": {
+    "name": "CHZ NZM SPL / CHZ NZM Special",
+    "from": {
+      "CHZ": "Charlapalli"
+    },
+    "to": {
+      "NZM": "Hazrat Nizamuddin"
+    }
+  },
+  "7026": {
+    "name": "CHE CHZ SPL",
+    "from": {
+      "CHE": "Srikakulam Road"
+    },
+    "to": {
+      "CHZ": "Charlapalli"
+    }
+  },
+  "7031": {
+    "name": "CHZ CCT SPL",
+    "from": {
+      "CHZ": "Charlapalli"
+    },
+    "to": {
+      "CCT": "Kakinada Town"
+    }
+  },
+  "8551": {
+    "name": "VSKP CHZ SPL (Visakhapatnam–Dantewada passenger/special)",
+    "from": {
+      "VSKP": "Visakhapatnam"
+    },
+    "to": {
+      "DWZ": "Dantewada"
+    }
+  },
+  "11019": {
+    "name": "KONARK EXPRESS (11019)",
+    "from": {
+      "CSMT": "C. Shivaji Maharaj Terminus / Mumbai"
+    },
+    "to": {
+      "BBS": "Bhubaneswar"
+    }
+  },
+  "11020": {
+    "name": "KONARK EXPRESS (11020)",
+    "from": {
+      "BBS": "Bhubaneswar"
+    },
+    "to": {
+      "CSMT": "C. Shivaji Maharaj Terminus / Mumbai"
+    }
+  },
+  "12309": {
+    "name": "RJPB TEJAS RAJ",
+    "from": {
+      "RJPB": "Rajendranagar Terminal"
+    },
+    "to": {
+      "NDLS": "New Delhi"
+    }
+  },
+  "12509": {
+    "name": "GUWAHATI EXPRESS / SMVT Bengaluru–Guwahati SF Exp (12509)",
+    "from": {
+      "SMVB": "SMVT Bengaluru"
+    },
+    "to": {
+      "GHY": "Guwahati"
+    }
+  },
+  "12603": {
+    "name": "MAS–CHZ SF EXP",
+    "from": {
+      "MAS": "Chennai Central"
+    },
+    "to": {
+      "CHZ": "Charlapalli / Hyderabad Deccan"
+    }
+  },
+  "12604": {
+    "name": "CHENNAI SF EXP",
+    "from": {
+      "CHZ": "Charlapalli / Hyderabad Deccan"
+    },
+    "to": {
+      "MAS": "Chennai Central"
+    }
+  },
+  "12648": {
+    "name": "KONGU EXPRESS (12648)",
+    "from": {
+      "NZM": "Hazrat Nizamuddin"
+    },
+    "to": {
+      "CBE": "Coimbatore"
+    }
+  },
+  "12669": {
+    "name": "GANGAKAVERI / Ganga Kaveri Express",
+    "from": {
+      "MAS": "Chennai Central"
+    },
+    "to": {
+      "CPR": "Chhapra Junction"
+    }
+  },
+  "12696": {
+    "name": "TVC–MAS SF EXP",
+    "from": {
+      "TVC": "Thiruvananthapuram Central"
+    },
+    "to": {
+      "MAS": "Chennai Central"
+    }
+  },
+  "12704": {
+    "name": "FALAKNUMA SF EX (12704)",
+    "from": {
+      "SC": "Secunderabad Junction"
+    },
+    "to": {
+      "HWH": "Howrah / Kolkata Howrah"
+    }
+  },
+  "12707": {
+    "name": "ANDHRA PRADESH SAMPARK KRANTI (12707)",
+    "from": {
+      "TPTY": "Tirupati Main"
+    },
+    "to": {
+      "NZM": "Hazrat Nizamuddin / New Delhi"
+    }
+  },
+  "12709": {
+    "name": "SIMHAPURI SF EX (12709)",
+    "from": {
+      "GDR": "Gudur Junction"
+    },
+    "to": {
+      "SC": "Secunderabad Junction"
+    }
+  },
+  "12710": {
+    "name": "SIMHAPURI SF EX (12710)",
+    "from": {
+      "SC": "Secunderabad Junction"
+    },
+    "to": {
+      "GDR": "Gudur Junction"
+    }
+  },
+  "12717": {
+    "name": "RATNANCHAL / RATNACHAL SF EX (12717)",
+    "from": {
+      "VSKP": "Visakhapatnam Junction"
+    },
+    "to": {
+      "BZA": "Vijayawada Junction"
+    }
+  },
+  "12718": {
+    "name": "RATNANCHAL / RATNACHAL SF EX (12718)",
+    "from": {
+      "BZA": "Vijayawada Junction"
+    },
+    "to": {
+      "VSKP": "Visakhapatnam Junction"
+    }
+  },
+  "12721": {
+    "name": "DAKSHIN SF EXP (12721)",
+    "from": {
+      "HYB": "Hyderabad Deccan / Hyderabad"
+    },
+    "to": {
+      "NZM": "Hazrat Nizamuddin"
+    }
+  },
+  "12727": {
+    "name": "Godavari SF Express",
+    "from": {
+      "VSKP": "Visakhapatnam"
+    },
+    "to": {
+      "HYB": "Hyderabad Deccan"
+    }
+  },
+  "12728": {
+    "name": "Godavari SF Express",
+    "from": {
+      "HYB": "Hyderabad Deccan"
+    },
+    "to": {
+      "VSKP": "Visakhapatnam"
+    }
+  },
+  "12733": {
+    "name": "Narayanadri SF Express",
+    "from": {
+      "TPTY": "Tirupati"
+    },
+    "to": {
+      "LPI": "Lingampalli"
+    }
+  },
+  "12734": {
+    "name": "Narayanadri SF Express",
+    "from": {
+      "LPI": "Lingampalli"
+    },
+    "to": {
+      "TPTY": "Tirupati"
+    }
+  },
+  "12737": {
+    "name": "Gowthami / Goutami SF Express",
+    "from": {
+      "COA": "Kakinada Port"
+    },
+    "to": {
+      "LPI": "Lingampalli"
+    }
+  },
+  "12738": {
+    "name": "Gowthami / Goutami SF Express",
+    "from": {
+      "LPI": "Lingampalli"
+    },
+    "to": {
+      "COA": "Kakinada Port"
+    }
+  },
+  "12739": {
+    "name": "Visakhapatnam–Secunderabad Garib Rath",
+    "from": {
+      "VSKP": "Visakhapatnam"
+    },
+    "to": {
+      "SC": "Secunderabad"
+    }
+  },
+  "12740": {
+    "name": "Visakhapatnam–Secunderabad Garib Rath",
+    "from": {
+      "SC": "Secunderabad"
+    },
+    "to": {
+      "VSKP": "Visakhapatnam"
+    }
+  },
+  "12747": {
+    "name": "Palnadu SF Express",
+    "from": {
+      "GNT": "Guntur Junction"
+    },
+    "to": {
+      "VKB": "Vikarabad Junction"
+    }
+  },
+  "12749": {
+    "name": "Machilipatnam–Bidar SF Express",
+    "from": {
+      "MTM": "Machilipatnam"
+    },
+    "to": {
+      "BIDR": "Bidar"
+    }
+  },
+  "12759": {
+    "name": "Charminar SF Express",
+    "from": {
+      "TBM": "Tambaram / Chennai Beach"
+    },
+    "to": {
+      "HYB": "Hyderabad Deccan"
+    }
+  },
+  "12760": {
+    "name": "Charminar SF Express",
+    "from": {
+      "HYB": "Hyderabad Deccan"
+    },
+    "to": {
+      "TBM": "Tambaram / Chennai Beach"
+    }
+  },
+  "12774": {
+    "name": "Secunderabad–Shalimar AC SF Express",
+    "from": {
+      "SC": "Secunderabad"
+    },
+    "to": {
+      "SHM": "Shalimar"
+    }
+  },
+  "12775": {
+    "name": "Cocanada AC Express",
+    "from": {
+      "CCT": "Kakinada Town"
+    },
+    "to": {
+      "LPI": "Lingampalli"
+    }
+  },
+  "12776": {
+    "name": "Cocanada AC Express",
+    "from": {
+      "LPI": "Lingampalli"
+    },
+    "to": {
+      "CCT": "Kakinada Town"
+    }
+  },
+  "12785": {
+    "name": "Kacheguda – Mysuru / Ashokapuram SF Express",
+    "from": {
+      "KCG": "Kacheguda"
+    },
+    "to": {
+      "MYS": "Mysuru / Ashokapuram"
+    }
+  },
+  "12786": {
+    "name": "Ashokapuram – Kacheguda SF Express",
+    "from": {
+      "AP": "Ashokapuram / Mysuru"
+    },
+    "to": {
+      "KCG": "Kacheguda"
+    }
+  },
+  "12788": {
+    "name": "Nagarsol – Narasapur SF Express",
+    "from": {
+      "NSL": "Nagarsol"
+    },
+    "to": {
+      "NS": "Narasapur"
+    }
+  },
+  "12789": {
+    "name": "Kacheguda – Murdeshwar SF Express",
+    "from": {
+      "KCG": "Kacheguda"
+    },
+    "to": {
+      "MRDW": "Murdeshwar"
+    }
+  },
+  "12792": {
+    "name": "Danapur – Secunderabad SF Express",
+    "from": {
+      "DNR": "Danapur"
+    },
+    "to": {
+      "SC": "Secunderabad"
+    }
+  },
+  "12805": {
+    "name": "Janmabhoomi SF Express",
+    "from": {
+      "VSKP": "Visakhapatnam"
+    },
+    "to": {
+      "LPI": "Lingampalli"
+    }
+  },
+  "12806": {
+    "name": "Janmabhoomi SF Express",
+    "from": {
+      "LPI": "Lingampalli"
+    },
+    "to": {
+      "VSKP": "Visakhapatnam"
+    }
+  },
+  "12861": {
+    "name": "VSKP–MBNR SF Express",
+    "from": {
+      "VSKP": "Visakhapatnam Junction"
+    },
+    "to": {
+      "MBNR": "Mahbubnagar"
+    }
+  },
+  "12862": {
+    "name": "MBNR–VSKP SF Express",
+    "from": {
+      "MBNR": "Mahbubnagar"
+    },
+    "to": {
+      "VSKP": "Visakhapatnam Junction"
+    }
+  },
+  "12898": {
+    "name": "Bhubaneswar – Puducherry SF Express",
+    "from": {
+      "BBS": "Bhubaneswar"
+    },
+    "to": {
+      "PDY": "Puducherry"
+    }
+  },
+  "13352": {
+    "name": "Alappuzha – Dhanbad Express",
+    "from": {
+      "ALLP": "Alappuzha / Alleppey"
+    },
+    "to": {
+      "DHN": "Dhanbad Junction"
+    }
+  },
+  "16032": {
+    "name": "Andaman Express (16032)",
+    "from": {
+      "SVDK": "Mata Vaishno Devi Katra"
+    },
+    "to": {
+      "MAS": "Chennai Central"
+    }
+  },
+  "16094": {
+    "name": "Lucknow Jn – Chennai Central Express",
+    "from": {
+      "LJN": "Lucknow Junction"
+    },
+    "to": {
+      "MAS": "Chennai Central"
+    }
+  },
+  "16128": {
+    "name": "Guruvayur – Chennai Egmore Express",
+    "from": {
+      "GUV": "Guruvayur"
+    },
+    "to": {
+      "MS": "Chennai Egmore / MSB"
+    }
+  },
+  "16382": {
+    "name": "Kanniyakumari – Pune Express",
+    "from": {
+      "CAPE": "Kanniyakumari"
+    },
+    "to": {
+      "PUNE": "Pune Junction"
+    }
+  },
+  "16787": {
+    "name": "Tirunelveli – SVDK Express",
+    "from": {
+      "TEN": "Tirunelveli Junction"
+    },
+    "to": {
+      "SVDK": "Mata Vaishno Devi Katra"
+    }
+  },
+  "17015": {
+    "name": "Visakha / Visakhapatnam Express (17015)",
+    "from": {
+      "BBS": "Bhubaneswar"
+    },
+    "to": {
+      "SC": "Secunderabad Junction"
+    }
+  },
+  "17016": {
+    "name": "Visakha / Visakhapatnam Express (17016)",
+    "from": {
+      "SC": "Secunderabad Junction"
+    },
+    "to": {
+      "BBS": "Bhubaneswar / BBS New"
+    }
+  },
+  "17057": {
+    "name": "Devagiri Express (17057)",
+    "from": {
+      "CSMT": "C. Shivaji Maharaj Terminus / Mumbai"
+    },
+    "to": {
+      "LPI": "Lingampalli"
+    }
+  },
+  "17205": {
+    "name": "Sainagar Shirdi – Kakinada Port Express (17205)",
+    "from": {
+      "SNSI": "Sainagar Shirdi"
+    },
+    "to": {
+      "COA": "Kakinada Port"
+    }
+  },
+  "17206": {
+    "name": "Kakinada Port – Sainagar Shirdi Express (17206)",
+    "from": {
+      "COA": "Kakinada Port"
+    },
+    "to": {
+      "SNSI": "Sainagar Shirdi"
+    }
+  },
+  "17209": {
+    "name": "Seshadri Express (17209)",
+    "from": {
+      "SMVB": "SMVT Bengaluru / KSR Bengaluru"
+    },
+    "to": {
+      "CCT": "Kakinada Town"
+    }
+  },
+  "17210": {
+    "name": "Seshadri Express (17210)",
+    "from": {
+      "CCT": "Kakinada Town"
+    },
+    "to": {
+      "SMVB": "SMVT Bengaluru / KSR Bengaluru"
+    }
+  },
+  "17212": {
+    "name": "Kondaveedu Express (17212)",
+    "from": {
+      "YPR": "Yesvantpur / Bengaluru"
+    },
+    "to": {
+      "MTM": "Machilipatnam"
+    }
+  },
+  "17221": {
+    "name": "Kakinada Port – LTT Express (17221)",
+    "from": {
+      "COA": "Kakinada Port"
+    },
+    "to": {
+      "LTT": "Lokmanya Tilak Terminus, Mumbai"
+    }
+  },
+  "17651": {
+    "name": "Kacheguda Express / Kacheguda–Puducherry",
+    "from": {
+      "PDY": "Puducherry"
+    },
+    "to": {
+      "KCG": "Kacheguda"
+    }
+  },
+  "17653": {
+    "name": "Kacheguda–Puducherry Express",
+    "from": {
+      "KCG": "Kacheguda"
+    },
+    "to": {
+      "PDY": "Puducherry"
+    }
+  },
+  "17654": {
+    "name": "Puducherry–Kacheguda Express",
+    "from": {
+      "PDY": "Puducherry"
+    },
+    "to": {
+      "KCG": "Kacheguda"
+    }
+  },
+  "17655": {
+    "name": "Circar Express / Kakinada Port – Puducherry",
+    "from": {
+      "COA": "Kakinada Port"
+    },
+    "to": {
+      "PDY": "Puducherry"
+    }
+  },
+  "17656": {
+    "name": "Circar Express (return)",
+    "from": {
+      "PDY": "Puducherry"
+    },
+    "to": {
+      "COA": "Kakinada Port"
+    }
+  },
+  "18046": {
+    "name": "East Coast Express (18045/18046)",
+    "from": {
+      "CHZ": "Charlapalli / Hyderabad"
+    },
+    "to": {
+      "SHM": "Kolkata Shalimar"
+    }
+  },
+  "18189": {
+    "name": "Tatanagar – Ernakulam Express (18189)",
+    "from": {
+      "TATA": "Tatanagar Junction"
+    },
+    "to": {
+      "ERS": "Ernakulam Junction"
+    }
+  },
+  "18190": {
+    "name": "Ernakulam – Tatanagar Express (18190)",
+    "from": {
+      "ERS": "Ernakulam Junction"
+    },
+    "to": {
+      "TATA": "Tatanagar Junction"
+    }
+  },
+  "18311": {
+    "name": "Sambalpur – Boudh special (18311)",
+    "from": {
+      "SBP": "Sambalpur"
+    },
+    "to": {
+      "BOUH": "Boudh"
+    }
+  },
+  "18312": {
+    "name": "Boudh – Sambalpur (18312)",
+    "from": {
+      "BOUH": "Boudh"
+    },
+    "to": {
+      "SBP": "Sambalpur"
+    }
+  },
+  "18463": {
+    "name": "Prashanti Express",
+    "from": {
+      "BBS": "Bhubaneswar"
+    },
+    "to": {
+      "SBC": "KSR Bengaluru"
+    }
+  },
+  "18503": {
+    "name": "Visakhapatnam – Sainagar Shirdi Express (18503)",
+    "from": {
+      "VSKP": "Visakhapatnam"
+    },
+    "to": {
+      "SNSI": "Sainagar Shirdi"
+    }
+  },
+  "18519": {
+    "name": "Visakhapatnam – Lokmanya Tilak Terminus (18519)",
+    "from": {
+      "VSKP": "Visakhapatnam"
+    },
+    "to": {
+      "LTT": "Lokmanya Tilak Terminus, Mumbai"
+    }
+  },
+  "18520": {
+    "name": "Mumbai LTT – Visakhapatnam Express (18520)",
+    "from": {
+      "LTT": "Lokmanya Tilak Terminus, Mumbai"
+    },
+    "to": {
+      "VSKP": "Visakhapatnam"
+    }
+  },
+  "18522": {
+    "name": "Tirumala Express",
+    "from": {
+      "HX": "Cuddapah / Kadapa"
+    },
+    "to": {
+      "VSKP": "Visakhapatnam"
+    }
+  },
+  "18561": {
+    "name": "Visakhapatnam – Kacheguda SF Express (18561)",
+    "from": {
+      "VSKP": "Visakhapatnam"
+    },
+    "to": {
+      "KCG": "Kacheguda"
+    }
+  },
+  "18567": {
+    "name": "Visakhapatnam – Kollam Weekly Express (18567)",
+    "from": {
+      "VSKP": "Visakhapatnam"
+    },
+    "to": {
+      "QLN": "Kollam Junction"
+    }
+  },
+  "18568": {
+    "name": "Kollam – Visakhapatnam Express (18568)",
+    "from": {
+      "QLN": "Kollam Junction"
+    },
+    "to": {
+      "VSKP": "Visakhapatnam"
+    }
+  },
+  "18574": {
+    "name": "Bhagat Ki Kothi – Visakhapatnam Express (18574)",
+    "from": {
+      "BGKT": "Bhagat Ki Kothi / Jodhpur area"
+    },
+    "to": {
+      "VSKP": "Visakhapatnam"
+    }
+  },
+  "20804": {
+    "name": "Gandhidham – Visakhapatnam SF Express (20804)",
+    "from": {
+      "GIMB": "Gandhidham Bg"
+    },
+    "to": {
+      "VSKP": "Visakhapatnam Junction"
+    }
+  },
+  "20805": {
+    "name": "Andhra Pradesh Express (20805)",
+    "from": {
+      "VSKP": "Visakhapatnam"
+    },
+    "to": {
+      "NDLS": "New Delhi"
+    }
+  },
+  "20806": {
+    "name": "Andhra Pradesh Express (20806)",
+    "from": {
+      "NDLS": "New Delhi"
+    },
+    "to": {
+      "VSKP": "Visakhapatnam"
+    }
+  },
+  "20809": {
+    "name": "Not found / unverified",
+    "from": {},
+    "to": {}
+  },
+  "20811": {
+    "name": "Not found / unverified",
+    "from": {},
+    "to": {}
+  },
+  "20812": {
+    "name": "Not found / unverified",
+    "from": {},
+    "to": {}
+  },
+  "20819": {
+    "name": "Not found / unverified",
+    "from": {},
+    "to": {}
+  },
+  "20820": {
+    "name": "Not found / unverified",
+    "from": {},
+    "to": {}
+  },
+  "20833": {
+    "name": "Vande Bharat Express (20833)",
+    "from": {
+      "VSKP": "Visakhapatnam"
+    },
+    "to": {
+      "SC": "Secunderabad Junction"
+    }
+  },
+  "17229": {
+    "name": "Sabari Express",
+    "from": {
+      "TVC": "Thiruvananthapuram Central"
+    },
+    "to": {
+      "SC": "Secunderabad Junction"
+    }
+  },
+  "17230": {
+    "name": "Sabari Express",
+    "from": {
+      "SC": "Secunderabad Junction"
+    },
+    "to": {
+      "TVC": "Thiruvananthapuram Central"
+    }
+  },
+  "17247": {
+    "name": "Narasapur – Dharmavaram Express",
+    "from": {
+      "NS": "Narasapur"
+    },
+    "to": {
+      "DMM": "Dharmavaram Junction"
+    }
+  },
+  "17248": {
+    "name": "Dharmavaram – Narasapur Express",
+    "from": {
+      "DMM": "Dharmavaram Junction"
+    },
+    "to": {
+      "NS": "Narasapur"
+    }
+  },
+  "17249": {
+    "name": "Tirupati – Kakinada Town Express",
+    "from": {
+      "TPTY": "Tirupati Main"
+    },
+    "to": {
+      "CCT": "Kakinada Town"
+    }
+  },
+  "17250": {
+    "name": "Kakinada Town – Tirupati Express",
+    "from": {
+      "CCT": "Kakinada Town"
+    },
+    "to": {
+      "TPTY": "Tirupati Main"
+    }
+  },
+  "17255": {
+    "name": "Narasapur – Lingampalli Express",
+    "from": {
+      "NS": "Narasapur"
+    },
+    "to": {
+      "LPI": "Lingampalli"
+    }
+  },
+  "17256": {
+    "name": "Lingampalli – Narasapur Express",
+    "from": {
+      "LPI": "Lingampalli"
+    },
+    "to": {
+      "NS": "Narasapur"
+    }
+  },
+  "17319": {
+    "name": "Hyderabad Express (Hubballi → Hyderabad)",
+    "from": {
+      "UBL": "Hubballi/Hubli Junction"
+    },
+    "to": {
+      "HYB": "Hyderabad Deccan"
+    }
+  },
+  "17405": {
+    "name": "Krishna Express",
+    "from": {
+      "TPTY": "Tirupati Main"
+    },
+    "to": {
+      "ADB": "Adilabad"
+    }
+  },
+  "17406": {
+    "name": "Krishna Express (return)",
+    "from": {
+      "ADB": "Adilabad"
+    },
+    "to": {
+      "TPTY": "Tirupati Main"
+    }
+  },
+  "17418": {
+    "name": "SNSI – TPTY Express",
+    "from": {
+      "SNSI": "Sainagar Shirdi"
+    },
+    "to": {
+      "TPTY": "Tirupati Main"
+    }
+  },
+  "17463": {
+    "name": "Not found / could not verify",
+    "from": {},
+    "to": {}
+  },
+  "17479": {
+    "name": "Puri – Tirupati Express",
+    "from": {
+      "PURI": "Puri"
+    },
+    "to": {
+      "TPTY": "Tirupati Main"
+    }
+  },
+  "17480": {
+    "name": "Tirupati – Puri Express",
+    "from": {
+      "TPTY": "Tirupati Main"
+    },
+    "to": {
+      "PURI": "Puri"
+    }
+  },
+  "17487": {
+    "name": "Tirumala Express",
+    "from": {
+      "HX": "Kadapa / Cuddapah"
+    },
+    "to": {
+      "VSKP": "Visakhapatnam Junction"
+    }
+  },
+  "17488": {
+    "name": "Tirumala Express (other pair / routing)",
+    "from": {
+      "VSKP": "Visakhapatnam"
+    },
+    "to": {
+      "HX": "Cuddapah / Kadapa"
+    }
+  },
+  "17609": {
+    "name": "PNBE – PAU Express",
+    "from": {
+      "PNBE": "Patna Junction"
+    },
+    "to": {
+      "PAU": "Purna Junction"
+    }
+  },
+  "17643": {
+    "name": "Circar Express (one direction)",
+    "from": {
+      "CGL": "Chengalpattu"
+    },
+    "to": {
+      "COA": "Kakinada Port"
+    }
+  },
+  "17644": {
+    "name": "Circar Express (return)",
+    "from": {
+      "COA": "Kakinada Port"
+    },
+    "to": {
+      "CGL": "Chengalpattu"
+    }
+  }
+}
