@@ -31,9 +31,10 @@ const TestimonialsSection = () => {
     <section className="py-16 bg-gray-50">
       <div className="container-custom">
         <div className="text-center mb-12">
-          <h2 className="section-title">What Our Customers Say</h2>
+          <h2 className="section-title">Why Customers Choose Anand Travel Agency - Best Reviews in Kakinada</h2>
           <p className="text-gray-600 max-w-3xl mx-auto">
-            Don't just take our word for it. Here's what travelers who have booked with us have to say.
+            See why we're rated as the best travel agency in Kakinada! Read reviews from 1000+ satisfied customers 
+            who trusted us for their travel bookings and tour packages across India.
           </p>
         </div>
 

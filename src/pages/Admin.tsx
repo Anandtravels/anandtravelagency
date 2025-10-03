@@ -11,6 +11,7 @@ import { formatFirebaseTimestamp } from "@/utils/adminHelpers";
 import AdminLayout from "@/components/admin/AdminLayout";
 import WhatsAppMessageModal from "@/components/admin/WhatsAppMessageModal";
 import EditBookingModal from "@/components/admin/EditBookingModal";
+import { DeleteConfirmationModal } from "@/components/admin/DeleteConfirmationModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BookingsTab from "@/components/BookingsTab";
 import PackageBookingsTab from "@/components/PackageBookingsTab";
@@ -30,7 +31,17 @@ const Admin = () => {
   const location = useLocation();
   const { user, loading: authLoading, handleSignOut } = useAdminAuth();
   const { bookings, agents, loading: dataLoading, adminNotes, setAdminNotes } = useAdminData();
-  const { updateBookingStatus, deleteBookings, handleNoteChange, debouncedNoteUpdate } = useBookingManagement(setAdminNotes);
+  const { 
+    updateBookingStatus, 
+    initiateDelete, 
+    confirmDelete, 
+    undoDelete, 
+    closeDeleteModal, 
+    deleteModalOpen, 
+    bookingsToDelete,
+    handleNoteChange, 
+    debouncedNoteUpdate 
+  } = useBookingManagement(setAdminNotes);
   const { assignTicket, assignPackageTicket } = useTicketAssignment(bookings, agents);
   const { editModalOpen, setEditModalOpen, editBooking, editFormData, setEditFormData, openEditModal, handleSaveEdit } = useEditBookingModal();
   const { whatsappModal, setWhatsappModal, currentBooking, messageDetails, setMessageDetails, handleWhatsapp, sendWhatsappMessage } = useWhatsAppModal();
@@ -98,7 +109,7 @@ const Admin = () => {
               formatFirebaseTimestamp={formatFirebaseTimestamp}
               handleNoteChange={handleNoteChange}
               updateBookingStatus={updateBookingStatus}
-              deleteBookings={deleteBookings}
+              deleteBookings={initiateDelete}
               openEditModal={openEditModal}
               handleCall={handleCall}
               handleEmail={handleEmail}
@@ -191,6 +202,19 @@ const Admin = () => {
         formData={editFormData}
         onFormChange={(e) => setEditFormData({ ...editFormData, [e.target.name]: e.target.value })}
         onSave={handleSaveEdit}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={closeDeleteModal}
+        onConfirm={confirmDelete}
+        onUndo={undoDelete}
+        title={bookingsToDelete.length > 1 ? "Delete Multiple Bookings?" : "Delete Booking?"}
+        description={bookingsToDelete.length > 1 
+          ? `Are you sure you want to delete ${bookingsToDelete.length} bookings? You'll have 5 seconds to undo this action.`
+          : "Are you sure you want to delete this booking? You'll have 5 seconds to undo this action."
+        }
+        count={bookingsToDelete.length}
       />
     </AdminLayout>
   );

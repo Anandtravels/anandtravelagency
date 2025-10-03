@@ -24,9 +24,10 @@ const PackagesSection = () => {
     <section className="py-16">
       <div className="container-custom">
         <div className="text-center mb-12">
-          <h2 className="section-title">Featured Tour Packages</h2>
+          <h2 className="section-title">Affordable Tour Packages from Kakinada - Domestic & International</h2>
           <p className="text-gray-600 max-w-3xl mx-auto">
-            Discover our handpicked selection of tour packages designed to give you unforgettable experiences and memories.
+            Explore the best travel packages in India with Anand Travel Agency. We offer customized domestic and international tour packages 
+            with all-inclusive options for families, couples, and groups. Book affordable holiday packages from Kakinada today!
           </p>
           
           <div className="flex justify-center mt-8 mb-10">

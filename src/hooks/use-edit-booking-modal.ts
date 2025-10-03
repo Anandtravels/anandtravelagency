@@ -29,7 +29,9 @@ export const useEditBookingModal = () => {
       to: booking.to || '',
       journey_date: booking.journey_date || '',
       passengers: Array.isArray(booking.passengers)
-        ? booking.passengers.map((p: any) => `${p.name} (${p.age} yrs, ${p.gender})`).join("\n")
+        ? booking.passengers
+            .filter((p: any) => p && (p.name || p.age || p.gender)) // Filter out empty/invalid passengers
+            .map((p: any) => `${p.name || ''} (${p.age || ''} yrs, ${p.gender || ''})`).join("\n")
         : booking.passengers || '',
       additional_requirements: booking.additional_requirements || '',
       booking_type: booking.booking_type || '',
@@ -81,6 +83,56 @@ export const useEditBookingModal = () => {
         return;
       }
 
+      // Convert passengers from string back to array format
+      let passengersData: any = editFormData.passengers || '';
+      
+      // If passengers is a string with newlines, convert to array of objects
+      if (typeof passengersData === 'string' && passengersData.trim()) {
+        const passengerLines = passengersData.split('\n').filter(line => line.trim());
+        const invalidPassengers: string[] = [];
+        
+        passengersData = passengerLines.map((line, index) => {
+          // More lenient regex - accepts multiple formats:
+          // "Name (Age yrs, Gender)" - standard format
+          // "Name (Age, Gender)" - without yrs
+          // "Name (Age years, Gender)" - with years
+          // Accepts optional spaces around parentheses, comma, etc.
+          const match = line.match(/^(.+?)\s*\(?\s*(\d+)\s*(?:yrs?|years?)?\s*[,\s]+\s*(\w+)\s*\)?$/i);
+          
+          if (match) {
+            const name = match[1].trim();
+            const age = parseInt(match[2]);
+            const gender = match[3].trim().toLowerCase();
+            
+            // Only return if we have valid data
+            if (name && !isNaN(age) && gender) {
+              return {
+                name: name,
+                age: age,
+                gender: gender
+              };
+            }
+          }
+          
+          // Track invalid passenger for error reporting
+          invalidPassengers.push(`Line ${index + 1}: "${line}"`);
+          return null;
+        }).filter(p => p !== null); // Remove null entries
+        
+        // Show warning if any passengers were rejected
+        if (invalidPassengers.length > 0) {
+          toast({
+            title: "Some Passengers Were Not Added",
+            description: `Invalid format detected:\n${invalidPassengers.join('\n')}\n\nCorrect format: Name (Age yrs, Gender)\nExample: John Doe (30 yrs, male)`,
+            variant: "destructive"
+          });
+          return; // Stop the save process
+        }
+      } else if (typeof passengersData === 'string' && !passengersData.trim()) {
+        // If empty string, set to empty array
+        passengersData = [];
+      }
+      
       // Convert string fields back to numbers for pricing fields
       // Handle empty strings by setting to undefined (Firebase will ignore these)
       const updateData: any = {
@@ -90,7 +142,7 @@ export const useEditBookingModal = () => {
         from: editFormData.from?.trim() || '',
         to: editFormData.to?.trim() || '',
         journey_date: editFormData.journey_date || '',
-        passengers: editFormData.passengers || '',
+        passengers: passengersData,
         additional_requirements: editFormData.additional_requirements?.trim() || '',
         booking_type: editFormData.booking_type || '',
         status: editFormData.status || 'pending',

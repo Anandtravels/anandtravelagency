@@ -27,6 +27,8 @@ import VisaServices from "./pages/VisaServices";
 import Hotels from "./pages/Hotels";
 import HotelDetail from "./pages/HotelDetail";
 import HotelBookingSuccess from "./pages/HotelBookingSuccess";
+import TravelAgencyKakinada from "./pages/TravelAgencyKakinada";
+import TatkalTrainTicketsAndhraPradesh from "./pages/TatkalTrainTicketsAndhraPradesh";
 import logo from './assets/poster.png';
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -129,6 +131,10 @@ const App = () => {
                 <Route path="/hotels" element={<Hotels />} />
                 <Route path="/hotels/:id" element={<HotelDetail />} />
                 <Route path="/hotel-booking-success" element={<HotelBookingSuccess />} />
+                
+                {/* SEO-Friendly Landing Pages */}
+                <Route path="/travel-agency-kakinada" element={<TravelAgencyKakinada />} />
+                <Route path="/tatkal-train-tickets-andhra-pradesh" element={<TatkalTrainTicketsAndhraPradesh />} />
                 
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/admin-login" element={<AdminLogin />} />

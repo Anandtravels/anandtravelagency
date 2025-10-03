@@ -14,6 +14,34 @@ This is a modern travel booking and management platform built for Anand Travels 
 - Manage their bookings
 - Contact travel agents
 - Access exclusive deals
+- Chat with AI-powered assistant (Anand Buddy) for instant help
+
+## 🤖 AI Chatbot Feature
+
+Our platform includes **Anand Buddy**, a super-powered AI travel assistant powered by Google Gemini 2.0 Flash Experimental:
+
+### Features:
+- 🚂 Answers questions about 1000+ Indian Railway stations
+- ✈️ Provides information about flights, hotels, and travel packages
+- 🌍 Offers visa consultancy guidance for multiple countries
+- 🎓 Can answer general knowledge questions beyond travel
+- ⚡ Real-time responses with comprehensive travel data
+- 📱 Available 24/7 on all pages (except admin areas)
+
+### Configuration:
+The chatbot requires a Google Gemini API key. Copy `.env.example` to `.env` and add your credentials:
+
+```bash
+# Google Gemini API Key
+VITE_GEMINI_API_KEY=your_api_key_here
+
+# Model Version (optional, defaults to gemini-2.0-flash-exp)
+VITE_GEMINI_MODEL=gemini-2.0-flash-exp
+```
+
+Get your API key from: [Google AI Studio](https://makersuite.google.com/app/apikey)
+
+For detailed chatbot documentation, see: `CHATBOT_GEMINI_UPGRADE.md`
 
 ## How can I edit this code?
 

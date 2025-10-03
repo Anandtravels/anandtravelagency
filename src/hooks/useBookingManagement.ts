@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { useCallback, useState } from 'react';
+import { doc, updateDoc, deleteDoc, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import debounce from 'lodash/debounce';
@@ -8,6 +8,9 @@ import { useAuth } from '@/lib/auth';
 export const useBookingManagement = (setAdminNotes: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [bookingsToDelete, setBookingsToDelete] = useState<string[]>([]);
+  const [deletedBookings, setDeletedBookings] = useState<{ [key: string]: any }>({});
 
   const updateBookingStatus = async (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold') => {
     if (!user || user.email !== 'admin@anandtravels.com') {
@@ -27,21 +30,92 @@ export const useBookingManagement = (setAdminNotes: React.Dispatch<React.SetStat
     }
   };
 
-  const deleteBookings = async (ids: string[]) => {
+  const initiateDelete = async (ids: string[]) => {
     if (!user || user.email !== 'admin@anandtravels.com') {
         toast({ title: "Unauthorized", description: "You don't have permission to do this.", variant: "destructive" });
         return;
     }
-    const confirmed = window.confirm(`Are you sure you want to delete ${ids.length > 1 ? 'these ' + ids.length + ' bookings' : 'this booking'}? This action cannot be undone.`);
-    if (!confirmed) return;
+    setBookingsToDelete(ids);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!user || user.email !== 'admin@anandtravels.com') {
+        toast({ title: "Unauthorized", description: "You don't have permission to do this.", variant: "destructive" });
+        return;
+    }
 
     try {
-      await Promise.all(ids.map((id) => deleteDoc(doc(db, 'bookings', id))));
-      toast({ title: "Deleted Successfully", description: `${ids.length > 1 ? ids.length + ' bookings have' : 'Booking has'} been deleted.` });
+      // Fetch full booking data before deletion for undo functionality
+      const bookingData: { [key: string]: any } = {};
+      
+      // Fetch all bookings that will be deleted
+      const fetchPromises = bookingsToDelete.map(async (id) => {
+        const bookingDoc = await getDoc(doc(db, 'bookings', id));
+        if (bookingDoc.exists()) {
+          bookingData[id] = { id, ...bookingDoc.data() };
+        }
+      });
+      
+      await Promise.all(fetchPromises);
+      setDeletedBookings(bookingData);
+      
+      // Now delete the bookings
+      await Promise.all(bookingsToDelete.map((id) => deleteDoc(doc(db, 'bookings', id))));
+      
+      // Don't show toast immediately - will show undo notification
     } catch (error) {
       console.error("Error deleting bookings:", error);
       toast({ title: "Delete Failed", description: "Failed to delete bookings.", variant: "destructive" });
+      setDeleteModalOpen(false);
     }
+  };
+
+  const undoDelete = async () => {
+    if (!user || user.email !== 'admin@anandtravels.com') {
+        toast({ title: "Unauthorized", description: "You don't have permission to do this.", variant: "destructive" });
+        return;
+    }
+
+    try {
+      // Restore all deleted bookings
+      const restorePromises = Object.keys(deletedBookings).map(async (id) => {
+        const bookingData = deletedBookings[id];
+        // Remove the id field from data as it's already in the document reference
+        const { id: _, ...dataWithoutId } = bookingData;
+        
+        // Restore the booking document
+        await setDoc(doc(db, 'bookings', id), {
+          ...dataWithoutId,
+          updated_at: serverTimestamp(),
+          restored_at: serverTimestamp(),
+          restored_by: user.email
+        });
+      });
+      
+      await Promise.all(restorePromises);
+      
+      toast({ 
+        title: "Bookings Restored", 
+        description: `Successfully restored ${Object.keys(deletedBookings).length} booking${Object.keys(deletedBookings).length > 1 ? 's' : ''}.`,
+      });
+      
+      setDeletedBookings({});
+      setDeleteModalOpen(false);
+    } catch (error) {
+      console.error("Error restoring bookings:", error);
+      toast({ 
+        title: "Restore Failed", 
+        description: "Failed to restore deleted bookings. Please contact support.", 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setBookingsToDelete([]);
+    setDeletedBookings({});
   };
 
   const debouncedNoteUpdate = useCallback(
@@ -64,5 +138,15 @@ export const useBookingManagement = (setAdminNotes: React.Dispatch<React.SetStat
     debouncedNoteUpdate(id, note, 'bookings');
   }, [debouncedNoteUpdate, setAdminNotes]);
 
-  return { updateBookingStatus, deleteBookings, handleNoteChange, debouncedNoteUpdate };
+  return { 
+    updateBookingStatus, 
+    initiateDelete, 
+    confirmDelete,
+    undoDelete,
+    closeDeleteModal,
+    deleteModalOpen,
+    bookingsToDelete,
+    handleNoteChange, 
+    debouncedNoteUpdate 
+  };
 };

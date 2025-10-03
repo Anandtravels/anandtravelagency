@@ -253,9 +253,10 @@ const AgentDashboard = () => {
     // Format passengers data
     let passengerInfo = '';
     if (Array.isArray(currentBooking.passengers)) {
-      passengerInfo = `*Passengers:* ${currentBooking.passengers.length}\n`;
-      currentBooking.passengers.forEach((passenger: any, index: number) => {
-        passengerInfo += `   ${index + 1}. ${passenger.name} (${passenger.age} yrs, ${passenger.gender})\n`;
+      const validPassengers = currentBooking.passengers.filter((p: any) => p && (p.name || p.age || p.gender));
+      passengerInfo = `*Passengers:* ${validPassengers.length}\n`;
+      validPassengers.forEach((passenger: any, index: number) => {
+        passengerInfo += `   ${index + 1}. ${passenger.name || 'N/A'} (${passenger.age || 'N/A'} yrs, ${passenger.gender || 'N/A'})\n`;
       });
     } else {
       passengerInfo = `*Passengers:* ${currentBooking.passengers}\n`;
@@ -441,9 +442,11 @@ Thank you for choosing Anand Travels!`;
                       <div className="mt-2">
                         <span className="font-medium">Passengers:</span>
                         <div className="ml-2 mt-1">
-                          {Array.isArray(booking.passengers) ? booking.passengers.map((passenger: any, idx: number) => (
+                          {Array.isArray(booking.passengers) ? booking.passengers
+                            .filter((passenger: any) => passenger && (passenger.name || passenger.age || passenger.gender))
+                            .map((passenger: any, idx: number) => (
                             <div key={idx} className="text-sm bg-gray-50 p-1 rounded mb-1">
-                              {passenger.name} ({passenger.age} yrs, {passenger.gender})
+                              {passenger.name || 'N/A'} ({passenger.age || 'N/A'} yrs, {passenger.gender || 'N/A'})
                             </div>
                           )) : (
                             <div>{booking.passengers}</div>

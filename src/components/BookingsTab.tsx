@@ -400,9 +400,11 @@ const BookingsTab = ({
                   <summary className="font-medium text-sm cursor-pointer">Passenger Info</summary>
                   <div className="mt-2 pt-2 border-t text-sm">
                     <div className="max-h-32 overflow-y-auto">
-                      {Array.isArray(booking.passengers) ? booking.passengers.map((passenger, idx) => (
+                      {Array.isArray(booking.passengers) ? booking.passengers
+                        .filter((passenger) => passenger && (passenger.name || passenger.age || passenger.gender))
+                        .map((passenger, idx) => (
                         <div key={idx} className="bg-gray-50 p-2 rounded mb-1">
-                          {passenger.name} <span className="text-gray-500 text-xs">({passenger.age} yrs, {passenger.gender})</span>
+                          {passenger.name || 'N/A'} <span className="text-gray-500 text-xs">({passenger.age || 'N/A'} yrs, {passenger.gender || 'N/A'})</span>
                         </div>
                       )) : (
                         <div className="bg-gray-50 p-2 rounded">{booking.passengers}</div>
@@ -657,12 +659,14 @@ const BookingsTab = ({
                     </summary>
                     <div className="pl-8 pt-2 text-sm">
                       <div className="overflow-y-auto max-h-32 space-y-1">
-                        {Array.isArray(booking.passengers) ? booking.passengers.map((passenger, idx) => (
+                        {Array.isArray(booking.passengers) ? booking.passengers
+                          .filter((passenger) => passenger && (passenger.name || passenger.age || passenger.gender))
+                          .map((passenger, idx) => (
                           <div key={idx} className="bg-gray-50 p-2 rounded mb-1 flex items-center">
                             <span className="h-5 w-5 rounded-full bg-green-100 text-green-800 text-xs flex items-center justify-center mr-2">
                               {idx + 1}
                             </span>
-                            <span>{passenger.name} <span className="text-gray-500">({passenger.age} yrs, {passenger.gender})</span></span>
+                            <span>{passenger.name || 'N/A'} <span className="text-gray-500">({passenger.age || 'N/A'} yrs, {passenger.gender || 'N/A'})</span></span>
                           </div>
                         )) : (
                           <div className="bg-gray-50 p-2 rounded">{booking.passengers}</div>

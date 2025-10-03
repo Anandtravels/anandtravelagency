@@ -7,11 +7,11 @@ const HeroSection = () => {
          style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.pexels.com/photos/3278215/pexels-photo-3278215.jpeg')" }}>
       <div className="container-custom text-white text-center">
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-          Your Gateway to Seamless Travel <br className="hidden md:block" />
-          Across India and Beyond
+          Best Travel Agency in Kakinada <br className="hidden md:block" />
+          <span className="text-3xl md:text-4xl lg:text-5xl">Your Gateway to Seamless Travel Across India</span>
         </h1>
         <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
-          Expert Tatkal Booking, Exclusive Tour Packages, and Comprehensive Travel Services
+          Expert Tatkal Booking, Affordable Tour Packages, Flight & Hotel Reservations - Trusted by 1000+ Customers
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link to="/booking" className="btn-primary text-lg px-8 py-3">

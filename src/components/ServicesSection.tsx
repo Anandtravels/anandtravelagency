@@ -40,11 +40,11 @@ const ServicesSection = () => {
     <section className="py-16 bg-gray-50">
       <div className="container-custom">
         <div className="text-center mb-12">
-          <h2 className="section-title">Our Travel Services</h2>
+          <h2 className="section-title">Top Travel Services in Kakinada & Across India</h2>
           <p className="text-gray-600 max-w-3xl mx-auto">
-            We provide comprehensive travel solutions with a focus on efficiency, reliability, 
-            and excellent customer service. From instant ticket bookings to personalized tour packages, 
-            we've got all your travel needs covered.
+            As the best travel agency in Kakinada, we provide comprehensive travel solutions including flight booking, 
+            hotel reservations, affordable tour packages, and expert Tatkal train booking services. 
+            Trusted by 1000+ customers for reliable and efficient travel planning across India.
           </p>
         </div>
 

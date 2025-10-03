@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, Minimize2, Maximize2, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Send, Minimize2, Maximize2, Sparkles, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,9 +16,10 @@ interface ChatBotProps {
   className?: string;
 }
 
-// Google Gemini API configuration
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyDD58R6k_IALIUvHyIrb5H6p8wVXGiOhik';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
+// Google Gemini API configuration - Now supports gemini-2.5-pro!
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyA622_SixT7YKKh6h1fj-8O788xQ05oWwU';
+const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.0-flash-exp';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,7 +27,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
-      text: "Hi! I'm Anand Buddy, your AI-powered travel assistant! 🤖✨\n\nI can help you with:\n• Train routes & schedules across 1000+ stations\n• Flight, bus, hotel bookings\n• Tour packages & visa services\n• General questions about anything!\n\nWhat would you like to know? 📱 BOOK NOW",
+      text: "Hi! I'm Anand Buddy, your AI-powered travel assistant! 🤖✨\n\nI can help you with:\n• Train routes & schedules across 1000+ stations\n• Flight, bus, hotel bookings\n• Tour packages & visa services\n• Travel planning, visa consultancy, and more!\n• General questions about anything you need\n\nI have access to comprehensive travel data and can answer all your questions. What would you like to know? 📱 BOOK NOW",
       sender: 'bot',
       timestamp: new Date()
     }
@@ -71,38 +72,52 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
   // Generate AI-powered bot response using Google Gemini API
   const generateBotResponse = async (userInput: string): Promise<string> => {
     try {
-      // Create comprehensive context for the AI
-      const systemContext = `You are Anand Buddy, an intelligent AI travel assistant for Anand Travel Agency. You have access to the following information and capabilities:
+      // Create comprehensive context for the AI with enhanced capabilities
+      const systemContext = `You are Anand Buddy, a super-intelligent AI travel assistant powered by Google Gemini for Anand Travel Agency. You have extensive knowledge and capabilities:
 
-COMPANY INFORMATION:
+🏢 COMPANY INFORMATION:
 - Company: Anand Travel Agency (www.anandtravels.com)
-- Contact: +91 88888 88888
-- Support: +91 8985816481
-- Services: Train Tickets, Flight Tickets, Bus Tickets, Cab Services, Tour Packages, Hotel Bookings, Visa Services
+- Primary Contact: +91 88888 88888
+- Support Line: +91 8985816481
+- Email: support@anandtravels.com
+- Location: Kakinada, Andhra Pradesh, India
+- Services: Train Tickets (including Tatkal), Flight Tickets, Bus Tickets, Cab Services, Tour Packages, Hotel Bookings, Visa Consultancy
 
-TRAIN STATION DATABASE:
-You have access to ${trainStations.length}+ Indian Railway stations across 26 states.
-${trainStations.length > 0 ? `Sample stations: ${trainStations.slice(0, 20).map(s => `${s.name} (${s.code})`).join(', ')}...` : ''}
+🚂 TRAIN STATION DATABASE:
+You have access to ${trainStations.length}+ Indian Railway stations across 26 states and union territories.
+${trainStations.length > 0 ? `Sample stations available: ${trainStations.slice(0, 20).map(s => `${s.name} (${s.code}) - ${s.state}`).join(', ')}... and many more!` : ''}
 
-CAPABILITIES:
-1. Answer questions about trains, routes, and railway stations in India
-2. Provide information about Anand Travel Agency's services
-3. Answer general questions about travel, geography, and any other topics
-4. Help with booking inquiries
-5. Provide travel tips and recommendations
+🌟 YOUR SUPER-POWERED CAPABILITIES:
+1. ✅ Answer ANY question about travel, trains, flights, hotels, visa services
+2. ✅ Provide detailed information about Indian Railways stations, routes, and schedules
+3. ✅ Help with travel planning, itineraries, and booking guidance
+4. ✅ Answer general knowledge questions (science, math, technology, history, etc.)
+5. ✅ Provide travel tips, recommendations, and advice
+6. ✅ Explain visa processes for different countries
+7. ✅ Help with emergency travel situations (Tatkal bookings, urgent visa, etc.)
+8. ✅ Engage in casual conversation and be friendly
+9. ✅ Solve problems, explain concepts, and provide insights
+10. ✅ NO RESTRICTIONS - Answer questions beyond travel too!
 
-IMPORTANT INSTRUCTIONS:
-- Answer ANY question the user asks - there are NO restrictions
-- For train route questions, use your knowledge of Indian Railways
-- For website services, provide specific information about Anand Travel Agency
-- Be helpful, accurate, and comprehensive
-- You can answer questions beyond travel - general knowledge, math, science, etc.
-- When suggesting actions, use action buttons like 📱 BOOK NOW, 🌟 VIEW PACKAGES, etc.
-- Be conversational and friendly
+🎯 SPECIAL FOCUS AREAS:
+- Tatkal Train Tickets for Andhra Pradesh & Telangana
+- Emergency Travel Services across India
+- Visa Consultancy for USA, UK, Canada, Australia, Dubai, Schengen countries
+- Tour Packages: Golden Triangle, Rajasthan, Kerala, Goa, Himalayas, International tours
 
-USER QUERY: ${userInput}
+💡 RESPONSE GUIDELINES:
+- Be conversational, friendly, and helpful
+- Provide accurate, detailed, and comprehensive answers
+- When discussing Anand Travel Agency services, highlight our expertise in Tatkal bookings and Visa consultancy
+- Use emojis appropriately to make responses engaging
+- For booking suggestions, include action buttons: 📱 BOOK NOW, 🌟 VIEW PACKAGES, 📋 VISA SERVICES, 🏨 SEARCH HOTELS, 📞 CONTACT US
+- If you don't know something specific, be honest but offer to help contact our team
+- For train queries, use the station database when relevant
+- Answer ALL types of questions - travel, technical, educational, or casual chat
 
-Provide a helpful, comprehensive response:`;
+👤 USER QUERY: ${userInput}
+
+Provide a helpful, accurate, and comprehensive response:`;
 
       const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
         method: 'POST',
@@ -116,9 +131,10 @@ Provide a helpful, comprehensive response:`;
             }]
           }],
           generationConfig: {
-            temperature: 0.7,
+            temperature: 0.9,
             topP: 0.95,
-            maxOutputTokens: 2048,
+            topK: 40,
+            maxOutputTokens: 8192,
           },
           safetySettings: [
             {
@@ -143,17 +159,28 @@ Provide a helpful, comprehensive response:`;
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('API Error Details:', errorData);
-        throw new Error(`API Error: ${response.status} - ${JSON.stringify(errorData)}`);
+        console.error('API Error Details:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+          model: GEMINI_MODEL,
+          apiKey: GEMINI_API_KEY ? '***' + GEMINI_API_KEY.slice(-4) : 'missing'
+        });
+        throw new Error(`API Error: ${response.status} - ${response.statusText}`);
       }
 
       const data = await response.json();
       
-      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-        return data.candidates[0].content.parts[0].text;
+      // Enhanced response parsing for better reliability
+      if (data.candidates && data.candidates.length > 0) {
+        const candidate = data.candidates[0];
+        if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+          return candidate.content.parts[0].text;
+        }
       }
       
-      throw new Error('Invalid response format');
+      console.error('Invalid response structure:', data);
+      throw new Error('Invalid response format from Gemini API');
       
     } catch (error) {
       console.error('Gemini API Error:', error);
@@ -210,7 +237,7 @@ Provide a helpful, comprehensive response:`;
     }
     
     // General knowledge fallback
-    return "I'm powered by AI to help you with travel bookings, train schedules, and general questions. Feel free to ask me anything about our services or travel in India! For immediate assistance, call us at +91 8985816481";
+    return "I'm your AI-powered travel assistant! I can help you with travel bookings, train schedules, visa services, and ANY questions you have! Feel free to ask me about our services, travel in India, or anything else - I can help with general knowledge, tech questions, and more! For immediate travel assistance, call us at +91 8985816481 📱 BOOK NOW";
   };
 
   const handleSendMessage = async () => {
@@ -293,10 +320,11 @@ Provide a helpful, comprehensive response:`;
       
       return (
         <div>
-          <p className="whitespace-pre-wrap break-words">{textWithoutAction}</p>
+          <p className="whitespace-pre-wrap break-words leading-relaxed">{textWithoutAction}</p>
           <button
             onClick={() => handleBotAction(action.trim())}
-            className="mt-2 bg-travel-blue-dark text-white px-3 py-1 rounded text-xs hover:bg-travel-blue-medium transition-colors duration-200"
+            className="mt-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 touch-manipulation active:scale-95 font-semibold shadow-md hover:shadow-lg"
+            aria-label={action.trim()}
           >
             {emoji} {action.trim()}
           </button>
@@ -304,12 +332,12 @@ Provide a helpful, comprehensive response:`;
       );
     }
     
-    return <p className="whitespace-pre-wrap break-words">{text}</p>;
+    return <p className="whitespace-pre-wrap break-words leading-relaxed">{text}</p>;
   };
 
   return (
     <div className={`fixed right-2 sm:right-4 bottom-2 sm:bottom-4 z-50 ${className}`}>
-      {/* Chat Button - Always visible */}
+      {/* Chat Button - Robot Icon */}
       {!isOpen && (
         <motion.button
           initial={{ scale: 0, opacity: 0 }}
@@ -318,23 +346,24 @@ Provide a helpful, comprehensive response:`;
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsOpen(true)}
-          className="bg-gradient-to-r from-travel-blue-dark to-travel-blue-medium text-white rounded-full p-3 sm:p-4 shadow-lg hover:shadow-xl transition-all duration-300 relative group"
+          className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white rounded-full p-4 shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 relative group touch-manipulation border-2 border-blue-400/30"
+          aria-label="Open chat"
         >
-          <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+          <Bot className="w-7 h-7" />
           
-          {/* AI Badge */}
-          <div className="absolute -top-1 -right-1 bg-travel-orange text-white rounded-full p-1">
-            <Sparkles size={12} />
+          {/* AI Badge with pulse */}
+          <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-1 animate-pulse">
+            <Sparkles size={10} />
           </div>
           
-          {/* Pulsing Ring Animation */}
-          <div className="absolute inset-0 rounded-full bg-travel-blue-dark opacity-30 animate-ping"></div>
+          {/* Animated Ring */}
+          <div className="absolute inset-0 rounded-full bg-blue-400 opacity-20 animate-ping"></div>
           
           {/* Tooltip */}
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block">
-            <div className="bg-black text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-              AI-Powered Chat
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-black"></div>
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 hidden group-hover:block z-10">
+            <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-xl">
+              <span className="font-medium">Anand Buddy</span> - AI Travel Assistant
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900"></div>
             </div>
           </div>
         </motion.button>
@@ -344,37 +373,44 @@ Provide a helpful, comprehensive response:`;
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ x: 320, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 320, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className={`bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden ${
-              isMinimized ? 'h-12' : 'h-80 sm:h-96 md:h-[500px]'
-            } w-72 sm:w-80 max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2rem)]`}
+            initial={{ scale: 0.8, y: 20, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.8, y: 20, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className={`bg-white rounded-2xl shadow-2xl border-2 border-blue-200 overflow-hidden transition-all duration-300 ${
+              isMinimized ? 'h-auto' : 'h-[calc(100vh-8rem)] sm:h-[450px] md:h-[550px] max-h-[650px]'
+            } w-[calc(100vw-1rem)] sm:w-[400px] max-w-[calc(100vw-1rem)]`}
           >
-            {/* Header */}
-            <div className="bg-gradient-to-r from-travel-blue-dark to-travel-blue-medium text-white p-4 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center relative">
-                  <MessageCircle className="w-4 h-4" />
-                  <div className="absolute -top-1 -right-1 bg-travel-orange rounded-full p-0.5">
-                    <Sparkles size={8} />
+            {/* Header - Matching Design */}
+            <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white p-3 sm:p-4 flex justify-between items-center flex-shrink-0 shadow-lg">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                {/* Robot Icon */}
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center relative flex-shrink-0 border-2 border-white/20">
+                  <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  <div className="absolute -bottom-0.5 -right-0.5 bg-green-500 rounded-full p-0.5 border-2 border-blue-700">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-sm flex items-center gap-1">
-                    Anand Buddy
-                    <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded">AI</span>
+                {/* Text Content */}
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-sm sm:text-base flex items-center gap-1.5 truncate">
+                    <span className="truncate">Anand Buddy</span>
+                    <span className="text-[10px] sm:text-xs bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full flex-shrink-0 font-semibold border border-white/30">AI</span>
                   </h3>
-                  <p className="text-xs text-white/80">Online • Powered by AI</p>
+                  <p className="text-[11px] sm:text-xs text-white/90 truncate flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                    Online • AI Assistant
+                  </p>
                 </div>
               </div>
-              <div className="flex gap-1">
+              {/* Action Buttons */}
+              <div className="flex gap-1 flex-shrink-0 ml-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsMinimized(!isMinimized)}
-                  className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                  className="text-white hover:bg-white/20 h-9 w-9 p-0 touch-manipulation rounded-full transition-all duration-200 hover:scale-110"
+                  aria-label={isMinimized ? "Maximize chat" : "Minimize chat"}
                 >
                   {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
                 </Button>
@@ -382,7 +418,8 @@ Provide a helpful, comprehensive response:`;
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsOpen(false)}
-                  className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                  className="text-white hover:bg-white/20 hover:bg-red-500/30 h-9 w-9 p-0 touch-manipulation rounded-full transition-all duration-200 hover:scale-110"
+                  aria-label="Close chat"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -393,63 +430,75 @@ Provide a helpful, comprehensive response:`;
             {!isMinimized && (
               <>
                 {/* Messages Area */}
-                <ScrollArea className="h-56 sm:h-72 md:h-80 p-3 sm:p-4">
-                  <div className="space-y-4">
+                <ScrollArea className="flex-1 h-[calc(100vh-16rem)] sm:h-[320px] md:h-[400px] p-4 overflow-y-auto bg-gradient-to-b from-gray-50 to-white">
+                  <div className="space-y-3 sm:space-y-4">
                     {messages.map((message) => (
-                      <div
+                      <motion.div
                         key={message.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
                         className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[80%] p-3 rounded-lg text-sm ${
+                          className={`max-w-[85%] sm:max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${
                             message.sender === 'user'
-                              ? 'bg-travel-blue-dark text-white'
-                              : 'bg-gray-100 text-gray-800'
+                              ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-br-md'
+                              : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md'
                           }`}
                         >
-                          {message.sender === 'bot' ? parseMessageWithActions(message.text) : <p className="whitespace-pre-wrap break-words">{message.text}</p>}
-                          <p className={`text-xs mt-1 ${
-                            message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
+                          {message.sender === 'bot' ? parseMessageWithActions(message.text) : <p className="whitespace-pre-wrap break-words leading-relaxed">{message.text}</p>}
+                          <p className={`text-xs mt-2 ${
+                            message.sender === 'user' ? 'text-blue-100' : 'text-gray-400'
                           }`}>
                             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                     
                     {/* Typing Indicator */}
                     {isTyping && (
-                      <div className="flex justify-start">
-                        <div className="bg-gray-100 p-3 rounded-lg">
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex justify-start"
+                      >
+                        <div className="bg-white border border-gray-200 p-3 rounded-2xl rounded-bl-md shadow-sm">
+                          <div className="flex space-x-1.5">
+                            <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"></div>
+                            <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
+                            <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     )}
                     <div ref={messagesEndRef} />
                   </div>
                 </ScrollArea>
 
                 {/* Input Area */}
-                <div className="p-3 sm:p-4 border-t border-gray-200">
+                <div className="p-4 border-t-2 border-blue-100 flex-shrink-0 bg-gradient-to-b from-white to-gray-50">
                   <div className="flex gap-2">
                     <Input
                       value={currentMessage}
                       onChange={(e) => setCurrentMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="Type your message..."
-                      className="flex-1 text-sm h-10"
+                      className="flex-1 text-sm sm:text-base h-12 rounded-xl border-2 border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 touch-manipulation bg-white shadow-sm"
+                      style={{ fontSize: '16px' }}
                       disabled={isTyping}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="sentences"
                     />
                     <Button
                       onClick={handleSendMessage}
                       disabled={!currentMessage.trim() || isTyping}
-                      className="bg-travel-blue-dark hover:bg-travel-blue-medium p-2 h-10 w-10 flex-shrink-0"
+                      className="bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 p-2 h-12 w-12 flex-shrink-0 touch-manipulation rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Send message"
                     >
-                      <Send className="w-4 h-4" />
+                      <Send className="w-5 h-5" />
                     </Button>
                   </div>
                 </div>

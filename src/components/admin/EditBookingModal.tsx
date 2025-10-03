@@ -2,6 +2,8 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { EditFormData } from "@/types/admin";
 import ProfitCalculator from "./ProfitCalculator";
+import { StationAutocomplete } from "@/components/StationAutocomplete";
+import { useState, useEffect } from "react";
 
 interface EditBookingModalProps {
   isOpen: boolean;
@@ -13,6 +15,14 @@ interface EditBookingModalProps {
 }
 
 const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChange, onSave }: EditBookingModalProps) => {
+  const [trainFromStation, setTrainFromStation] = useState(formData.from || '');
+  const [trainToStation, setTrainToStation] = useState(formData.to || '');
+  
+  // Update station states when formData changes (when modal opens with booking data)
+  useEffect(() => {
+    setTrainFromStation(formData.from || '');
+    setTrainToStation(formData.to || '');
+  }, [formData.from, formData.to, isOpen]);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,14 +82,43 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
             <section id="journey-section" className="scroll-mt-32 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
                 <h3 className="text-lg font-semibold text-gray-800 mb-5">Journey Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label className="block text-sm font-medium mb-1.5 text-gray-700">From</label>
-                        <input type="text" name="from" value={formData.from} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1.5 text-gray-700">To</label>
-                        <input type="text" name="to" value={formData.to} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
-                    </div>
+                    {formData.booking_type === "train" ? (
+                      <>
+                        <div>
+                          <StationAutocomplete
+                            label="From"
+                            value={trainFromStation}
+                            onChange={(value) => {
+                              setTrainFromStation(value);
+                              onFormChange({ target: { name: 'from', value } } as any);
+                            }}
+                            placeholder="Search station name or code..."
+                          />
+                        </div>
+                        <div>
+                          <StationAutocomplete
+                            label="To"
+                            value={trainToStation}
+                            onChange={(value) => {
+                              setTrainToStation(value);
+                              onFormChange({ target: { name: 'to', value } } as any);
+                            }}
+                            placeholder="Search station name or code..."
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium mb-1.5 text-gray-700">From</label>
+                          <input type="text" name="from" value={formData.from} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1.5 text-gray-700">To</label>
+                          <input type="text" name="to" value={formData.to} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                        </div>
+                      </>
+                    )}
                     <div>
                         <label className="block text-sm font-medium mb-1.5 text-gray-700">Journey Date</label>
                         <input type="date" name="journey_date" value={formData.journey_date} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
@@ -96,7 +135,19 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
                     </div>
                     <div className="md:col-span-2">
                         <label className="block text-sm font-medium mb-1.5 text-gray-700">Passenger Details</label>
-                        <textarea name="passengers" value={formData.passengers} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" rows={4}></textarea>
+                        <textarea 
+                          name="passengers" 
+                          value={formData.passengers} 
+                          onChange={onFormChange} 
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm" 
+                          rows={6}
+                          placeholder="Enter passenger details (one per line):&#10;Name (Age yrs, Gender)&#10;&#10;Examples:&#10;John Doe (25 yrs, male)&#10;Jane Smith (30, female)&#10;Bob Johnson (45 years, male)"
+                        ></textarea>
+                        <p className="text-xs text-gray-500 mt-1">
+                          💡 <strong>Format:</strong> Name (Age yrs, Gender) - Each passenger on a new line
+                          <br />
+                          ✅ Accepts: "John (30 yrs, male)" or "John (30, male)" or "John (30 years, male)"
+                        </p>
                     </div>
                 </div>
             </section>
@@ -134,7 +185,31 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
             {/* Special Requirements */}
             <section id="requirements-section" className="scroll-mt-32 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
                 <h3 className="text-lg font-semibold text-gray-800 mb-5">Special Requirements</h3>
-                <textarea name="additional_requirements" value={formData.additional_requirements} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" rows={4}></textarea>
+                <textarea 
+                  name="additional_requirements" 
+                  value={formData.additional_requirements} 
+                  onChange={onFormChange} 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg" 
+                  rows={4}
+                  placeholder="Enter special requirements (e.g., lower berth, window seat, wheelchair assistance, meal preference, etc.)"
+                ></textarea>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="text-xs text-gray-500">Common requirements:</span>
+                  {['Lower berth preferred', 'Window seat', 'Wheelchair assistance', 'Vegetarian meal', 'Senior citizen', 'Pregnant woman', 'Child berth'].map((req) => (
+                    <button
+                      key={req}
+                      type="button"
+                      onClick={() => {
+                        const currentValue = formData.additional_requirements || '';
+                        const newValue = currentValue ? `${currentValue}\n${req}` : req;
+                        onFormChange({ target: { name: 'additional_requirements', value: newValue } } as any);
+                      }}
+                      className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md transition-colors"
+                    >
+                      + {req}
+                    </button>
+                  ))}
+                </div>
             </section>
 
             {/* Ticket Details */}

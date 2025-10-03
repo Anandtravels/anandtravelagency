@@ -19,9 +19,10 @@ const CTASection = () => {
           </div>
           
           <div className="relative z-10 text-center max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Book Your Next Adventure?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Book with the Best Travel Agency in Kakinada Today!</h2>
             <p className="text-xl mb-8">
-              Limited Tatkal tickets available daily! Contact us now to secure your reservation and travel worry-free.
+              Get expert Tatkal booking, affordable tour packages, and comprehensive travel services. 
+              Contact Anand Travel Agency now for confirmed reservations and hassle-free travel across India!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/booking" className="btn-primary text-lg px-8 py-3">

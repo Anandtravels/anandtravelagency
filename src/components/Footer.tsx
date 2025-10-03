@@ -47,18 +47,23 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/eservices" className="text-gray-300 hover:text-travel-orange transition-colors">
-                  E-Services
-                </Link>
-              </li>
-              <li>
                 <Link to="/packages" className="text-gray-300 hover:text-travel-orange transition-colors">
                   Tour Packages
                 </Link>
               </li>
               <li>
+                <Link to="/hotels" className="text-gray-300 hover:text-travel-orange transition-colors">
+                  Hotel Booking
+                </Link>
+              </li>
+              <li>
                 <Link to="/booking" className="text-gray-300 hover:text-travel-orange transition-colors">
-                  Booking
+                  Book Now
+                </Link>
+              </li>
+              <li>
+                <Link to="/travel-agency-kakinada" className="text-gray-300 hover:text-travel-orange transition-colors">
+                  Travel Agency Kakinada
                 </Link>
               </li>
               <li>
