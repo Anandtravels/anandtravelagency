@@ -377,7 +377,7 @@ Provide a helpful, accurate, and comprehensive response:`;
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.8, y: 20, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className={`bg-white rounded-2xl shadow-2xl border-2 border-blue-200 overflow-hidden transition-all duration-300 ${
+            className={`bg-white rounded-2xl shadow-2xl border-2 border-blue-200 overflow-hidden transition-all duration-300 flex flex-col ${
               isMinimized ? 'h-auto' : 'h-[calc(100vh-8rem)] sm:h-[450px] md:h-[550px] max-h-[650px]'
             } w-[calc(100vw-1rem)] sm:w-[400px] max-w-[calc(100vw-1rem)]`}
           >
