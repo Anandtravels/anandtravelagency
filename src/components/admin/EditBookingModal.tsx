@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { EditFormData } from "@/types/admin";
 import ProfitCalculator from "./ProfitCalculator";
 import { StationAutocomplete } from "@/components/StationAutocomplete";
+import { MultiSelectTrainAutocomplete } from "@/components/MultiSelectTrainAutocomplete";
 import { useState, useEffect } from "react";
 
 interface EditBookingModalProps {
@@ -17,12 +18,14 @@ interface EditBookingModalProps {
 const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChange, onSave }: EditBookingModalProps) => {
   const [trainFromStation, setTrainFromStation] = useState(formData.from || '');
   const [trainToStation, setTrainToStation] = useState(formData.to || '');
+  const [preferredTrains, setPreferredTrains] = useState(formData.preferred_trains || '');
   
   // Update station states when formData changes (when modal opens with booking data)
   useEffect(() => {
     setTrainFromStation(formData.from || '');
     setTrainToStation(formData.to || '');
-  }, [formData.from, formData.to, isOpen]);
+    setPreferredTrains(formData.preferred_trains || '');
+  }, [formData.from, formData.to, formData.preferred_trains, isOpen]);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,8 +182,23 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
                             </select>
                         </div>
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium mb-1.5 text-gray-700">Preferred Trains</label>
-                            <input type="text" name="preferred_trains" value={formData.preferred_trains} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+                            <MultiSelectTrainAutocomplete
+                              label="Preferred Trains (Optional)"
+                              required={false}
+                              value={preferredTrains}
+                              onChange={(value) => {
+                                setPreferredTrains(value);
+                                // Update formData through synthetic event
+                                const syntheticEvent = {
+                                  target: {
+                                    name: 'preferred_trains',
+                                    value: value
+                                  }
+                                } as React.ChangeEvent<HTMLInputElement>;
+                                onFormChange(syntheticEvent);
+                              }}
+                              placeholder="Search by train number or name (e.g., 12345 or Rajdhani)"
+                            />
                         </div>
                     </div>
                 </section>
