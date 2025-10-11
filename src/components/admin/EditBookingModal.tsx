@@ -170,8 +170,12 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
                             <select name="train_class" value={formData.train_class} onChange={onFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg">
                                 <option value="SL">Sleeper (SL)</option>
                                 <option value="3A">AC 3-Tier (3A)</option>
+                                <option value="3E">AC 3 Economy (3E)</option>
                                 <option value="2A">AC 2-Tier (2A)</option>
+                                <option value="2S">Second Sitting (2S)</option>
                                 <option value="1A">AC First Class (1A)</option>
+                                <option value="CC">Chair Car (CC)</option>
+                                <option value="EC">Executive Chair Car (EC)</option>
                             </select>
                         </div>
                         <div className="md:col-span-2">

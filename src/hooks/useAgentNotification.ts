@@ -27,11 +27,26 @@ export const useAgentNotification = () => {
       return false;
     }
 
+    const formatDateToDDMMYYYY = (dateString: string): string => {
+      if (!dateString) return 'Not specified';
+      try {
+        const date = new Date(dateString);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      } catch (error) {
+        return dateString; // Return original if parsing fails
+      }
+    };
+
     const formatPassengerInfo = () => {
       if (Array.isArray(booking.passengers)) {
         let info = `*Passengers:* ${booking.passengers.length}\n`;
         booking.passengers.forEach((p: any, i: number) => {
-          info += `   ${i + 1}. ${p.name} (${p.age} yrs, ${p.gender})\n`;
+          // Display DOB in DD/MM/YYYY format if available
+          const dobDisplay = p.dob ? ` DOB: ${formatDateToDDMMYYYY(p.dob)}` : '';
+          info += `   ${i + 1}. ${p.name} (${p.age} yrs, ${p.gender}${dobDisplay})\n`;
         });
         return info;
       }
@@ -64,6 +79,9 @@ export const useAgentNotification = () => {
         }
         if (booking.train_class) {
           classInfo += `Train Class: ${booking.train_class}\n`;
+        }
+        if (booking.preferred_trains) {
+          classInfo += `Preferred Trains: ${booking.preferred_trains}\n`;
         }
       }
       
@@ -121,9 +139,9 @@ Phone: ${booking.phone}
 ${isPackageBooking ? 
   `Package: ${(booking as any).package_name || 'Custom Package'}
 Destination: ${(booking as any).destination || booking.to || 'Not specified'}
-Travel Date: ${booking.journey_date}` :
+Travel Date: ${formatDateToDDMMYYYY(booking.journey_date)}` :
   `Journey: ${booking.from} to ${booking.to}
-Date: ${booking.journey_date}
+Date: ${formatDateToDDMMYYYY(booking.journey_date)}
 Service Type: ${bookingTypeDisplay}
 ${getClassPreferenceInfo()}`
 }

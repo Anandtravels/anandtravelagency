@@ -16,8 +16,8 @@ const Booking = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [passengerCount, setPassengerCount] = useState(1);
-  const [passengers, setPassengers] = useState([
-    { name: '', age: '', gender: 'male' }
+  const [passengers, setPassengers] = useState<Array<{ name: string; age: string; gender: string; dob?: string }>>([
+    { name: '', age: '', gender: 'male', dob: '' }
   ]);
   const [flightTripType, setFlightTripType] = useState("one_way");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -117,18 +117,50 @@ const Booking = () => {
     setPassengerCount(count);
     setPassengers(prev => {
       if (count > prev.length) {
-        return [...prev, ...Array(count - prev.length).fill({ name: '', age: '', gender: 'male' })];
+        return [...prev, ...Array(count - prev.length).fill({ name: '', age: '', gender: 'male', dob: '' })];
       }
       return prev.slice(0, count);
     });
   };
 
+  const calculateAgeFromDOB = (dob: string): number => {
+    if (!dob) return 0;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const formatDateToDDMMYYYY = (dateString: string): string => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   const handlePassengerChange = (index: number, field: string, value: string) => {
     const updatedPassengers = [...passengers.map(passenger => ({...passenger}))];
-    updatedPassengers[index] = {
-      ...updatedPassengers[index],
-      [field]: value
-    };
+    
+    if (field === 'dob') {
+      // Calculate age when DOB changes
+      const age = calculateAgeFromDOB(value);
+      updatedPassengers[index] = {
+        ...updatedPassengers[index],
+        dob: value,
+        age: age.toString()
+      };
+    } else {
+      updatedPassengers[index] = {
+        ...updatedPassengers[index],
+        [field]: value
+      };
+    }
     setPassengers(updatedPassengers);
   };
   
@@ -529,7 +561,9 @@ const Booking = () => {
                             >
                               <option value="SL">Sleeper (SL)</option>
                               <option value="3A">AC 3-Tier (3A)</option>
+                              <option value="3E">AC 3 Economy (3E)</option>
                               <option value="2A">AC 2-Tier (2A)</option>
+                              <option value="2S">Second Sitting (2S)</option>
                               <option value="1A">AC First Class (1A)</option>
                               <option value="CC">Chair Car (CC)</option>
                               <option value="EC">Executive Chair Car (EC)</option>
@@ -798,14 +832,18 @@ const Booking = () => {
                               </div>
                               
                               <div>
-                                <label className="block text-sm font-medium mb-1">Age</label>
+                                <label className="block text-sm font-medium mb-1">Date of Birth (DD/MM/YYYY)</label>
                                 <input
-                                  type="number"
-                                  value={passenger.age || ''}
-                                  onChange={(e) => handlePassengerChange(index, 'age', e.target.value)}
+                                  type="date"
+                                  value={passenger.dob || ''}
+                                  onChange={(e) => handlePassengerChange(index, 'dob', e.target.value)}
                                   className="w-full px-3 py-2 border rounded-md"
+                                  max={new Date().toISOString().split('T')[0]}
                                   required
                                 />
+                                {passenger.dob && passenger.age && (
+                                  <p className="text-xs text-gray-500 mt-1">Age: {passenger.age} years</p>
+                                )}
                               </div>
                               
                               <div>
