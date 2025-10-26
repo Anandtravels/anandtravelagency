@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
@@ -55,12 +56,18 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- About & Contact - Medium-High Priority -->
+  <!-- About & Contact - Medium-High Priority with Founder Image -->
   <url>
     <loc>https://anandtravels.com/about</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-10-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://anandtravels.com/anand-pinisetty-founder-anand-travel-agency.jpg</image:loc>
+      <image:title>Anand Pinisetty - Founder & CEO of Anand Travel Agency</image:title>
+      <image:caption>Anand Pinisetty – Founder & CEO of Anand Travel Agency, India's first AI-powered travel agency</image:caption>
+      <image:geo_location>Kakinada, Andhra Pradesh, India</image:geo_location>
+    </image:image>
   </url>
 
   <url>
@@ -92,12 +99,27 @@
     <priority>0.7</priority>
   </url>
 
-  <!-- SEO-Friendly Landing Pages (to be created) -->
+  <!-- SEO-Friendly Landing Pages -->
   <url>
     <loc>https://anandtravels.com/travel-agency-kakinada</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-10-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://anandtravels.com/tatkal-train-tickets-andhra-pradesh</loc>
+    <lastmod>2025-10-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- AI Chatbot Landing Page - High Priority -->
+  <url>
+    <loc>https://anandtravels.com/ai-travel-agency-india</loc>
+    <lastmod>2025-10-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
   </url>
 
   <url>

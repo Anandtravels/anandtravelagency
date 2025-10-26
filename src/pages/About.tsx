@@ -3,16 +3,17 @@ import { Award, Star, Users, ThumbsUp, Calendar } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import QuoteSection from "../components/QuoteSection";
-// Import the profile image
-import profileImage from "../assets/profile.jpg";
 
 const About = () => {
+  // SEO-optimized CEO image
+  const founderImageUrl = "/anand-pinisetty-founder-anand-travel-agency.jpg";
+  const founderImageAlt = "Anand Pinisetty – Founder & CEO of Anand Travel Agency, India's first AI-powered travel agency";
+  
   const teamMembers = [
     {
       name: "Anand Pinisetty",
       role: "Founder & CEO",
-      // Use the imported image instead of the placeholder
-      image: profileImage,
+      image: founderImageUrl,
       bio: "A passionate travel entrepreneur who founded Anand Travel Agency with a vision to make travel bookings seamless and hassle-free for everyone."
     }
   ];
@@ -292,14 +293,21 @@ const About = () => {
                 <div className="aspect-square w-full overflow-hidden">
                   <img 
                     src={teamMembers[0].image} 
-                    alt={teamMembers[0].name} 
+                    alt={founderImageAlt}
+                    title="Anand Pinisetty - Founder & CEO of Anand Travel Agency"
+                    loading="lazy"
                     className="w-full h-full object-cover"
+                    itemProp="image"
                   />
                 </div>
-                <div className="p-8">
-                  <h3 className="text-2xl font-semibold text-travel-blue-dark mb-2">{teamMembers[0].name}</h3>
-                  <p className="text-travel-orange font-medium mb-4">{teamMembers[0].role}</p>
-                  <p className="text-gray-600 text-lg">{teamMembers[0].bio}</p>
+                <div className="p-8" itemScope itemType="https://schema.org/Person">
+                  <meta itemProp="name" content="Anand Pinisetty" />
+                  <meta itemProp="jobTitle" content="Founder & CEO" />
+                  <meta itemProp="image" content={founderImageUrl} />
+                  <meta itemProp="worksFor" content="Anand Travel Agency" />
+                  <h3 className="text-2xl font-semibold text-travel-blue-dark mb-2" itemProp="name">{teamMembers[0].name}</h3>
+                  <p className="text-travel-orange font-medium mb-4" itemProp="jobTitle">{teamMembers[0].role}</p>
+                  <p className="text-gray-600 text-lg" itemProp="description">{teamMembers[0].bio}</p>
                   <p className="text-gray-600 mt-4 text-lg">
                     Based in Kakinada, Mr. Anand has built a reputation for excellence in the travel industry. 
                     His deep understanding of customer needs and commitment to service has helped transform 

@@ -127,6 +127,7 @@ const BookingsTab = ({
       if (trainClassFilter === 'ac') {
         filtered = filtered.filter(b => 
           b.train_class === '3A' || 
+          b.train_class === '3E' ||  // AC 3 Economy - Added to AC filter
           b.train_class === '2A' || 
           b.train_class === '1A' || 
           b.train_class === 'CC' || 
@@ -239,7 +240,7 @@ const BookingsTab = ({
                 onChange={(e) => setTrainClassFilter(e.target.value)}
               >
                 <option value="all">All Classes</option>
-                <option value="ac">AC (3A, 2A, 1A, CC, EC)</option>
+                <option value="ac">AC (3A, 3E, 2A, 1A, CC, EC)</option>
                 <option value="sleeper">Sleeper (SL, 2S)</option>
               </select>
             </div>

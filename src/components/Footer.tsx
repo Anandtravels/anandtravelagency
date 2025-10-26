@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Phone, Mail, MapPin, Instagram, Facebook, Twitter, Linkedin, Globe, MessageSquare } from "lucide-react";
+import { Phone, Mail, MapPin, Instagram, Facebook, Twitter, Linkedin, Globe, MessageSquare, Youtube, AtSign, Camera } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -13,21 +13,69 @@ const Footer = () => {
               Your gateway to seamless travel across India and beyond. We specialize in train reservations, 
               bus bookings, flight tickets, and curated travel packages for the perfect journey.
             </p>
-            <div className="flex space-x-4 mt-4">
-              <a href="https://www.facebook.com/profile.php?id=61575167457124" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
-                <Facebook size={20} />
-              </a>
-              <a href="https://www.instagram.com/anandtravels.agency/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
-                <Instagram size={20} />
-              </a>
-              <a href="https://x.com/anandtravelss" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
-                <Twitter size={20} />
-              </a>
-              <a href="https://www.linkedin.com/in/anand-pinisetty-656583359/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
+            <div className="flex flex-wrap gap-3 mt-4">
+              <a 
+                href="https://www.linkedin.com/in/anand-pinisetty-656583359/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-white hover:text-travel-orange transition-colors"
+                aria-label="LinkedIn"
+              >
                 <Linkedin size={20} />
               </a>
-              <a href="https://g.co/kgs/xk43d2S" target="_blank" rel="noopener noreferrer" className="text-white hover:text-travel-orange transition-colors">
-                <Globe size={20} />
+              <a 
+                href="https://www.instagram.com/anandtravels.agency/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-white hover:text-travel-orange transition-colors"
+                aria-label="Instagram"
+              >
+                <Instagram size={20} />
+              </a>
+              <a 
+                href="https://www.facebook.com/profile.php?id=61580145898379" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-white hover:text-travel-orange transition-colors"
+                aria-label="Facebook"
+              >
+                <Facebook size={20} />
+              </a>
+              <a 
+                href="https://x.com/anandtravelss" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-white hover:text-travel-orange transition-colors"
+                aria-label="Twitter / X"
+              >
+                <Twitter size={20} />
+              </a>
+              <a 
+                href="https://youtube.com/@anandtravelagency?si=mWr0Cbtll8MjVMhi" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-white hover:text-travel-orange transition-colors"
+                aria-label="YouTube"
+              >
+                <Youtube size={20} />
+              </a>
+              <a 
+                href="https://www.threads.com/@anandtravels.agency" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-white hover:text-travel-orange transition-colors"
+                aria-label="Threads"
+              >
+                <AtSign size={20} />
+              </a>
+              <a 
+                href="https://www.snapchat.com/add/anandtravelagen?share_id=5zmnWL-HyQ8&locale=en-US" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-white hover:text-travel-orange transition-colors"
+                aria-label="Snapchat"
+              >
+                <Camera size={20} />
               </a>
             </div>
           </div>
