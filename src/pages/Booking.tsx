@@ -50,6 +50,9 @@ const Booking = () => {
   const [trainToStation, setTrainToStation] = useState("");
   const [preferredTrains, setPreferredTrains] = useState("");
   
+  // State for advance booking toggle
+  const [isAdvanceBooking, setIsAdvanceBooking] = useState(false);
+  
   const { register, handleSubmit, reset, formState: { errors }, setValue, getValues } = useForm({
     defaultValues: {
       phone: "",
@@ -86,6 +89,8 @@ const Booking = () => {
     setTrainFromStation("");
     setTrainToStation("");
     setPreferredTrains("");
+    // Reset advance booking toggle when changing booking type
+    setIsAdvanceBooking(false);
     reset({
       phone: "",
       name: "",
@@ -244,6 +249,7 @@ const Booking = () => {
         booking_type: bookingType,
         passengers,
         status: "pending",
+        advance_booking: isAdvanceBooking, // Add advance booking flag
         created_at: serverTimestamp(),
         booking_charge: {
           original: baseCharge,
@@ -314,6 +320,7 @@ const Booking = () => {
       setTrainFromStation("");
       setTrainToStation("");
       setPreferredTrains("");
+      setIsAdvanceBooking(false); // Reset advance booking toggle
       clearAppliedCoupon();
 
     } catch (error) {
@@ -532,6 +539,75 @@ const Booking = () => {
                     
                     {bookingType === "train" && (
                       <>
+                        {/* Advance Booking Toggle */}
+                        <div className="mb-6">
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200 shadow-sm">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex-1">
+                                <h3 className="text-lg font-semibold text-travel-blue-dark mb-1 flex items-center gap-2">
+                                  <Calendar className="w-5 h-5 text-travel-orange" />
+                                  Booking Mode
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                  {isAdvanceBooking 
+                                    ? "Plan ahead! Book your tickets in advance for future dates" 
+                                    : "Regular booking for immediate travel needs"}
+                                </p>
+                              </div>
+                              
+                              {/* Toggle Button */}
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setIsAdvanceBooking(!isAdvanceBooking)}
+                                  className={`relative inline-flex h-12 w-24 items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                                    isAdvanceBooking 
+                                      ? 'bg-gradient-to-r from-travel-orange to-orange-500 focus:ring-travel-orange shadow-lg' 
+                                      : 'bg-gray-300 focus:ring-gray-400 shadow-md'
+                                  }`}
+                                  aria-label="Toggle advance booking"
+                                >
+                                  <span
+                                    className={`inline-block h-10 w-10 transform rounded-full bg-white transition-all duration-300 ease-in-out shadow-lg ${
+                                      isAdvanceBooking ? 'translate-x-12' : 'translate-x-1'
+                                    }`}
+                                  >
+                                    {isAdvanceBooking ? (
+                                      <Check className="w-6 h-6 text-travel-orange m-2" />
+                                    ) : (
+                                      <span className="w-6 h-6 text-gray-400 m-2 block" />
+                                    )}
+                                  </span>
+                                </button>
+                                
+                                <div className="text-right min-w-[120px]">
+                                  <div className={`font-bold text-sm transition-colors duration-200 ${
+                                    isAdvanceBooking ? 'text-travel-orange' : 'text-gray-600'
+                                  }`}>
+                                    {isAdvanceBooking ? 'Advance Booking' : 'Regular Booking'}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {isAdvanceBooking ? 'Active' : 'Standard'}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Additional Info Badge */}
+                            {isAdvanceBooking && (
+                              <div className="mt-4 flex items-start gap-2 bg-white rounded-lg p-3 border border-blue-200">
+                                <div className="bg-travel-orange rounded-full p-1 mt-0.5">
+                                  <Check className="w-3 h-3 text-white" />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-travel-blue-dark">Advance Booking Selected</p>
+                                  <p className="text-xs text-gray-600">Your booking will be marked for advance scheduling in the admin panel</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
                             <label className="block text-gray-700 font-medium mb-2">

@@ -24,6 +24,7 @@ export interface Booking {
   train_class?: string;
   preferred_trains?: string;
   admin_notes?: string;
+  advance_booking?: boolean; // Flag for advance booking
   created_at: Date;
   updated_at?: any;
   updated_by?: string;

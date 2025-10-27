@@ -70,6 +70,9 @@ const BookingsTab = ({
         filtered = filtered.filter(b => b.status === 'booked');
       } else if (statusFilter === 'hold') {
         filtered = filtered.filter(b => b.status === 'hold');
+      } else if (statusFilter === 'advance_booking') {
+        // Filter for advance bookings - show only bookings with advance_booking flag set to true
+        filtered = filtered.filter(b => b.advance_booking === true);
       }
     }
     
@@ -200,6 +203,7 @@ const BookingsTab = ({
                 <option value="in_process">In Process</option>
                 <option value="booked">Booked</option>
                 <option value="hold">Hold</option>
+                <option value="advance_booking">Advance Booking</option>
               </select>
             </div>
             
@@ -343,6 +347,11 @@ const BookingsTab = ({
                       }`}>
                         {booking.status === 'completed' ? 'Payment Done' : booking.status === 'in_process' ? 'In Process' : booking.status === 'booked' ? 'Booked' : booking.status === 'hold' ? 'Hold' : 'Pending'}
                       </span>
+                      {booking.advance_booking && (
+                        <span className="inline-block px-2 py-0.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded text-xs font-semibold shadow-sm">
+                          🚀 Advance
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -574,6 +583,11 @@ const BookingsTab = ({
                       <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">
                         {booking.booking_type || 'Not specified'}
                       </span>
+                      {booking.advance_booking && (
+                        <span className="inline-block px-2 py-0.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded text-xs font-semibold shadow-sm">
+                          🚀 Advance
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
