@@ -539,28 +539,30 @@ const Booking = () => {
                     
                     {bookingType === "train" && (
                       <>
-                        {/* Advance Booking Toggle */}
+                        {/* Advance Booking Toggle - Responsive Design */}
                         <div className="mb-6">
-                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200 shadow-sm">
-                            <div className="flex items-center justify-between gap-4">
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg md:rounded-xl p-4 md:p-6 border-2 border-blue-200 shadow-sm">
+                            {/* Mobile Layout - Stacked */}
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                              {/* Title and Description */}
                               <div className="flex-1">
-                                <h3 className="text-lg font-semibold text-travel-blue-dark mb-1 flex items-center gap-2">
-                                  <Calendar className="w-5 h-5 text-travel-orange" />
-                                  Booking Mode
+                                <h3 className="text-base md:text-lg font-semibold text-travel-blue-dark mb-1 flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 md:w-5 md:h-5 text-travel-orange flex-shrink-0" />
+                                  <span>Booking Mode</span>
                                 </h3>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-xs md:text-sm text-gray-600 leading-relaxed">
                                   {isAdvanceBooking 
-                                    ? "Plan ahead! Book your tickets in advance for future dates" 
-                                    : "Regular booking for immediate travel needs"}
+                                    ? "Plan ahead! Book tickets in advance" 
+                                    : "Regular booking for immediate travel"}
                                 </p>
                               </div>
                               
-                              {/* Toggle Button */}
-                              <div className="flex items-center gap-3">
+                              {/* Toggle Button - Responsive Size */}
+                              <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto">
                                 <button
                                   type="button"
                                   onClick={() => setIsAdvanceBooking(!isAdvanceBooking)}
-                                  className={`relative inline-flex h-12 w-24 items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                                  className={`relative inline-flex h-8 w-16 sm:h-10 sm:w-20 md:h-12 md:w-24 items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 flex-shrink-0 ${
                                     isAdvanceBooking 
                                       ? 'bg-gradient-to-r from-travel-orange to-orange-500 focus:ring-travel-orange shadow-lg' 
                                       : 'bg-gray-300 focus:ring-gray-400 shadow-md'
@@ -568,23 +570,23 @@ const Booking = () => {
                                   aria-label="Toggle advance booking"
                                 >
                                   <span
-                                    className={`inline-block h-10 w-10 transform rounded-full bg-white transition-all duration-300 ease-in-out shadow-lg ${
-                                      isAdvanceBooking ? 'translate-x-12' : 'translate-x-1'
+                                    className={`inline-block h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 transform rounded-full bg-white transition-all duration-300 ease-in-out shadow-lg ${
+                                      isAdvanceBooking ? 'translate-x-8 sm:translate-x-10 md:translate-x-12' : 'translate-x-1'
                                     }`}
                                   >
                                     {isAdvanceBooking ? (
-                                      <Check className="w-6 h-6 text-travel-orange m-2" />
+                                      <Check className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-travel-orange m-1 sm:m-1.5 md:m-2" />
                                     ) : (
-                                      <span className="w-6 h-6 text-gray-400 m-2 block" />
+                                      <span className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-400 m-1 sm:m-1.5 md:m-2 block" />
                                     )}
                                   </span>
                                 </button>
                                 
-                                <div className="text-right min-w-[120px]">
-                                  <div className={`font-bold text-sm transition-colors duration-200 ${
+                                <div className="text-left sm:text-right min-w-[100px] sm:min-w-[110px] md:min-w-[120px]">
+                                  <div className={`font-bold text-xs sm:text-sm transition-colors duration-200 ${
                                     isAdvanceBooking ? 'text-travel-orange' : 'text-gray-600'
                                   }`}>
-                                    {isAdvanceBooking ? 'Advance Booking' : 'Regular Booking'}
+                                    {isAdvanceBooking ? 'Advance' : 'Regular'}
                                   </div>
                                   <div className="text-xs text-gray-500">
                                     {isAdvanceBooking ? 'Active' : 'Standard'}
@@ -593,15 +595,15 @@ const Booking = () => {
                               </div>
                             </div>
                             
-                            {/* Additional Info Badge */}
+                            {/* Additional Info Badge - Responsive */}
                             {isAdvanceBooking && (
-                              <div className="mt-4 flex items-start gap-2 bg-white rounded-lg p-3 border border-blue-200">
-                                <div className="bg-travel-orange rounded-full p-1 mt-0.5">
+                              <div className="mt-3 md:mt-4 flex items-start gap-2 bg-white rounded-lg p-2.5 md:p-3 border border-blue-200">
+                                <div className="bg-travel-orange rounded-full p-1 mt-0.5 flex-shrink-0">
                                   <Check className="w-3 h-3 text-white" />
                                 </div>
-                                <div>
+                                <div className="flex-1 min-w-0">
                                   <p className="text-xs font-medium text-travel-blue-dark">Advance Booking Selected</p>
-                                  <p className="text-xs text-gray-600">Your booking will be marked for advance scheduling in the admin panel</p>
+                                  <p className="text-xs text-gray-600 leading-relaxed">Your booking will be marked for advance scheduling</p>
                                 </div>
                               </div>
                             )}

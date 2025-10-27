@@ -15,6 +15,7 @@ export const useEditBookingModal = () => {
     class_preference: '', ticket_number: '', pnr: '', booking_reference: '',
     payment_status: 'pending', fare_details: '', train_booking_type: '',
     train_class: '', preferred_trains: '',
+    advance_booking: false, // Initialize advance_booking flag
     ticket_cost: '', actual_price: '', commission_amount: '', profit_amount: '',
     train_number: '', tatkal_booking_date: ''
   });
@@ -49,6 +50,7 @@ export const useEditBookingModal = () => {
       train_booking_type: booking.train_booking_type || '',
       train_class: booking.train_class || '',
       preferred_trains: booking.preferred_trains || '',
+      advance_booking: booking.advance_booking || false, // Load advance_booking flag
       // New pricing fields
       ticket_cost: booking.ticket_cost?.toString() || '',
       actual_price: booking.actual_price?.toString() || '',
@@ -159,6 +161,7 @@ export const useEditBookingModal = () => {
         train_booking_type: editFormData.train_booking_type || '',
         train_class: editFormData.train_class || '',
         preferred_trains: editFormData.preferred_trains?.trim() || '',
+        advance_booking: editFormData.advance_booking || false, // Save advance_booking flag
         train_number: editFormData.train_number?.trim() || '',
         tatkal_booking_date: editFormData.tatkal_booking_date || '',
         updated_at: serverTimestamp()

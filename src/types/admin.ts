@@ -91,6 +91,7 @@ export interface EditFormData {
   train_booking_type: string;
   train_class: string;
   preferred_trains: string;
+  advance_booking?: boolean; // Flag for advance booking
   // New pricing fields
   ticket_cost: string;
   actual_price: string;

@@ -265,6 +265,102 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
                 </div>
             </section>
 
+            {/* Booking Mode Section */}
+            {formData.booking_type === "train" && (
+              <section id="booking-mode-section" className="scroll-mt-32 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-5">Booking Mode</h3>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-blue-100">
+                  {/* Icon and Label */}
+                  <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-base sm:text-lg md:text-xl font-bold text-gray-800 leading-tight">
+                        {formData.advance_booking === true ? 'Advance Booking' : 'Regular Booking'}
+                      </h4>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1">
+                        {formData.advance_booking === true 
+                          ? 'Book well in advance' 
+                          : 'Standard booking'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newValue = !formData.advance_booking;
+                      onFormChange({ 
+                        target: { 
+                          name: 'advance_booking', 
+                          value: newValue 
+                        } 
+                      } as any);
+                    }}
+                    className={`
+                      relative flex-shrink-0 transition-all duration-300 ease-in-out rounded-full shadow-lg
+                      h-8 w-16 sm:h-10 sm:w-20 md:h-12 md:w-24
+                      ${formData.advance_booking === true
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 shadow-green-200' 
+                        : 'bg-gradient-to-r from-gray-300 to-gray-400 shadow-gray-200'
+                      }
+                      hover:shadow-xl transform hover:scale-105
+                    `}
+                    aria-label={formData.advance_booking === true ? 'Switch to Regular Booking' : 'Switch to Advance Booking'}
+                  >
+                    {/* Toggle Circle */}
+                    <span
+                      className={`
+                        absolute top-1 transition-all duration-300 ease-in-out
+                        bg-white rounded-full shadow-md flex items-center justify-center
+                        h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10
+                        ${formData.advance_booking === true 
+                          ? 'left-[calc(100%-1.75rem)] sm:left-[calc(100%-2.25rem)] md:left-[calc(100%-2.75rem)]' 
+                          : 'left-1'
+                        }
+                      `}
+                    >
+                      {formData.advance_booking === true ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Info Box */}
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                  <div className="flex items-start gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm text-blue-800 font-medium mb-1">About Booking Modes</p>
+                      <ul className="text-xs text-blue-700 space-y-1">
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-0.5">✓</span>
+                          <span><strong>Advance Booking:</strong> Bookings made well in advance for future travel dates</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-gray-600 mt-0.5">•</span>
+                          <span><strong>Regular Booking:</strong> Standard bookings for immediate or near-term travel</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* Pricing & Commission Details */}
             <section id="pricing-section" className="scroll-mt-32 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
                 <h3 className="text-lg font-semibold text-gray-800 mb-5">Pricing & Commission Details</h3>

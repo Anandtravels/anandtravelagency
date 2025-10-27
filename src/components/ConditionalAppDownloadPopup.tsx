@@ -14,11 +14,12 @@ const ConditionalAppDownloadPopup: React.FC<ConditionalAppDownloadPopupProps> = 
 }) => {
   const location = useLocation();
   
-  // Don't show popup on admin pages
+  // Don't show popup on admin pages, agent pages, or home page
   const isAdminPage = location.pathname.startsWith('/admin') || 
                      location.pathname.startsWith('/agent');
+  const isHomePage = location.pathname === '/';
   
-  if (isAdminPage) {
+  if (isAdminPage || isHomePage) {
     return null;
   }
   
