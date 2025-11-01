@@ -13,12 +13,14 @@ interface WhatsAppMessageModalProps {
   messageDetails: MessageDetails;
   setMessageDetails: React.Dispatch<React.SetStateAction<MessageDetails>>;
   onSendMessage: () => void;
+  sending?: boolean;
 }
 
 const WhatsAppMessageModal = ({
   isOpen,
   onOpenChange,
   currentBooking,
+  sending = false,
   messageDetails,
   setMessageDetails,
   onSendMessage,
@@ -145,8 +147,10 @@ const WhatsAppMessageModal = ({
           </div>
         )}
         <DialogFooter className="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto order-2 sm:order-1">Cancel</Button>
-          <Button onClick={onSendMessage} className="w-full sm:w-auto order-1 sm:order-2">Send to WhatsApp</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending} className="w-full sm:w-auto order-2 sm:order-1">Cancel</Button>
+          <Button onClick={onSendMessage} disabled={sending} className="w-full sm:w-auto order-1 sm:order-2">
+            {sending ? 'Sending...' : 'Send to WhatsApp'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   FileCheck, 
@@ -6,7 +7,8 @@ import {
   Calendar, 
   Globe, 
   Eye, 
-  User
+  User,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +20,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import AgentWhatsAppSelector from './AgentWhatsAppSelector';
 
 interface VisaApplication {
@@ -40,6 +52,7 @@ interface VisaApplicationCardProps {
   formatFirebaseTimestamp: (timestamp: any) => string;
   updateStatus: (applicationId: string, newStatus: string) => void;
   viewDetails: (application: VisaApplication) => void;
+  deleteApplication: (applicationId: string, applicantName: string) => void;
 }
 
 const STATUS_CONFIG = {
@@ -64,9 +77,18 @@ const VisaApplicationCard = ({
   agents, 
   formatFirebaseTimestamp, 
   updateStatus, 
-  viewDetails 
+  viewDetails,
+  deleteApplication 
 }: VisaApplicationCardProps) => {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const handleDelete = () => {
+    deleteApplication(application.id, application.name);
+    setShowDeleteDialog(false);
+  };
+
   return (
+    <>
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -151,24 +173,36 @@ const VisaApplicationCard = ({
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-2 pt-2">
+          <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => viewDetails(application)}
+                className="flex-1 text-xs"
+              >
+                <Eye className="h-3 w-3 mr-1" />
+                Details
+              </Button>
+              
+              <div className="flex-1">
+                <AgentWhatsAppSelector
+                  application={application}
+                  agents={agents}
+                  formatFirebaseTimestamp={formatFirebaseTimestamp}
+                />
+              </div>
+            </div>
+            
             <Button
               size="sm"
-              variant="outline"
-              onClick={() => viewDetails(application)}
-              className="flex-1 text-xs"
+              variant="destructive"
+              onClick={() => setShowDeleteDialog(true)}
+              className="w-full text-xs"
             >
-              <Eye className="h-3 w-3 mr-1" />
-              Details
+              <Trash2 className="h-3 w-3 mr-1" />
+              Delete Application
             </Button>
-            
-            <div className="flex-1">
-              <AgentWhatsAppSelector
-                application={application}
-                agents={agents}
-                formatFirebaseTimestamp={formatFirebaseTimestamp}
-              />
-            </div>
           </div>
           
           <div className="text-xs text-gray-500 pt-2 border-t">
@@ -179,6 +213,29 @@ const VisaApplicationCard = ({
         </CardContent>
       </Card>
     </motion.div>
+
+    {/* Delete Confirmation Dialog */}
+    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Visa Application?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete the visa application for <strong>{application.name}</strong>?
+            This action cannot be undone and will permanently remove this application from the system.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };
 

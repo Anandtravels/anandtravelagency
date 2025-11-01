@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Users, Eye, Calendar, TrendingUp, Clock, Globe, Package, MessageSquare, UserCheck, AlertCircle } from 'lucide-react';
+import { Users, Eye, Calendar, TrendingUp, Clock, Globe, Package, MessageSquare, UserCheck, AlertCircle, CalendarClock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useVisitorAnalytics } from '@/hooks/useVisitorAnalytics';
 import { useAdminSidebarData } from '@/hooks/useAdminSidebarData';
@@ -124,6 +124,14 @@ const VisitorAnalytics = () => {
       isLoading: countsLoading
     },
     {
+      title: 'Advance Reservations',
+      value: counts.advanceBookings,
+      icon: CalendarClock,
+      description: 'Future bookings',
+      color: 'bg-purple-600',
+      isLoading: countsLoading
+    },
+    {
       title: 'Total Bookings',
       value: counts.bookings,
       icon: Package,
@@ -186,7 +194,7 @@ const VisitorAnalytics = () => {
       {/* Business Metrics Section */}
       <div>
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Business Metrics</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {businessCards.map((stat, index) => (
             <StatCard
               key={stat.title}

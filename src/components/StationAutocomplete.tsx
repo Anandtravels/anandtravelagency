@@ -77,18 +77,29 @@ export const StationAutocomplete = ({
     setInputValue(value);
   }, [value]);
 
-  // Filter stations based on input
+  // Filter stations based on input - prioritize station code matches first
   const filteredStations = useMemo(() => {
     if (!inputValue || inputValue.length < 1) return [];
     
     const searchTerm = inputValue.toLowerCase().trim();
     
-    return stations
-      .filter(station => 
-        station.name.toLowerCase().includes(searchTerm) ||
-        station.code.toLowerCase().includes(searchTerm)
-      )
-      .slice(0, 50); // Limit to 50 results for performance
+    // Separate matches by code and name
+    const codeMatches: Station[] = [];
+    const nameMatches: Station[] = [];
+    
+    stations.forEach(station => {
+      const matchesCode = station.code.toLowerCase().includes(searchTerm);
+      const matchesName = station.name.toLowerCase().includes(searchTerm);
+      
+      if (matchesCode) {
+        codeMatches.push(station);
+      } else if (matchesName) {
+        nameMatches.push(station);
+      }
+    });
+    
+    // Combine: code matches first, then name matches
+    return [...codeMatches, ...nameMatches].slice(0, 50); // Limit to 50 results for performance
   }, [inputValue, stations]);
 
   // Close dropdown when clicking outside

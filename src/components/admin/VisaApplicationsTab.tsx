@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   FileCheck
 } from 'lucide-react';
-import { collection, doc, updateDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import VisaApplicationCard from './VisaApplicationCard';
@@ -139,6 +139,27 @@ const VisaApplicationsTab = ({ user, formatFirebaseTimestamp }: VisaApplications
     }
   };
 
+  // Delete application
+  const deleteApplication = async (applicationId: string, applicantName: string) => {
+    try {
+      await deleteDoc(doc(db, 'visa-services', applicationId));
+      
+      setApplications(prev => prev.filter(app => app.id !== applicationId));
+      
+      toast({
+        title: "Application Deleted",
+        description: `Visa application for ${applicantName} has been removed`,
+      });
+    } catch (error) {
+      console.error('Error deleting application:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete visa application",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Filter applications
   const filteredApplications = applications.filter(app => {
     const matchesSearch = 
@@ -230,6 +251,7 @@ const VisaApplicationsTab = ({ user, formatFirebaseTimestamp }: VisaApplications
               formatFirebaseTimestamp={formatFirebaseTimestamp}
               updateStatus={updateStatus}
               viewDetails={viewDetails}
+              deleteApplication={deleteApplication}
             />
           ))}
         </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   MapPin, 
@@ -16,6 +16,8 @@ import {
   PopoverTrigger,
 } from "./ui/popover";
 import { useToast } from "../hooks/use-toast";
+import { HotelService } from "../services/hotelService";
+import { Hotel } from "../types/hotel";
 
 interface HotelSearchBarProps {
   city?: string;
@@ -59,6 +61,27 @@ const HotelSearchBar = ({
   });
 
   const [guestsPopoverOpen, setGuestsPopoverOpen] = useState(false);
+  
+  // Autocomplete state
+  const [allHotels, setAllHotels] = useState<Hotel[]>([]);
+  const [suggestions, setSuggestions] = useState<Array<{type: 'city' | 'hotel', value: string, city?: string}>>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Load all hotels for autocomplete
+  useEffect(() => {
+    const loadHotels = async () => {
+      try {
+        const hotelsData = await HotelService.getAllHotels();
+        setAllHotels(hotelsData);
+      } catch (error) {
+        console.error('Error loading hotels for autocomplete:', error);
+      }
+    };
+    loadHotels();
+  }, []);
 
   // Update search data when props change
   useEffect(() => {
@@ -71,12 +94,110 @@ const HotelSearchBar = ({
     });
   }, [city, checkInDate, checkOutDate, numberOfRooms, numberOfGuests]);
 
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+        setActiveSuggestionIndex(-1);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Handle input changes
   const updateSearchData = (field: keyof HotelSearchFilters, value: string | number) => {
     setSearchData(prev => ({
       ...prev,
       [field]: value
     }));
+
+    // Handle autocomplete for city field
+    if (field === 'city' && typeof value === 'string') {
+      handleCityInputChange(value);
+    }
+  };
+
+  // Handle city input change for autocomplete
+  const handleCityInputChange = (input: string) => {
+    if (!input.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const searchTerm = input.toLowerCase().trim();
+    const uniqueCities = new Set<string>();
+    const hotelSuggestions: Array<{type: 'city' | 'hotel', value: string, city?: string}> = [];
+
+    // First, collect unique cities
+    allHotels.forEach(hotel => {
+      if (hotel.status === 'active') {
+        uniqueCities.add(hotel.city);
+      }
+    });
+
+    // Add matching cities
+    uniqueCities.forEach(cityName => {
+      if (cityName.toLowerCase().includes(searchTerm)) {
+        hotelSuggestions.push({
+          type: 'city',
+          value: cityName
+        });
+      }
+    });
+
+    // Add matching hotel names
+    allHotels.forEach(hotel => {
+      if (hotel.status === 'active' && hotel.name.toLowerCase().includes(searchTerm)) {
+        hotelSuggestions.push({
+          type: 'hotel',
+          value: hotel.name,
+          city: hotel.city
+        });
+      }
+    });
+
+    // Limit suggestions to 8 items
+    setSuggestions(hotelSuggestions.slice(0, 8));
+    setShowSuggestions(hotelSuggestions.length > 0);
+    setActiveSuggestionIndex(-1);
+  };
+
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion: {type: 'city' | 'hotel', value: string, city?: string}) => {
+    if (suggestion.type === 'city') {
+      setSearchData(prev => ({ ...prev, city: suggestion.value }));
+    } else {
+      // For hotel, set the city
+      setSearchData(prev => ({ ...prev, city: suggestion.city || suggestion.value }));
+    }
+    setShowSuggestions(false);
+    setActiveSuggestionIndex(-1);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveSuggestionIndex(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveSuggestionIndex(prev => 
+        prev > 0 ? prev - 1 : suggestions.length - 1
+      );
+    } else if (e.key === 'Enter' && activeSuggestionIndex >= 0) {
+      e.preventDefault();
+      handleSuggestionClick(suggestions[activeSuggestionIndex]);
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setActiveSuggestionIndex(-1);
+    }
   };
 
   // Get minimum date (today)
@@ -218,19 +339,62 @@ const HotelSearchBar = ({
     <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Destination */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1" ref={wrapperRef}>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Destination
           </label>
           <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" size={18} />
             <Input
+              ref={inputRef}
               type="text"
               placeholder="City or hotel name"
               value={searchData.city}
               onChange={(e) => updateSearchData('city', e.target.value)}
+              onKeyDown={handleKeyDown}
+              onFocus={() => {
+                if (searchData.city && suggestions.length > 0) {
+                  setShowSuggestions(true);
+                }
+              }}
               className="pl-10"
+              autoComplete="off"
             />
+            
+            {/* Autocomplete Suggestions */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                {suggestions.map((suggestion, index) => (
+                  <div
+                    key={`${suggestion.type}-${suggestion.value}-${index}`}
+                    className={`px-4 py-2.5 cursor-pointer flex items-start gap-2 ${
+                      index === activeSuggestionIndex 
+                        ? 'bg-travel-orange/10' 
+                        : 'hover:bg-gray-50'
+                    } transition-colors`}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    onMouseEnter={() => setActiveSuggestionIndex(index)}
+                  >
+                    <MapPin className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                      suggestion.type === 'city' ? 'text-travel-orange' : 'text-gray-400'
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm text-gray-900 truncate">
+                        {suggestion.value}
+                      </div>
+                      {suggestion.type === 'hotel' && suggestion.city && (
+                        <div className="text-xs text-gray-500">
+                          {suggestion.city}
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-400">
+                        {suggestion.type === 'city' ? 'City' : 'Hotel'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         

@@ -154,13 +154,6 @@ const HotelQuickViewModal = ({
                   Featured
                 </Badge>
               )}
-              <div className="bg-black/70 text-white px-3 py-1 rounded-md flex items-center gap-1">
-                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-sm font-medium">{hotel.rating.toFixed(1)}</span>
-                {hotel.reviews > 0 && (
-                  <span className="text-xs">({hotel.reviews})</span>
-                )}
-              </div>
             </div>
           </div>
 

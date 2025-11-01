@@ -16,8 +16,8 @@ const Booking = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [passengerCount, setPassengerCount] = useState(1);
-  const [passengers, setPassengers] = useState<Array<{ name: string; age: string; gender: string; dob?: string }>>([
-    { name: '', age: '', gender: 'male', dob: '' }
+  const [passengers, setPassengers] = useState<Array<{ name: string; age: string; gender: string; dob?: string; aadhar?: string; }>>([
+    { name: '', age: '', gender: 'male', dob: '', aadhar: '' }
   ]);
   const [flightTripType, setFlightTripType] = useState("one_way");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -122,22 +122,31 @@ const Booking = () => {
     setPassengerCount(count);
     setPassengers(prev => {
       if (count > prev.length) {
-        return [...prev, ...Array(count - prev.length).fill({ name: '', age: '', gender: 'male', dob: '' })];
+        return [...prev, ...Array(count - prev.length).fill({ name: '', age: '', gender: 'male', dob: '', aadhar: '' })];
       }
       return prev.slice(0, count);
     });
   };
 
-  const calculateAgeFromDOB = (dob: string): number => {
-    if (!dob) return 0;
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
+  // Calculate Date of Birth from Age with random month and day
+  const calculateDOBFromAge = (age: string): string => {
+    if (!age || isNaN(parseInt(age))) return '';
+    const currentYear = new Date().getFullYear();
+    const birthYear = currentYear - parseInt(age);
+    
+    // Generate random month (1-12)
+    const randomMonth = Math.floor(Math.random() * 12) + 1;
+    
+    // Generate random day based on the month
+    const daysInMonth = new Date(birthYear, randomMonth, 0).getDate();
+    const randomDay = Math.floor(Math.random() * daysInMonth) + 1;
+    
+    // Format with leading zeros
+    const month = String(randomMonth).padStart(2, '0');
+    const day = String(randomDay).padStart(2, '0');
+    
+    // Return date in YYYY-MM-DD format with random date and month
+    return `${birthYear}-${month}-${day}`;
   };
 
   const formatDateToDDMMYYYY = (dateString: string): string => {
@@ -152,13 +161,13 @@ const Booking = () => {
   const handlePassengerChange = (index: number, field: string, value: string) => {
     const updatedPassengers = [...passengers.map(passenger => ({...passenger}))];
     
-    if (field === 'dob') {
-      // Calculate age when DOB changes
-      const age = calculateAgeFromDOB(value);
+    if (field === 'age') {
+      // Calculate DOB when age changes
+      const dob = calculateDOBFromAge(value);
       updatedPassengers[index] = {
         ...updatedPassengers[index],
-        dob: value,
-        age: age.toString()
+        age: value,
+        dob: dob
       };
     } else {
       updatedPassengers[index] = {
@@ -316,7 +325,7 @@ const Booking = () => {
       // Reset form and all state values after successful submission
       reset();
       setPassengerCount(1);
-      setPassengers([{ name: '', age: '', gender: 'male' }]);
+      setPassengers([{ name: '', age: '', gender: 'male', dob: '', aadhar: '' }]);
       setTrainFromStation("");
       setTrainToStation("");
       setPreferredTrains("");
@@ -910,17 +919,18 @@ const Booking = () => {
                               </div>
                               
                               <div>
-                                <label className="block text-sm font-medium mb-1">Date of Birth (DD/MM/YYYY)</label>
+                                <label className="block text-sm font-medium mb-1">Age</label>
                                 <input
-                                  type="date"
-                                  value={passenger.dob || ''}
-                                  onChange={(e) => handlePassengerChange(index, 'dob', e.target.value)}
+                                  type="number"
+                                  value={passenger.age || ''}
+                                  onChange={(e) => handlePassengerChange(index, 'age', e.target.value)}
                                   className="w-full px-3 py-2 border rounded-md"
-                                  max={new Date().toISOString().split('T')[0]}
+                                  min="0"
+                                  max="120"
                                   required
                                 />
-                                {passenger.dob && passenger.age && (
-                                  <p className="text-xs text-gray-500 mt-1">Age: {passenger.age} years</p>
+                                {passenger.age && passenger.dob && (
+                                  <p className="text-xs text-gray-500 mt-1">DOB: {formatDateToDDMMYYYY(passenger.dob)}</p>
                                 )}
                               </div>
                               
@@ -937,6 +947,29 @@ const Booking = () => {
                                   <option value="other">Other</option>
                                 </select>
                               </div>
+                            </div>
+                            
+                            <div className="mt-4">
+                              <label className="block text-sm font-medium mb-1">
+                                Aadhar Card Number <span className="text-gray-500 text-xs">(Optional)</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={passenger.aadhar || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/\D/g, '').slice(0, 12);
+                                  handlePassengerChange(index, 'aadhar', value);
+                                }}
+                                placeholder="Enter 12-digit Aadhar number"
+                                className="w-full px-3 py-2 border rounded-md"
+                                maxLength={12}
+                              />
+                              {passenger.aadhar && passenger.aadhar.length < 12 && passenger.aadhar.length > 0 && (
+                                <p className="text-xs text-red-500 mt-1">Aadhar card number must be 12 digits</p>
+                              )}
+                              {passenger.aadhar && passenger.aadhar.length === 12 && (
+                                <p className="text-xs text-green-600 mt-1">✓ Valid Aadhar number</p>
+                              )}
                             </div>
                           </div>
                         ))}

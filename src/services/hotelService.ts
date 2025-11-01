@@ -47,6 +47,55 @@ export class HotelService {
     }
   }
 
+  static async bulkCreateHotels(hotelsData: HotelFormData[], createdBy: string): Promise<{ successCount: number; failCount: number; errors: string[] }> {
+    const batch = writeBatch(db);
+    const errors: string[] = [];
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      // Firestore batch has a limit of 500 operations
+      const batchSize = 500;
+      const batches = [];
+      
+      for (let i = 0; i < hotelsData.length; i += batchSize) {
+        const currentBatch = writeBatch(db);
+        const chunk = hotelsData.slice(i, i + batchSize);
+        
+        chunk.forEach((hotelData) => {
+          try {
+            const docRef = doc(collection(db, 'hotels'));
+            currentBatch.set(docRef, {
+              ...hotelData,
+              rating: 0,
+              reviews: 0,
+              priceRange: { min: 0, max: 0 },
+              created_at: serverTimestamp(),
+              created_by: createdBy,
+              coordinates: null
+            });
+            successCount++;
+          } catch (error) {
+            failCount++;
+            errors.push(`Failed to add ${hotelData.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+        });
+        
+        batches.push(currentBatch);
+      }
+
+      // Commit all batches
+      for (const batch of batches) {
+        await batch.commit();
+      }
+
+      return { successCount, failCount, errors };
+    } catch (error) {
+      console.error('Error in bulk hotel creation:', error);
+      throw error;
+    }
+  }
+
   static async updateHotel(hotelId: string, hotelData: Partial<HotelFormData>, updatedBy: string): Promise<void> {
     try {
       await updateDoc(doc(db, 'hotels', hotelId), {

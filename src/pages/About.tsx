@@ -3,20 +3,15 @@ import { Award, Star, Users, ThumbsUp, Calendar } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import QuoteSection from "../components/QuoteSection";
+import { useTeamManagement } from "@/hooks/useTeamManagement";
 
 const About = () => {
   // SEO-optimized CEO image
   const founderImageUrl = "/anand-pinisetty-founder-anand-travel-agency.jpg";
   const founderImageAlt = "Anand Pinisetty – Founder & CEO of Anand Travel Agency, India's first AI-powered travel agency";
   
-  const teamMembers = [
-    {
-      name: "Anand Pinisetty",
-      role: "Founder & CEO",
-      image: founderImageUrl,
-      bio: "A passionate travel entrepreneur who founded Anand Travel Agency with a vision to make travel bookings seamless and hassle-free for everyone."
-    }
-  ];
+  // Fetch team members from Firebase
+  const { teamMembers, loading } = useTeamManagement();
 
   const milestones = [
     {
@@ -51,8 +46,111 @@ const About = () => {
           </div>
         </div>
         
-        {/* Our Story Section */}
+        {/* Team Section */}
         <section className="py-16">
+          <div className="container-custom">
+            <div className="text-center mb-12">
+              <h2 className="section-title">Meet Our Team</h2>
+              <p className="text-gray-600 max-w-3xl mx-auto">
+                Meet the dedicated professionals who make your travel experiences exceptional
+              </p>
+            </div>
+            
+            {loading ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Loading team members...</p>
+              </div>
+            ) : teamMembers.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No team members to display</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {teamMembers.map((member) => (
+                  <div key={member.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                    <div className="aspect-square w-full overflow-hidden">
+                      <img 
+                        src={member.image} 
+                        alt={`${member.name} - ${member.role}`}
+                        title={`${member.name} - ${member.role}`}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                        itemProp="image"
+                      />
+                    </div>
+                    <div className="p-6" itemScope itemType="https://schema.org/Person">
+                      <meta itemProp="name" content={member.name} />
+                      <meta itemProp="jobTitle" content={member.role} />
+                      <meta itemProp="image" content={member.image} />
+                      <meta itemProp="worksFor" content="Anand Travel Agency" />
+                      <h3 className="text-xl font-semibold text-travel-blue-dark mb-2" itemProp="name">{member.name}</h3>
+                      <p className="text-travel-orange font-medium mb-3" itemProp="jobTitle">{member.role}</p>
+                      <p className="text-gray-600 mb-3" itemProp="description">{member.bio}</p>
+                      {member.email && (
+                        <p className="text-sm text-gray-500">
+                          <a href={`mailto:${member.email}`} className="hover:text-travel-blue-dark">{member.email}</a>
+                        </p>
+                      )}
+                      {member.phone && (
+                        <p className="text-sm text-gray-500">
+                          <a href={`tel:${member.phone}`} className="hover:text-travel-blue-dark">{member.phone}</a>
+                        </p>
+                      )}
+                      
+                      {/* Social Media Links */}
+                      {(member.instagram || member.linkedin || member.idCard) && (
+                        <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
+                          {member.instagram && (
+                            <a 
+                              href={member.instagram} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-pink-600 hover:text-pink-700 transition-colors"
+                              title="Instagram"
+                            >
+                              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                              </svg>
+                            </a>
+                          )}
+                          {member.linkedin && (
+                            <a 
+                              href={member.linkedin} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-700 transition-colors"
+                              title="LinkedIn"
+                            >
+                              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                              </svg>
+                            </a>
+                          )}
+                          {member.idCard && (
+                            <a 
+                              href={member.idCard} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-gray-600 hover:text-gray-700 transition-colors"
+                              title="ID Card"
+                            >
+                              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 14H4v-4h11v4zm0-5H4V9h11v4zm5 5h-4V9h4v9z"/>
+                              </svg>
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+        
+        {/* Our Story Section */}
+        <section className="py-16 bg-gray-50">
           <div className="container-custom">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
@@ -278,48 +376,6 @@ const About = () => {
           </div>
         </section>
         
-        {/* Founder Section */}
-        <section className="py-16">
-          <div className="container-custom">
-            <div className="text-center mb-12">
-              <h2 className="section-title">The Man Behind Anand Travel Agency</h2>
-              <p className="text-gray-600 max-w-3xl mx-auto">
-                Meet the visionary who makes your travel experiences exceptional
-              </p>
-            </div>
-            
-            <div className="max-w-2xl mx-auto">
-              <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="aspect-square w-full overflow-hidden">
-                  <img 
-                    src={teamMembers[0].image} 
-                    alt={founderImageAlt}
-                    title="Anand Pinisetty - Founder & CEO of Anand Travel Agency"
-                    loading="lazy"
-                    className="w-full h-full object-cover"
-                    itemProp="image"
-                  />
-                </div>
-                <div className="p-8" itemScope itemType="https://schema.org/Person">
-                  <meta itemProp="name" content="Anand Pinisetty" />
-                  <meta itemProp="jobTitle" content="Founder & CEO" />
-                  <meta itemProp="image" content={founderImageUrl} />
-                  <meta itemProp="worksFor" content="Anand Travel Agency" />
-                  <h3 className="text-2xl font-semibold text-travel-blue-dark mb-2" itemProp="name">{teamMembers[0].name}</h3>
-                  <p className="text-travel-orange font-medium mb-4" itemProp="jobTitle">{teamMembers[0].role}</p>
-                  <p className="text-gray-600 text-lg" itemProp="description">{teamMembers[0].bio}</p>
-                  <p className="text-gray-600 mt-4 text-lg">
-                    Based in Kakinada, Mr. Anand has built a reputation for excellence in the travel industry. 
-                    His deep understanding of customer needs and commitment to service has helped transform 
-                    Anand Travel Agency into a trusted name for travelers across India.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        
-        {/* QuoteSection */}
         <QuoteSection />
         
         {/* CTA Section */}

@@ -415,6 +415,17 @@ const BookingsTab = ({
                         .map((passenger, idx) => (
                         <div key={idx} className="bg-gray-50 p-2 rounded mb-1">
                           {passenger.name || 'N/A'} <span className="text-gray-500 text-xs">({passenger.age || 'N/A'} yrs, {passenger.gender || 'N/A'})</span>
+                          {passenger.dob && <span className="text-gray-400 text-xs block mt-0.5">DOB: {(() => {
+                            try {
+                              const date = new Date(passenger.dob);
+                              const day = String(date.getDate()).padStart(2, '0');
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const year = date.getFullYear();
+                              return `${day}/${month}/${year}`;
+                            } catch (e) {
+                              return passenger.dob;
+                            }
+                          })()}</span>}
                         </div>
                       )) : (
                         <div className="bg-gray-50 p-2 rounded">{booking.passengers}</div>
@@ -677,11 +688,24 @@ const BookingsTab = ({
                         {Array.isArray(booking.passengers) ? booking.passengers
                           .filter((passenger) => passenger && (passenger.name || passenger.age || passenger.gender))
                           .map((passenger, idx) => (
-                          <div key={idx} className="bg-gray-50 p-2 rounded mb-1 flex items-center">
-                            <span className="h-5 w-5 rounded-full bg-green-100 text-green-800 text-xs flex items-center justify-center mr-2">
-                              {idx + 1}
-                            </span>
-                            <span>{passenger.name || 'N/A'} <span className="text-gray-500">({passenger.age || 'N/A'} yrs, {passenger.gender || 'N/A'})</span></span>
+                          <div key={idx} className="bg-gray-50 p-2 rounded mb-1">
+                            <div className="flex items-center">
+                              <span className="h-5 w-5 rounded-full bg-green-100 text-green-800 text-xs flex items-center justify-center mr-2">
+                                {idx + 1}
+                              </span>
+                              <span>{passenger.name || 'N/A'} <span className="text-gray-500">({passenger.age || 'N/A'} yrs, {passenger.gender || 'N/A'})</span></span>
+                            </div>
+                            {passenger.dob && <span className="text-gray-400 text-xs block mt-1 ml-7">DOB: {(() => {
+                              try {
+                                const date = new Date(passenger.dob);
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const year = date.getFullYear();
+                                return `${day}/${month}/${year}`;
+                              } catch (e) {
+                                return passenger.dob;
+                              }
+                            })()}</span>}
                           </div>
                         )) : (
                           <div className="bg-gray-50 p-2 rounded">{booking.passengers}</div>

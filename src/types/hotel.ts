@@ -130,6 +130,10 @@ export interface HotelFormData {
   pincode: string;
   images: string[];
   amenities: string[];
+  priceRange?: {
+    min: number;
+    max: number;
+  };
   checkInTime: string;
   checkOutTime: string;
   policies: string[];

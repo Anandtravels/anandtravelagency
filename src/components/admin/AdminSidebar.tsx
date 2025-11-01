@@ -15,7 +15,9 @@ import {
   ChevronRight,
   Home,
   FileText,
-  FileCheck
+  FileCheck,
+  CreditCard,
+  Receipt
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -145,6 +147,24 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
       icon: UserCheck,
       description: 'Manage Agents',
       badge: counts.agents > 0 ? counts.agents : undefined
+    },
+    {
+      title: 'Team Management',
+      href: '/admin#team-management',
+      icon: Users,
+      description: 'Manage Team Members'
+    },
+    {
+      title: 'UPI Settings',
+      href: '/admin#upi-settings',
+      icon: CreditCard,
+      description: 'Payment Configuration'
+    },
+    {
+      title: 'Bills',
+      href: '/admin#bills',
+      icon: Receipt,
+      description: 'Invoice Management'
     },
     {
       title: 'Coupons',

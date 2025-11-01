@@ -194,59 +194,44 @@ const DynamicPackageDetail = () => {
                 </div>
               </div>
               
-              {/* Dynamic Thumbnail Images - Stacked Vertically */}
+              {/* Scrollable Thumbnail Images - Improved Design */}
               <div className="lg:w-1/4">
-                {(() => {
-                  const imageCount = packageData.images.length;
-                  const displayImages = imageCount <= 3 ? packageData.images : packageData.images.slice(0, 3);
-                  
-                  // Dynamic height calculation based on image count
-                  const getThumbHeight = () => {
-                    if (imageCount === 2) return 'lg:h-[calc(50%-0.375rem)]'; // 50% each with gap
-                    if (imageCount === 3) return 'lg:h-[calc(33.333%-0.5rem)]'; // 33.33% each with gap
-                    return 'lg:h-[calc(33.333%-0.5rem)]'; // Default for 4+ images
-                  };
-                  
-                  return (
-                    <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 md:gap-3 h-auto lg:h-full relative">
-                      {displayImages.map((image, index) => (
-                        <div 
-                          key={index} 
-                          className={`aspect-square lg:aspect-auto ${getThumbHeight()} rounded-lg overflow-hidden cursor-pointer transition-all duration-300 shadow-md hover:shadow-lg ${
-                            index === activeImageIndex 
-                              ? 'ring-2 ring-orange-400 ring-offset-2 scale-105' 
-                              : 'hover:scale-105 opacity-90 hover:opacity-100'
-                          }`}
-                          onClick={() => setActiveImageIndex(index)}
-                        >
-                          <img 
-                            src={image} 
-                            alt={`${packageData.title} - Image ${index + 1}`} 
-                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
-                          />
-                        </div>
-                      ))}
+                <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 md:gap-3 lg:h-full lg:overflow-y-auto lg:scrollbar-thin lg:scrollbar-thumb-orange-400 lg:scrollbar-track-gray-100 lg:pr-2">
+                  {packageData.images.map((image, index) => (
+                    <div 
+                      key={index} 
+                      className={`relative aspect-square lg:aspect-auto lg:h-[160px] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 ${
+                        index === activeImageIndex 
+                          ? 'ring-4 ring-orange-400 shadow-xl scale-[1.02]' 
+                          : 'shadow-md hover:shadow-xl hover:scale-[1.02] opacity-80 hover:opacity-100'
+                      }`}
+                      onClick={() => setActiveImageIndex(index)}
+                    >
+                      <img 
+                        src={image} 
+                        alt={`${packageData.title} - Image ${index + 1}`} 
+                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                      />
+                      {/* Gradient overlay for better badge visibility */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                       
-                      {/* Show "View More" overlay for 4+ images */}
-                      {imageCount > 3 && (
-                        <div 
-                          className="absolute bottom-0 right-0 left-0 lg:h-[calc(33.333%-0.5rem)] rounded-lg bg-black bg-opacity-70 flex items-center justify-center cursor-pointer transition-all duration-300 hover:bg-opacity-80 backdrop-blur-sm"
-                          onClick={() => {
-                            // Cycle through remaining images when clicked
-                            const nextIndex = activeImageIndex < imageCount - 1 ? activeImageIndex + 1 : 3;
-                            setActiveImageIndex(nextIndex);
-                          }}
-                        >
-                          <div className="text-center text-white">
-                            <Image size={24} className="mx-auto mb-2" />
-                            <p className="text-sm font-semibold">+{imageCount - 3} More</p>
-                            <p className="text-xs opacity-80">Click to view</p>
-                          </div>
+                      {/* Image number badge */}
+                      <div className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-lg">
+                        {index + 1}/{packageData.images.length}
+                      </div>
+                      
+                      {/* Active indicator */}
+                      {index === activeImageIndex && (
+                        <div className="absolute bottom-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                          </svg>
+                          Active
                         </div>
                       )}
                     </div>
-                  );
-                })()}
+                  ))}
+                </div>
               </div>
             </div>
           </div>

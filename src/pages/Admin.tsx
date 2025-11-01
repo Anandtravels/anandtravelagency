@@ -5,7 +5,7 @@ import { useAdminData } from "@/hooks/useAdminData";
 import { useBookingManagement } from "@/hooks/useBookingManagement";
 import { useTicketAssignment } from "@/hooks/useTicketAssignment";
 import { useEditBookingModal } from "@/hooks/use-edit-booking-modal";
-import { useWhatsAppModal } from "@/hooks/use-whatsapp-modal";
+import { useEnhancedWhatsAppModal } from "@/hooks/useEnhancedWhatsAppModal";
 import { useAdminNavigation } from "@/hooks/useAdminNavigation";
 import { formatFirebaseTimestamp } from "@/utils/adminHelpers";
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -24,6 +24,9 @@ import VisitorAnalytics from "@/components/admin/VisitorAnalytics";
 import HotelBookingsTab from "@/components/admin/HotelBookingsTab";
 import HotelManagementTab from "@/components/admin/HotelManagementTab";
 import HotelAgentsTab from "@/components/admin/HotelAgentsTab";
+import TeamManagementTab from "@/components/admin/TeamManagementTab";
+import UPISettingsTab from "@/components/admin/UPISettingsTab";
+import BillsManagementTab from "@/components/admin/BillsManagementTab";
 import { BarChart3 } from "lucide-react";
 
 const Admin = () => {
@@ -44,7 +47,7 @@ const Admin = () => {
   } = useBookingManagement(setAdminNotes);
   const { assignTicket, assignPackageTicket } = useTicketAssignment(bookings, agents);
   const { editModalOpen, setEditModalOpen, editBooking, editFormData, setEditFormData, openEditModal, handleSaveEdit } = useEditBookingModal();
-  const { whatsappModal, setWhatsappModal, currentBooking, messageDetails, setMessageDetails, handleWhatsapp, sendWhatsappMessage } = useWhatsAppModal();
+  const { whatsappModal, setWhatsappModal, currentBooking, messageDetails, setMessageDetails, handleWhatsapp, sendWhatsappMessage, sending } = useEnhancedWhatsAppModal(user?.email);
   const { activeTab, handleTabChange } = useAdminNavigation();
 
   useEffect(() => {
@@ -183,6 +186,24 @@ const Admin = () => {
               user={user}
             />
           </TabsContent>
+
+          <TabsContent value="team-management" className="space-y-6">
+            <TeamManagementTab 
+              user={user}
+            />
+          </TabsContent>
+
+          <TabsContent value="upi-settings" className="space-y-6">
+            <UPISettingsTab 
+              user={user}
+            />
+          </TabsContent>
+
+          <TabsContent value="bills" className="space-y-6">
+            <BillsManagementTab 
+              user={user}
+            />
+          </TabsContent>
         </Tabs>
       )}
 
@@ -193,6 +214,7 @@ const Admin = () => {
         messageDetails={messageDetails}
         setMessageDetails={setMessageDetails}
         onSendMessage={sendWhatsappMessage}
+        sending={sending}
       />
 
       <EditBookingModal

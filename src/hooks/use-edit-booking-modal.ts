@@ -32,7 +32,13 @@ export const useEditBookingModal = () => {
       passengers: Array.isArray(booking.passengers)
         ? booking.passengers
             .filter((p: any) => p && (p.name || p.age || p.gender)) // Filter out empty/invalid passengers
-            .map((p: any) => `${p.name || ''} (${p.age || ''} yrs, ${p.gender || ''})`).join("\n")
+            .map((p: any) => {
+              // Format passenger info, including DOB if available in display
+              let info = `${p.name || ''} (${p.age || ''} yrs, ${p.gender || ''})`;
+              // Note: DOB is preserved in the array but not shown in text format
+              // It will be recalculated from age when saving
+              return info;
+            }).join("\n")
         : booking.passengers || '',
       additional_requirements: booking.additional_requirements || '',
       booking_type: booking.booking_type || '',
@@ -108,10 +114,28 @@ export const useEditBookingModal = () => {
             
             // Only return if we have valid data
             if (name && !isNaN(age) && gender) {
+              // Calculate DOB from age with random month and day
+              const currentYear = new Date().getFullYear();
+              const birthYear = currentYear - age;
+              
+              // Generate random month (1-12)
+              const randomMonth = Math.floor(Math.random() * 12) + 1;
+              
+              // Generate random day based on the month
+              const daysInMonth = new Date(birthYear, randomMonth, 0).getDate();
+              const randomDay = Math.floor(Math.random() * daysInMonth) + 1;
+              
+              // Format with leading zeros
+              const month = String(randomMonth).padStart(2, '0');
+              const day = String(randomDay).padStart(2, '0');
+              
+              const dob = `${birthYear}-${month}-${day}`;
+              
               return {
                 name: name,
                 age: age,
-                gender: gender
+                gender: gender,
+                dob: dob
               };
             }
           }

@@ -12,6 +12,7 @@ interface SidebarCounts {
   visaApplications: number;
   pendingBookings: number;
   todayBookings: number;
+  advanceBookings: number;
 }
 
 interface AdminDataSubscription {
@@ -30,7 +31,8 @@ export class AdminDataService {
     eservices: 0,
     visaApplications: 0,
     pendingBookings: 0,
-    todayBookings: 0
+    todayBookings: 0,
+    advanceBookings: 0
   };
   private subscribers: Set<(counts: SidebarCounts) => void> = new Set();
   private unsubscribeFunctions: (() => void)[] = [];
@@ -84,10 +86,16 @@ export class AdminDataService {
             return bookingDate === today;
           }).length;
 
+          const advanceBookings = bookingDocs.filter(doc => {
+            const data = doc.data();
+            return data.advance_booking === true;
+          }).length;
+
           this.updateCounts({ 
             bookings: totalBookings,
             pendingBookings,
-            todayBookings
+            todayBookings,
+            advanceBookings
           });
         },
         (error) => {
@@ -234,7 +242,8 @@ export class AdminDataService {
       eservices: 0,
       visaApplications: 0,
       pendingBookings: 0,
-      todayBookings: 0
+      todayBookings: 0,
+      advanceBookings: 0
     };
   }
 }
