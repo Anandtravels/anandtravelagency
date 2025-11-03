@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Calendar, MapPin, User, Phone, Mail, Train, Bus, Plane, Car, Check } from "lucide-react";
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
@@ -10,6 +10,7 @@ import BookingSuccess from "@/components/BookingSuccess";
 import { CouponInput } from "@/components/CouponSystem/CouponInput";
 import { StationAutocomplete } from "@/components/StationAutocomplete";
 import { MultiSelectTrainAutocomplete } from "@/components/MultiSelectTrainAutocomplete";
+import { preloadStationData } from "@/utils/stationDataLoader";
 
 const Booking = () => {
   const [bookingType, setBookingType] = useState("train");
@@ -52,6 +53,13 @@ const Booking = () => {
   
   // State for advance booking toggle
   const [isAdvanceBooking, setIsAdvanceBooking] = useState(false);
+  
+  // Preload station data immediately when page loads (background loading)
+  useEffect(() => {
+    // Start loading station data in the background as soon as page loads
+    // This ensures data is ready before user interacts with the form
+    preloadStationData();
+  }, []);
   
   const { register, handleSubmit, reset, formState: { errors }, setValue, getValues } = useForm({
     defaultValues: {

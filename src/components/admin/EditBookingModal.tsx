@@ -5,6 +5,7 @@ import ProfitCalculator from "./ProfitCalculator";
 import { StationAutocomplete } from "@/components/StationAutocomplete";
 import { MultiSelectTrainAutocomplete } from "@/components/MultiSelectTrainAutocomplete";
 import { useState, useEffect } from "react";
+import { preloadStationData } from "@/utils/stationDataLoader";
 
 interface EditBookingModalProps {
   isOpen: boolean;
@@ -19,6 +20,13 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
   const [trainFromStation, setTrainFromStation] = useState(formData.from || '');
   const [trainToStation, setTrainToStation] = useState(formData.to || '');
   const [preferredTrains, setPreferredTrains] = useState(formData.preferred_trains || '');
+  
+  // Preload station data when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      preloadStationData();
+    }
+  }, [isOpen]);
   
   // Update station states when formData changes (when modal opens with booking data)
   useEffect(() => {

@@ -1,13 +1,17 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { TrashIcon, PencilIcon, Check, X, Phone, Mail, MessageSquare, Download } from "lucide-react";
+import { TrashIcon, PencilIcon, Check, X, Phone, Mail, MessageSquare, Download, CalendarIcon } from "lucide-react";
 import { debounce } from 'lodash';
+import { format } from "date-fns";
 import ExcelExportButton from "@/components/admin/ExcelExportButton";
+import { preloadStationData } from "@/utils/stationDataLoader";
 
 interface BookingsTabProps {
   user: any;
@@ -46,6 +50,11 @@ const BookingsTab = ({
 }: BookingsTabProps) => {
   const { toast } = useToast();
 
+  // Preload station data for admin panel (for edit modal)
+  useEffect(() => {
+    preloadStationData();
+  }, []);
+
   // State declarations
   const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -53,6 +62,12 @@ const BookingsTab = ({
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [sortByJourneyDate, setSortByJourneyDate] = useState<boolean>(false);
   const [trainClassFilter, setTrainClassFilter] = useState<string>('all');
+  
+  // Calendar date picker states
+  const [calendarDate, setCalendarDate] = useState<Date | undefined>(undefined);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [advanceReservationMode, setAdvanceReservationMode] = useState(false);
+  const [calendarBookingTypeFilter, setCalendarBookingTypeFilter] = useState<string>('all');
 
   // Memoized filtered bookings
   const filteredBookings = useMemo(() => {
@@ -81,8 +96,54 @@ const BookingsTab = ({
       filtered = filtered.filter(b => b.booking_type === bookingTypeFilter);
     }
     
-    // Apply date filter
-    if (dateFilter !== 'all') {
+    // Apply calendar date filter (higher priority than dateFilter dropdown)
+    if (calendarDate) {
+      const selectedDate = new Date(calendarDate);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      if (advanceReservationMode) {
+        // In advance reservation mode: show bookings 60 days after selected date
+        const targetDate = new Date(selectedDate);
+        targetDate.setDate(targetDate.getDate() + 60);
+        
+        filtered = filtered.filter(b => {
+          try {
+            const journeyDate = new Date(b.journey_date);
+            journeyDate.setHours(0, 0, 0, 0);
+            return journeyDate.getTime() === targetDate.getTime();
+          } catch (e) {
+            return false;
+          }
+        });
+      } else {
+        // Normal mode: show bookings on selected date
+        filtered = filtered.filter(b => {
+          try {
+            const journeyDate = new Date(b.journey_date);
+            journeyDate.setHours(0, 0, 0, 0);
+            return journeyDate.getTime() === selectedDate.getTime();
+          } catch (e) {
+            return false;
+          }
+        });
+      }
+      
+      // Apply train booking type filter when using calendar (for tatkal/general/premium tatkal filtering)
+      if (calendarBookingTypeFilter !== 'all' && bookingTypeFilter === 'train') {
+        if (calendarBookingTypeFilter === 'general') {
+          filtered = filtered.filter(b => b.train_booking_type === 'general');
+        } else if (calendarBookingTypeFilter === 'tatkal') {
+          filtered = filtered.filter(b => b.train_booking_type === 'tatkal');
+        } else if (calendarBookingTypeFilter === 'premium_tatkal') {
+          filtered = filtered.filter(b => b.train_booking_type === 'premium_tatkal');
+        } else if (calendarBookingTypeFilter === 'advance_booking') {
+          // Filter for advance bookings (bookings with advance_booking flag)
+          filtered = filtered.filter(b => b.advance_booking === true);
+        }
+      }
+    }
+    // Apply date filter dropdown (only if calendar date not selected)
+    else if (dateFilter !== 'all') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
@@ -157,7 +218,7 @@ const BookingsTab = ({
     }
     
     return filtered;
-  }, [bookings, statusFilter, bookingTypeFilter, dateFilter, sortByJourneyDate, trainClassFilter]);
+  }, [bookings, statusFilter, bookingTypeFilter, dateFilter, sortByJourneyDate, trainClassFilter, calendarDate, advanceReservationMode, calendarBookingTypeFilter]);
 
   // Loading state
   if (bookingLoading) {
@@ -248,6 +309,105 @@ const BookingsTab = ({
                 <option value="sleeper">Sleeper (SL, 2S)</option>
               </select>
             </div>
+          </div>
+          
+          {/* Calendar Date Picker */}
+          <div className="flex items-center mb-2 sm:mb-0">
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={`px-3 py-1.5 h-auto text-xs font-medium flex items-center gap-2 ${
+                    calendarDate ? 'bg-purple-50 text-purple-700 border-purple-200' : ''
+                  }`}
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    {calendarDate ? format(calendarDate, "MMM dd, yyyy") : "Pick Date"}
+                  </span>
+                  <span className="sm:hidden">
+                    {calendarDate ? format(calendarDate, "MMM dd") : "Date"}
+                  </span>
+                  {calendarDate && (
+                    <X 
+                      className="h-3 w-3 ml-1" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCalendarDate(undefined);
+                        setAdvanceReservationMode(false);
+                        setCalendarBookingTypeFilter('all');
+                      }}
+                    />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <div className="p-3 border-b space-y-3">
+                  {/* Advance Reservation Mode Checkbox */}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="advance-mode"
+                      checked={advanceReservationMode}
+                      onCheckedChange={(checked) => setAdvanceReservationMode(checked as boolean)}
+                    />
+                    <label
+                      htmlFor="advance-mode"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Advance Reservation Mode (+60 days)
+                    </label>
+                  </div>
+                  
+                  {/* Train Booking Type Filter Dropdown */}
+                  {bookingTypeFilter === 'train' && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-gray-700">
+                        Booking Type Filter:
+                      </label>
+                      <select
+                        value={calendarBookingTypeFilter}
+                        onChange={(e) => setCalendarBookingTypeFilter(e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="all">All Booking Types</option>
+                        <option value="general">General Booking</option>
+                        <option value="tatkal">Tatkal Booking</option>
+                        <option value="premium_tatkal">Premium Tatkal</option>
+                        <option value="advance_booking">Advance Reservation</option>
+                      </select>
+                    </div>
+                  )}
+                  
+                  {/* Info text for advance mode */}
+                  {advanceReservationMode && calendarDate && (
+                    <p className="text-xs text-muted-foreground">
+                      Showing bookings for: {format(new Date(calendarDate.getTime() + 60 * 24 * 60 * 60 * 1000), "MMM dd, yyyy")}
+                    </p>
+                  )}
+                  
+                  {/* Info text for booking type filter */}
+                  {calendarBookingTypeFilter !== 'all' && bookingTypeFilter === 'train' && (
+                    <p className="text-xs text-purple-600">
+                      Filtering: {calendarBookingTypeFilter === 'general' ? 'General Booking' : 
+                                  calendarBookingTypeFilter === 'tatkal' ? 'Tatkal Booking' : 
+                                  calendarBookingTypeFilter === 'premium_tatkal' ? 'Premium Tatkal' : 
+                                  'Advance Reservation'}
+                    </p>
+                  )}
+                </div>
+                <Calendar
+                  mode="single"
+                  selected={calendarDate}
+                  onSelect={(date) => {
+                    setCalendarDate(date);
+                    if (date) {
+                      setIsCalendarOpen(false);
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           
           {/* Sort toggle button */}

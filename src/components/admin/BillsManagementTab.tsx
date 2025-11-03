@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,11 +24,14 @@ import {
   Search, 
   FileText,
   Calendar,
+  CalendarIcon,
   User,
   Phone,
   IndianRupee,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { useBills } from '@/hooks/useBills';
 import { generateBillPDF } from '@/utils/pdfGenerator';
 import { formatCurrency, formatDate } from '@/utils/billUtils';
@@ -44,16 +50,48 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
   const [billToDelete, setBillToDelete] = useState<{ id: string; billNumber: string } | null>(null);
   const [selectedBills, setSelectedBills] = useState<Set<string>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  
+  // Calendar and filter states
+  const [calendarDate, setCalendarDate] = useState<Date | undefined>(undefined);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [bookingTypeFilter, setBookingTypeFilter] = useState<string>('all');
+  
   const { toast } = useToast();
 
   const filteredBills = bills.filter(bill => {
+    // Search term filter
     const search = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       bill.billNumber.toLowerCase().includes(search) ||
       bill.customerName.toLowerCase().includes(search) ||
       bill.customerPhone.includes(search) ||
       bill.bookingType.toLowerCase().includes(search)
     );
+    
+    // Calendar date filter
+    let matchesDate = true;
+    if (calendarDate) {
+      try {
+        const billDate = bill.createdAt.toDate ? bill.createdAt.toDate() : new Date(bill.createdAt);
+        const selectedDate = new Date(calendarDate);
+        
+        // Compare dates (ignore time)
+        billDate.setHours(0, 0, 0, 0);
+        selectedDate.setHours(0, 0, 0, 0);
+        
+        matchesDate = billDate.getTime() === selectedDate.getTime();
+      } catch (e) {
+        matchesDate = false;
+      }
+    }
+    
+    // Booking type filter
+    let matchesBookingType = true;
+    if (bookingTypeFilter !== 'all') {
+      matchesBookingType = bill.bookingType.toLowerCase() === bookingTypeFilter.toLowerCase();
+    }
+    
+    return matchesSearch && matchesDate && matchesBookingType;
   });
 
   const handleDownloadPDF = async (billId: string) => {
@@ -158,7 +196,8 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Search Input */}
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
@@ -169,6 +208,56 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
               className="pl-10"
             />
           </div>
+          
+          {/* Booking Type Dropdown */}
+          <Select value={bookingTypeFilter} onValueChange={setBookingTypeFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Booking Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="general booking">General Booking</SelectItem>
+              <SelectItem value="tatkal booking">Tatkal Booking</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {/* Calendar Date Picker */}
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={`w-[200px] justify-start text-left font-normal ${
+                  calendarDate ? 'bg-blue-50 text-blue-700 border-blue-200' : ''
+                }`}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {calendarDate ? format(calendarDate, "MMM dd, yyyy") : "Pick a date"}
+                {calendarDate && (
+                  <X 
+                    className="ml-auto h-4 w-4" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCalendarDate(undefined);
+                    }}
+                  />
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <CalendarComponent
+                mode="single"
+                selected={calendarDate}
+                onSelect={(date) => {
+                  setCalendarDate(date);
+                  if (date) {
+                    setIsCalendarOpen(false);
+                  }
+                }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          
           {selectedBills.size > 0 && (
             <Button
               onClick={handleBulkDeleteClick}

@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { MapPin, ChevronDown, Loader2 } from 'lucide-react';
-
-interface Station {
-  name: string;
-  code: string;
-}
+import { loadStationData, getCachedStationData, type Station } from '@/utils/stationDataLoader';
 
 interface StationAutocompleteProps {
   value: string;
@@ -26,7 +22,7 @@ export const StationAutocomplete = ({
   onReset
 }: StationAutocompleteProps) => {
   const [stations, setStations] = useState<Station[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
@@ -35,32 +31,25 @@ export const StationAutocomplete = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  // Load stations from data.json
+  // Load stations using centralized loader (cached globally)
   useEffect(() => {
     const loadStations = async () => {
       try {
+        // Check if data is already cached
+        const cachedData = getCachedStationData();
+        if (cachedData) {
+          // Data already loaded, use it immediately (no loading state)
+          setStations(cachedData);
+          setIsLoading(false);
+          return;
+        }
+
+        // Data not cached, need to load
         setIsLoading(true);
         setLoadError(null);
         
-        const response = await fetch('/data.json');
-        
-        if (!response.ok) {
-          throw new Error(`Failed to load stations: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        // Flatten all stations from all states
-        const allStations: Station[] = [];
-        if (data.states && Array.isArray(data.states)) {
-          data.states.forEach((state: any) => {
-            if (state.stations && Array.isArray(state.stations)) {
-              allStations.push(...state.stations);
-            }
-          });
-        }
-        
-        setStations(allStations);
+        const stationData = await loadStationData();
+        setStations(stationData);
         setIsLoading(false);
       } catch (error) {
         console.error('Error loading stations:', error);
