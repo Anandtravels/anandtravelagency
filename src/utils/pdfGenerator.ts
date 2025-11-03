@@ -4,11 +4,11 @@ import { Bill } from '@/types/upi';
 import { formatCurrency, formatDate } from './billUtils';
 
 /**
- * Generate modern, professional travel invoice with premium blue and gray design
- * Design: Corporate blue palette, white background, clear visual hierarchy
- * Style: Clean, elegant, print-ready and web-display compatible
- * Typography: Montserrat/Open Sans inspired, professional sans-serif
- * Spacing: Consistent 12px row spacing, 20px section gaps
+ * Generate ultra-professional travel invoice with maximum readability
+ * Design Philosophy: Clarity First - Every text element must be crystal clear
+ * Typography: Large, bold, high-contrast fonts for optimal readability
+ * Layout: Generous spacing, clean sections, professional structure
+ * Print & Screen: Perfect for both digital viewing and printing
  */
 export const generateBillPDF = async (bill: Bill): Promise<void> => {
   const doc = new jsPDF();
@@ -17,20 +17,22 @@ export const generateBillPDF = async (bill: Bill): Promise<void> => {
   const pageHeight = doc.internal.pageSize.getHeight();
   const centerX = pageWidth / 2;
   
-  // Modern Blue & Gray Color Palette - Corporate Travel Theme
-  const primaryBlue = [41, 128, 185];    // #2980b9 - Main brand blue
-  const accentBlue = [52, 152, 219];     // #3498db - Lighter blue for accents
-  const darkGray = [52, 73, 94];         // #34495e - Professional dark gray
-  const mediumGray = [127, 140, 141];    // #7f8c8d - Medium gray for labels
-  const lightGray = [236, 240, 241];     // #ecf0f1 - Light gray backgrounds
-  const borderGray = [189, 195, 199];    // #bdc3c7 - Border color
-  const white = [255, 255, 255];         // #ffffff - White
-  const black = [44, 62, 80];            // #2c3e50 - Almost black for text
+  // Professional Color Palette - High Contrast for Maximum Readability
+  const primaryColor = [0, 102, 204];      // #0066CC - Professional blue
+  const darkText = [33, 33, 33];           // #212121 - Almost black (high contrast)
+  const mediumText = [66, 66, 66];         // #424242 - Medium gray for secondary text
+  const lightText = [117, 117, 117];       // #757575 - Light gray for labels
+  const bgLight = [248, 249, 250];         // #F8F9FA - Very light background
+  const bgBlue = [230, 242, 255];          // #E6F2FF - Light blue background
+  const borderColor = [224, 224, 224];     // #E0E0E0 - Light border
+  const white = [255, 255, 255];           // #FFFFFF - Pure white
+  const successGreen = [0, 150, 0];        // #009600 - Success green
   
-  // Professional spacing constants
-  const SECTION_GAP = 20;                // Gap between major sections
-  const ROW_SPACING = 12;                // Spacing between rows
-  const PADDING = 15;                    // Page padding/margins
+  // Enhanced Spacing Constants - More generous for professional look
+  const SECTION_GAP = 25;                  // Larger gap between sections
+  const ROW_HEIGHT = 18;                   // Taller rows for better readability
+  const PADDING = 20;                      // More padding from edges
+  const INNER_PADDING = 12;                // Padding inside boxes
   
   let currentY = PADDING;
   
@@ -64,200 +66,208 @@ export const generateBillPDF = async (bill: Bill): Promise<void> => {
     console.error('Error adding logo:', error);
   }
   
-  currentY = 58;
+  currentY = 70;
   
-  // Tagline centered below logo - professional spacing
-  doc.setFontSize(11);
+  // Company name and tagline - larger, bolder, more prominent
+  doc.setFontSize(24);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+  doc.text('ANAND TRAVEL AGENCY', centerX, currentY, { align: 'center' });
+  
+  currentY += 10;
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
-  doc.text('Travel Services & Ticket Booking', centerX, currentY, { align: 'center' });
+  doc.setTextColor(mediumText[0], mediumText[1], mediumText[2]);
+  doc.text('Your Trusted Travel Partner', centerX, currentY, { align: 'center' });
   
-  // Contact info - clean minimal design
-  currentY += ROW_SPACING;
-  doc.setFontSize(10);
-  doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
+  // Contact information - clear and prominent
+  currentY += 10;
+  doc.setFontSize(11);
+  doc.setTextColor(lightText[0], lightText[1], lightText[2]);
+  doc.text('📞 8985816481 / 9676138010  •  📧 anandtravelsguide@gmail.com', centerX, currentY, { align: 'center' });
   
-  // Phone number
-  const contactY = currentY;
-  doc.text('☎ 8985816481', centerX - 28, contactY);
-  
-  // Vertical separator
-  doc.text('|', centerX, contactY);
-  
-  // Website
-  doc.text('🌐 anandtravelagency.com', centerX + 5, contactY);
-  
-  // Elegant divider line with proper spacing
   currentY += SECTION_GAP;
-  doc.setDrawColor(borderGray[0], borderGray[1], borderGray[2]);
-  doc.setLineWidth(1);
+  
+  // Professional divider line
+  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setLineWidth(2);
   doc.line(PADDING, currentY, pageWidth - PADDING, currentY);
   
-  // ==================== INVOICE TITLE IN CORNER ====================
-  // "INVOICE" heading in top-right corner with info box
-  const invoiceCornerY = 20;
+  currentY += SECTION_GAP;
   
-  // Big, bold INVOICE heading - top right
-  doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
-  doc.setFontSize(22);
+  // ==================== INVOICE TITLE ====================
+  // Large, bold "INVOICE" heading
+  doc.setFontSize(32);
   doc.setFont('helvetica', 'bold');
-  doc.text('INVOICE', pageWidth - PADDING, invoiceCornerY, { align: 'right' });
-  
-  // Invoice info box positioned under INVOICE heading in corner
-  const infoBoxX = pageWidth - 80;
-  const infoBoxWidth = 65;
-  const infoBoxHeight = 26;
-  const infoBoxY = 30;
-  
-  // Shadow effect for depth
-  doc.setFillColor(200, 200, 200);
-  doc.roundedRect(infoBoxX + 2, infoBoxY + 2, infoBoxWidth, infoBoxHeight, 4, 4, 'F');
-  
-  // Main box with light gray background
-  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-  doc.roundedRect(infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, 4, 4, 'F');
-  doc.setDrawColor(borderGray[0], borderGray[1], borderGray[2]);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, 4, 4, 'S');
-  
-  // Invoice number with consistent spacing
-  const boxPadding = 5;
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
-  doc.text('Invoice No:', infoBoxX + boxPadding, infoBoxY + 6);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-  doc.setFontSize(9);
-  doc.text(bill.billNumber, infoBoxX + boxPadding, infoBoxY + 12);
-  
-  // Date with ROW_SPACING
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
-  doc.text('Date:', infoBoxX + boxPadding, infoBoxY + 18);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-  doc.setFontSize(9);
-  doc.text(formatDate(bill.createdAt), infoBoxX + boxPadding, infoBoxY + 24);
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text('INVOICE', centerX, currentY, { align: 'center' });
   
   currentY += SECTION_GAP;
   
-  // ==================== BILLING AND JOURNEY DETAILS SECTION ====================
-  currentY += SECTION_GAP + 10;
+  // ==================== INVOICE DETAILS BOX ====================
+  // Invoice number and date in a clean, prominent box
+  const infoBoxY = currentY;
+  const infoBoxHeight = 35;
   
-  // Two-column layout with rounded corners and blue accent headers
-  const leftColX = PADDING;
-  const leftColWidth = 92;
-  const rightColX = pageWidth - 97;
-  const rightColWidth = 82;
-  const boxHeight = (bill.customerEmail ? 42 : 38);  // More height for better spacing
+  // Light blue background box
+  doc.setFillColor(bgBlue[0], bgBlue[1], bgBlue[2]);
+  doc.rect(PADDING, infoBoxY, pageWidth - (PADDING * 2), infoBoxHeight, 'F');
   
-  // Left Column - BILL TO
-  // Blue header bar with rounded top corners
-  doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
-  doc.roundedRect(leftColX, currentY - 10, leftColWidth, 10, 3, 3, 'F');
-  
-  // Main box with light gray background
-  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-  doc.roundedRect(leftColX, currentY, leftColWidth, boxHeight - 10, 0, 0, 'F');
-  doc.setDrawColor(borderGray[0], borderGray[1], borderGray[2]);
+  // Border
+  doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
   doc.setLineWidth(0.5);
-  doc.roundedRect(leftColX, currentY - 10, leftColWidth, boxHeight, 3, 3, 'S');
+  doc.rect(PADDING, infoBoxY, pageWidth - (PADDING * 2), infoBoxHeight, 'S');
   
-  // "BILL TO" label in white on blue - using small caps style
+  // Invoice Number - Left side
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(lightText[0], lightText[1], lightText[2]);
+  doc.text('INVOICE NO:', PADDING + INNER_PADDING, infoBoxY + 12);
+  
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+  doc.text(bill.billNumber, PADDING + INNER_PADDING, infoBoxY + 24);
+  
+  // Invoice Date - Right side
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(lightText[0], lightText[1], lightText[2]);
+  doc.text('DATE:', pageWidth - PADDING - INNER_PADDING, infoBoxY + 12, { align: 'right' });
+  
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+  doc.text(formatDate(bill.createdAt), pageWidth - PADDING - INNER_PADDING, infoBoxY + 24, { align: 'right' });
+  
+  currentY = infoBoxY + infoBoxHeight + SECTION_GAP;
+  
+  // ==================== CUSTOMER & JOURNEY DETAILS ====================
+  const detailsBoxY = currentY;
+  const detailsBoxHeight = bill.customerEmail ? 85 : 75;
+  const columnWidth = (pageWidth - (PADDING * 2) - 15) / 2;
+  
+  // Left Box - BILL TO
+  const leftBoxX = PADDING;
+  
+  // Blue header
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.rect(leftBoxX, detailsBoxY, columnWidth, 12, 'F');
+  
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
   doc.setTextColor(white[0], white[1], white[2]);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('BILL TO', leftColX + 5, currentY - 4);
+  doc.text('BILL TO', leftBoxX + INNER_PADDING, detailsBoxY + 8);
   
-  // Customer details with consistent spacing
-  const leftPadding = 5;
-  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-  doc.setFontSize(12);  // Larger for better visibility
-  doc.setFont('helvetica', 'bold');
-  doc.text(bill.customerName, leftColX + leftPadding, currentY + 8);
+  // Light background
+  doc.setFillColor(bgLight[0], bgLight[1], bgLight[2]);
+  doc.rect(leftBoxX, detailsBoxY + 12, columnWidth, detailsBoxHeight - 12, 'F');
   
-  doc.setFontSize(10);
+  // Border
+  doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+  doc.setLineWidth(0.5);
+  doc.rect(leftBoxX, detailsBoxY, columnWidth, detailsBoxHeight, 'S');
+  
+  // Customer details - larger fonts
+  let leftY = detailsBoxY + 25;
+  
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+  doc.text(bill.customerName, leftBoxX + INNER_PADDING, leftY);
+  
+  leftY += ROW_HEIGHT;
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
-  doc.text(`☎ ${bill.customerPhone}`, leftColX + leftPadding, currentY + 8 + ROW_SPACING);
+  doc.setTextColor(mediumText[0], mediumText[1], mediumText[2]);
+  doc.text(`📞 ${bill.customerPhone}`, leftBoxX + INNER_PADDING, leftY);
+  
   if (bill.customerEmail) {
-    doc.text(`✉ ${bill.customerEmail}`, leftColX + leftPadding, currentY + 8 + (ROW_SPACING * 2));
+    leftY += ROW_HEIGHT;
+    doc.setFontSize(11);
+    doc.text(`📧 ${bill.customerEmail}`, leftBoxX + INNER_PADDING, leftY);
   }
   
-  // Right Column - JOURNEY DETAILS
+  // Right Box - JOURNEY DETAILS
   if (bill.journeyFrom && bill.journeyTo) {
-    // Blue header bar with rounded top corners
-    doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
-    doc.roundedRect(rightColX, currentY - 10, rightColWidth, 10, 3, 3, 'F');
+    const rightBoxX = leftBoxX + columnWidth + 15;
     
-    // Main box with light gray background
-    doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-    doc.roundedRect(rightColX, currentY, rightColWidth, boxHeight - 10, 0, 0, 'F');
-    doc.setDrawColor(borderGray[0], borderGray[1], borderGray[2]);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(rightColX, currentY - 10, rightColWidth, boxHeight, 3, 3, 'S');
+    // Blue header
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(rightBoxX, detailsBoxY, columnWidth, 12, 'F');
     
-    // "JOURNEY DETAILS" label in white on blue - small caps style
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(white[0], white[1], white[2]);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('JOURNEY DETAILS', rightColX + 5, currentY - 4);
+    doc.text('JOURNEY DETAILS', rightBoxX + INNER_PADDING, detailsBoxY + 8);
     
-    // Journey information with consistent spacing
-    const rightPadding = 5;
-    const labelWidth = 20;
-    let journeyY = currentY + 8;
+    // Light background
+    doc.setFillColor(bgLight[0], bgLight[1], bgLight[2]);
+    doc.rect(rightBoxX, detailsBoxY + 12, columnWidth, detailsBoxHeight - 12, 'F');
     
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
-    doc.text('From:', rightColX + rightPadding, journeyY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-    doc.text(bill.journeyFrom, rightColX + rightPadding + labelWidth, journeyY);
+    // Border
+    doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+    doc.setLineWidth(0.5);
+    doc.rect(rightBoxX, detailsBoxY, columnWidth, detailsBoxHeight, 'S');
     
-    journeyY += ROW_SPACING;
+    // Journey information - larger fonts with labels
+    let rightY = detailsBoxY + 25;
+    
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
-    doc.text('To:', rightColX + rightPadding, journeyY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-    doc.text(bill.journeyTo, rightColX + rightPadding + labelWidth, journeyY);
+    doc.setTextColor(lightText[0], lightText[1], lightText[2]);
+    doc.text('FROM:', rightBoxX + INNER_PADDING, rightY);
+    
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+    doc.text(bill.journeyFrom, rightBoxX + INNER_PADDING, rightY + 10);
+    
+    rightY += ROW_HEIGHT + 12;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(lightText[0], lightText[1], lightText[2]);
+    doc.text('TO:', rightBoxX + INNER_PADDING, rightY);
+    
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+    doc.text(bill.journeyTo, rightBoxX + INNER_PADDING, rightY + 10);
     
     if (bill.journeyDate) {
-      journeyY += ROW_SPACING;
+      rightY += ROW_HEIGHT + 12;
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
-      doc.text('Date:', rightColX + rightPadding, journeyY);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-      doc.text(bill.journeyDate, rightColX + rightPadding + labelWidth, journeyY);
+      doc.setTextColor(lightText[0], lightText[1], lightText[2]);
+      doc.text('DATE:', rightBoxX + INNER_PADDING, rightY);
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(mediumText[0], mediumText[1], mediumText[2]);
+      doc.text(bill.journeyDate, rightBoxX + INNER_PADDING, rightY + 10);
     }
   }
   
-  // ==================== SERVICES TABLE ====================
-  currentY += (bill.customerEmail ? 42 : 38) + SECTION_GAP;
-  const tableStartY = currentY;
+  currentY = detailsBoxY + detailsBoxHeight + SECTION_GAP;
   
+  // ==================== SERVICES TABLE ====================
   const tableData: any[][] = [
     [
-      'Service Description',
-      'Service Type',
-      'Passengers',
-      'Rate',
-      'Amount'
+      'SERVICE DESCRIPTION',
+      'TYPE',
+      'PAX',
+      'RATE',
+      'AMOUNT'
     ],
     [
-      `Ticket Cost`,
+      'Ticket Cost',
       bill.bookingType,
       bill.passengerCount.toString(),
       formatCurrency(bill.ticketCost),
       formatCurrency(bill.ticketCost * bill.passengerCount)
     ],
     [
-      `Booking Charge`,
+      'Booking Charge',
       bill.bookingType,
       bill.passengerCount.toString(),
       formatCurrency(bill.bookingCharge),
@@ -265,11 +275,11 @@ export const generateBillPDF = async (bill: Bill): Promise<void> => {
     ]
   ];
   
-  // Add coupon row if applicable
+  // Add coupon discount if applicable
   if (bill.couponCode && bill.couponDiscount) {
     const discountAmount = bill.couponDiscount;
     tableData.push([
-      `Coupon Discount (${bill.couponCode})`,
+      `Discount - ${bill.couponCode}`,
       '',
       '',
       '',
@@ -278,180 +288,197 @@ export const generateBillPDF = async (bill: Bill): Promise<void> => {
   }
   
   autoTable(doc, {
-    startY: tableStartY,
+    startY: currentY,
     head: [tableData[0]],
     body: tableData.slice(1),
     theme: 'grid',
     headStyles: {
-      fillColor: [primaryBlue[0], primaryBlue[1], primaryBlue[2]],
+      fillColor: [primaryColor[0], primaryColor[1], primaryColor[2]],
       textColor: [white[0], white[1], white[2]],
       fontStyle: 'bold',
-      fontSize: 11,  // Larger for better readability
-      cellPadding: 7,  // More padding
-      halign: 'center'
+      fontSize: 12,
+      cellPadding: 10,
+      halign: 'center',
+      lineWidth: 0.5,
+      lineColor: [primaryColor[0], primaryColor[1], primaryColor[2]]
     },
     bodyStyles: {
-      fontSize: 10,
-      cellPadding: 6,  // Consistent 12px spacing (6*2)
-      textColor: [darkGray[0], darkGray[1], darkGray[2]],
-      lineColor: [borderGray[0], borderGray[1], borderGray[2]],
+      fontSize: 11,
+      cellPadding: 10,
+      textColor: [darkText[0], darkText[1], darkText[2]],
+      lineColor: [borderColor[0], borderColor[1], borderColor[2]],
       lineWidth: 0.5,
-      minCellHeight: ROW_SPACING  // Ensure minimum row height
+      minCellHeight: 15
     },
     alternateRowStyles: {
-      fillColor: [lightGray[0], lightGray[1], lightGray[2]]
+      fillColor: [bgLight[0], bgLight[1], bgLight[2]]
     },
     columnStyles: {
-      0: { cellWidth: 68, fontStyle: 'bold', textColor: [darkGray[0], darkGray[1], darkGray[2]] },
-      1: { cellWidth: 35, halign: 'center' },
-      2: { cellWidth: 25, halign: 'center' },
-      3: { cellWidth: 32, halign: 'right' },
-      4: { cellWidth: 35, halign: 'right', fontStyle: 'bold', textColor: [primaryBlue[0], primaryBlue[1], primaryBlue[2]] }
+      0: { 
+        cellWidth: 70, 
+        fontStyle: 'bold', 
+        textColor: [darkText[0], darkText[1], darkText[2]],
+        halign: 'left'
+      },
+      1: { 
+        cellWidth: 35, 
+        halign: 'center',
+        fontStyle: 'normal'
+      },
+      2: { 
+        cellWidth: 25, 
+        halign: 'center',
+        fontStyle: 'bold'
+      },
+      3: { 
+        cellWidth: 32, 
+        halign: 'right',
+        fontStyle: 'normal'
+      },
+      4: { 
+        cellWidth: 33, 
+        halign: 'right', 
+        fontStyle: 'bold',
+        fontSize: 12,
+        textColor: [darkText[0], darkText[1], darkText[2]]
+      }
     },
     margin: { left: PADDING, right: PADDING }
   });
   
-  // Get the Y position after the table
-  const finalY = (doc as any).lastAutoTable.finalY || tableStartY + 60;
+  // Get Y position after table
+  const finalY = (doc as any).lastAutoTable.finalY || currentY + 80;
   
-  // ==================== TOTAL AMOUNT BOX ====================
+  // ==================== TOTAL AMOUNT ====================
   currentY = finalY + SECTION_GAP;
   
-  // Prominent total box with blue background and rounded corners
-  const totalBoxX = pageWidth - 95;
-  const totalBoxWidth = 80;
-  const totalBoxHeight = 28;
+  // Large, prominent total box
+  const totalBoxHeight = 50;
+  const totalBoxWidth = 160;
+  const totalBoxX = pageWidth - PADDING - totalBoxWidth;
   
-  // Shadow effect for depth
-  doc.setFillColor(200, 200, 200);
-  doc.roundedRect(totalBoxX + 2, currentY - 12 + 2, totalBoxWidth, totalBoxHeight, 4, 4, 'F');
+  // Green gradient background
+  doc.setFillColor(successGreen[0], successGreen[1], successGreen[2]);
+  doc.rect(totalBoxX, currentY, totalBoxWidth, totalBoxHeight, 'F');
   
-  // Main blue box with rounded corners
-  doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
-  doc.roundedRect(totalBoxX, currentY - 12, totalBoxWidth, totalBoxHeight, 4, 4, 'F');
+  // Thick border
+  doc.setDrawColor(successGreen[0] - 20, successGreen[1] - 20, successGreen[2] - 20);
+  doc.setLineWidth(2);
+  doc.rect(totalBoxX, currentY, totalBoxWidth, totalBoxHeight, 'S');
   
-  // White text for total - centered and prominent
-  doc.setTextColor(white[0], white[1], white[2]);
-  doc.setFontSize(12);
+  // "TOTAL AMOUNT" label
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('TOTAL AMOUNT:', totalBoxX + 6, currentY - 3);
-  doc.setFontSize(18);  // Larger for better visibility
-  doc.text(formatCurrency(bill.totalAmount), totalBoxX + totalBoxWidth - 6, currentY + 9, { align: 'right' });
+  doc.setTextColor(white[0], white[1], white[2]);
+  doc.text('TOTAL AMOUNT', totalBoxX + totalBoxWidth/2, currentY + 15, { align: 'center' });
+  
+  // Large amount display
+  doc.setFontSize(24);
+  doc.setFont('helvetica', 'bold');
+  doc.text(formatCurrency(bill.totalAmount), totalBoxX + totalBoxWidth/2, currentY + 35, { align: 'center' });
+  
+  currentY += totalBoxHeight + SECTION_GAP;
   
   // ==================== PAYMENT SECTION ====================
   if (bill.qrCodeUrl) {
     try {
-      currentY = finalY + SECTION_GAP + 28;
+      // Divider before payment section
+      doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+      doc.setLineWidth(1);
+      doc.line(PADDING, currentY, pageWidth - PADDING, currentY);
       
-      // Two-column layout: QR Code on left, Instructions on right
-      const qrBoxX = PADDING;
-      const qrBoxWidth = 80;
-      const qrBoxHeight = 98;
+      currentY += SECTION_GAP;
       
-      // Left side - QR Code Box with blue header
-      // Blue header bar with rounded top
-      doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
-      doc.roundedRect(qrBoxX, currentY - 12, qrBoxWidth, 12, 3, 3, 'F');
+      // Payment title
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+      doc.text('PAYMENT INFORMATION', centerX, currentY, { align: 'center' });
       
-      // Main box with light gray background
-      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-      doc.roundedRect(qrBoxX, currentY, qrBoxWidth, qrBoxHeight - 12, 0, 0, 'F');
-      doc.setDrawColor(borderGray[0], borderGray[1], borderGray[2]);
-      doc.setLineWidth(0.5);
-      doc.roundedRect(qrBoxX, currentY - 12, qrBoxWidth, qrBoxHeight, 3, 3, 'S');
+      currentY += 20;
       
-      // "SCAN TO PAY" label in white on blue
+      // QR Code box - left side
+      const qrBoxX = PADDING + 15;
+      const qrBoxWidth = 85;
+      const qrBoxHeight = 105;
+      
+      // Border
+      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setLineWidth(2);
+      doc.rect(qrBoxX, currentY, qrBoxWidth, qrBoxHeight, 'S');
+      
+      // QR Code title
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(qrBoxX, currentY, qrBoxWidth, 15, 'F');
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(white[0], white[1], white[2]);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text('SCAN TO PAY', qrBoxX + qrBoxWidth/2, currentY - 5, { align: 'center' });
+      doc.text('SCAN TO PAY', qrBoxX + qrBoxWidth/2, currentY + 10, { align: 'center' });
       
-      // QR Code image - centered
-      doc.addImage(bill.qrCodeUrl, 'PNG', qrBoxX + 14, currentY + 6, 52, 52);
+      // QR Code image
+      doc.addImage(bill.qrCodeUrl, 'PNG', qrBoxX + 12, currentY + 22, 61, 61);
       
-      // Payment provider info with better spacing
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-      doc.text('Anand Travel Agency', qrBoxX + qrBoxWidth/2, currentY + 65, { align: 'center' });
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
-      doc.text('PhonePe • GPay • Paytm', qrBoxX + qrBoxWidth/2, currentY + 72, { align: 'center' });
-      doc.text('All UPI Apps Accepted', qrBoxX + qrBoxWidth/2, currentY + 78, { align: 'center' });
-      
-      // Right side - Payment Instructions Box
-      const instrBoxX = 100;
-      const instrBoxWidth = pageWidth - instrBoxX - PADDING;
-      const instrBoxHeight = 58;
-      
-      // Light gray background box with rounded corners
-      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-      doc.roundedRect(instrBoxX, currentY - 12, instrBoxWidth, instrBoxHeight, 3, 3, 'F');
-      doc.setDrawColor(borderGray[0], borderGray[1], borderGray[2]);
-      doc.setLineWidth(0.5);
-      doc.roundedRect(instrBoxX, currentY - 12, instrBoxWidth, instrBoxHeight, 3, 3, 'S');
-      
-      // Title with better styling
-      doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Payment Instructions', instrBoxX + 5, currentY - 4);
-      
-      // Numbered instructions with consistent 12px spacing
-      const instrPadding = 5;
-      let instrY = currentY + 6;
+      // UPI info
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setTextColor(mediumText[0], mediumText[1], mediumText[2]);
+      doc.text('All UPI Apps Accepted', qrBoxX + qrBoxWidth/2, currentY + 95, { align: 'center' });
       
-      doc.setFont('helvetica', 'bold');
-      doc.text('1.', instrBoxX + instrPadding, instrY);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Open any UPI app on your phone', instrBoxX + instrPadding + 8, instrY);
+      // Payment instructions - right side
+      const instrBoxX = qrBoxX + qrBoxWidth + 15;
+      const instrBoxWidth = pageWidth - instrBoxX - PADDING - 15;
       
-      instrY += ROW_SPACING;
-      doc.setFont('helvetica', 'bold');
-      doc.text('2.', instrBoxX + instrPadding, instrY);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Scan the QR code shown on left', instrBoxX + instrPadding + 8, instrY);
+      let instrY = currentY + 15;
       
-      instrY += ROW_SPACING;
+      doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('3.', instrBoxX + instrPadding, instrY);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Verify amount & complete payment', instrBoxX + instrPadding + 8, instrY);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text('HOW TO PAY:', instrBoxX, instrY);
       
-      instrY += ROW_SPACING;
-      doc.setFont('helvetica', 'bold');
-      doc.text('4.', instrBoxX + instrPadding, instrY);
+      instrY += 18;
+      
+      // Instruction steps with large, clear text
+      const steps = [
+        '1. Open any UPI payment app',
+        '2. Scan the QR code on left',
+        '3. Verify the amount shown',
+        '4. Complete the payment',
+        '5. Share payment screenshot'
+      ];
+      
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
-      doc.text('Share screenshot for confirmation', instrBoxX + instrPadding + 8, instrY);
+      doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+      
+      steps.forEach((step, index) => {
+        doc.text(step, instrBoxX, instrY + (index * 15));
+      });
       
     } catch (error) {
       console.error('Error adding QR code:', error);
     }
   }
   
-  // ==================== FOOTER SECTION ====================
-  const footerY = pageHeight - SECTION_GAP - 2;
+  // ==================== FOOTER ====================
+  const footerY = pageHeight - 30;
   
-  // Elegant divider line with proper spacing
-  doc.setDrawColor(borderGray[0], borderGray[1], borderGray[2]);
-  doc.setLineWidth(1);
-  doc.line(PADDING, footerY - SECTION_GAP/2, pageWidth - PADDING, footerY - SECTION_GAP/2);
+  // Divider line
+  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setLineWidth(1.5);
+  doc.line(PADDING, footerY - 10, pageWidth - PADDING, footerY - 10);
   
-  // Thank you message - centered, professional with better font
-  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-  doc.setFontSize(12);
+  // Thank you message
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkText[0], darkText[1], darkText[2]);
   doc.text('Thank you for choosing Anand Travel Agency!', centerX, footerY, { align: 'center' });
   
-  // Contact reminder - italic style with proper spacing
-  doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'italic');
-  doc.text('For queries, contact us at the above details. Safe travels!', centerX, footerY + ROW_SPACING/2 + 3, { align: 'center' });
+  // Contact info
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(lightText[0], lightText[1], lightText[2]);
+  doc.text('For queries, please contact us at 8985816481 or anandtravelsguide@gmail.com', centerX, footerY + 10, { align: 'center' });
   
   // ==================== SAVE PDF ====================
   doc.save(`Invoice_${bill.billNumber}.pdf`);

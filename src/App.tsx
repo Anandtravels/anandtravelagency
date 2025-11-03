@@ -30,6 +30,7 @@ import HotelBookingSuccess from "./pages/HotelBookingSuccess";
 import TravelAgencyKakinada from "./pages/TravelAgencyKakinada";
 import TatkalTrainTicketsAndhraPradesh from "./pages/TatkalTrainTicketsAndhraPradesh";
 import AITravelAgencyIndia from "./pages/AITravelAgencyIndia";
+import InvoicePrint from "./pages/InvoicePrint";
 import logo from './assets/poster.png';
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -122,6 +123,9 @@ const App = () => {
                 <Route path="/travel-agency-kakinada" element={<TravelAgencyKakinada />} />
                 <Route path="/tatkal-train-tickets-andhra-pradesh" element={<TatkalTrainTicketsAndhraPradesh />} />
                 <Route path="/ai-travel-agency-india" element={<AITravelAgencyIndia />} />
+                
+                {/* Invoice Print Page */}
+                <Route path="/invoice-print" element={<InvoicePrint />} />
                 
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/admin-login" element={<AdminLogin />} />

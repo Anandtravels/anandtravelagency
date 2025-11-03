@@ -20,7 +20,7 @@ import {
 import { 
   Loader2, 
   Receipt, 
-  Download, 
+  Eye, 
   Search, 
   FileText,
   Calendar,
@@ -33,7 +33,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useBills } from '@/hooks/useBills';
-import { generateBillPDF } from '@/utils/pdfGenerator';
 import { formatCurrency, formatDate } from '@/utils/billUtils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -44,7 +43,6 @@ interface BillsManagementTabProps {
 const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
   const { bills, loading, deleting, deleteBill, deleteBulkBills } = useBills();
   const [searchTerm, setSearchTerm] = useState('');
-  const [downloadingBill, setDownloadingBill] = useState<string | null>(null);
   const [deletingBillId, setDeletingBillId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [billToDelete, setBillToDelete] = useState<{ id: string; billNumber: string } | null>(null);
@@ -94,27 +92,10 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
     return matchesSearch && matchesDate && matchesBookingType;
   });
 
-  const handleDownloadPDF = async (billId: string) => {
-    const bill = bills.find(b => b.id === billId);
-    if (!bill) return;
-
-    setDownloadingBill(billId);
-    try {
-      await generateBillPDF(bill);
-      toast({
-        title: 'Success',
-        description: 'Bill downloaded successfully'
-      });
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to generate PDF',
-        variant: 'destructive'
-      });
-    } finally {
-      setDownloadingBill(null);
-    }
+  const handleViewBill = (billId: string) => {
+    // Open invoice in new window
+    const invoiceUrl = `/invoice-print?id=${billId}`;
+    window.open(invoiceUrl, '_blank', 'width=1200,height=900,scrollbars=yes,resizable=yes');
   };
 
   const handleDeleteClick = (billId: string, billNumber: string) => {
@@ -447,27 +428,18 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
                         
                         <div className="flex gap-2 mt-2">
                           <Button
-                            onClick={() => handleDownloadPDF(bill.id)}
-                            disabled={downloadingBill === bill.id || deletingBillId === bill.id}
+                            onClick={() => handleViewBill(bill.id)}
+                            disabled={deletingBillId === bill.id}
                             size="sm"
                             variant="default"
                           >
-                            {downloadingBill === bill.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Generating...
-                              </>
-                            ) : (
-                              <>
-                                <Download className="mr-2 h-4 w-4" />
-                                Download PDF
-                              </>
-                            )}
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Bill
                           </Button>
                           
                           <Button
                             onClick={() => handleDeleteClick(bill.id, bill.billNumber)}
-                            disabled={downloadingBill === bill.id || deletingBillId === bill.id}
+                            disabled={deletingBillId === bill.id}
                             size="sm"
                             variant="destructive"
                           >
@@ -547,6 +519,7 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
     </div>
   );
 };
