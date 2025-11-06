@@ -46,7 +46,9 @@ export const useAgentNotification = () => {
         booking.passengers.forEach((p: any, i: number) => {
           // Display DOB in DD/MM/YYYY format if available
           const dobDisplay = p.dob ? ` DOB: ${formatDateToDDMMYYYY(p.dob)}` : '';
-          info += `   ${i + 1}. ${p.name} (${p.age} yrs, ${p.gender}${dobDisplay})\n`;
+          // Display Aadhar if available
+          const aadharDisplay = p.aadhar ? `\n      Aadhar: ${p.aadhar}` : '';
+          info += `   ${i + 1}. ${p.name} (${p.age} yrs, ${p.gender}${dobDisplay})${aadharDisplay}\n`;
         });
         return info;
       }

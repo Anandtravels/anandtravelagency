@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { TrashIcon, PencilIcon, Check, X, Phone, Mail, MessageSquare, Download, CalendarIcon } from "lucide-react";
+import { TrashIcon, PencilIcon, Check, X, Phone, Mail, MessageSquare, Download, CalendarIcon, Search } from "lucide-react";
 import { debounce } from 'lodash';
 import { format } from "date-fns";
 import ExcelExportButton from "@/components/admin/ExcelExportButton";
@@ -62,6 +62,7 @@ const BookingsTab = ({
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [sortByJourneyDate, setSortByJourneyDate] = useState<boolean>(false);
   const [trainClassFilter, setTrainClassFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   
   // Calendar date picker states
   const [calendarDate, setCalendarDate] = useState<Date | undefined>(undefined);
@@ -72,6 +73,15 @@ const BookingsTab = ({
   // Memoized filtered bookings
   const filteredBookings = useMemo(() => {
     let filtered = bookings;
+    
+    // Apply search filter
+    if (searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(b => 
+        b.name.toLowerCase().includes(query) || 
+        b.phone.replace(/\D/g, '').includes(query.replace(/\D/g, ''))
+      );
+    }
     
     // Apply status filter
     if (statusFilter !== 'all') {
@@ -218,7 +228,7 @@ const BookingsTab = ({
     }
     
     return filtered;
-  }, [bookings, statusFilter, bookingTypeFilter, dateFilter, sortByJourneyDate, trainClassFilter, calendarDate, advanceReservationMode, calendarBookingTypeFilter]);
+  }, [bookings, statusFilter, bookingTypeFilter, dateFilter, sortByJourneyDate, trainClassFilter, calendarDate, advanceReservationMode, calendarBookingTypeFilter, searchQuery]);
 
   // Loading state
   if (bookingLoading) {
@@ -249,6 +259,26 @@ const BookingsTab = ({
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          {/* Search Input */}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="Search by name or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark focus:border-travel-blue-dark"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          
           {/* Enhanced filter section */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 w-full">
             {/* Status filter dropdown */}
@@ -320,6 +350,15 @@ const BookingsTab = ({
                   className={`px-3 py-1.5 h-auto text-xs font-medium flex items-center gap-2 ${
                     calendarDate ? 'bg-purple-50 text-purple-700 border-purple-200' : ''
                   }`}
+                  onClick={(e) => {
+                    // Check if the click target is the X button or its parent
+                    const target = e.target as HTMLElement;
+                    if (target.closest('.clear-date-btn')) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
+                  }}
                 >
                   <CalendarIcon className="h-4 w-4" />
                   <span className="hidden sm:inline">
@@ -330,12 +369,14 @@ const BookingsTab = ({
                   </span>
                   {calendarDate && (
                     <X 
-                      className="h-3 w-3 ml-1" 
+                      className="h-3 w-3 ml-1 clear-date-btn cursor-pointer hover:text-purple-900" 
                       onClick={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
                         setCalendarDate(undefined);
                         setAdvanceReservationMode(false);
                         setCalendarBookingTypeFilter('all');
+                        setIsCalendarOpen(false);
                       }}
                     />
                   )}
@@ -586,6 +627,7 @@ const BookingsTab = ({
                               return passenger.dob;
                             }
                           })()}</span>}
+                          {passenger.aadhar && <span className="text-blue-600 text-xs block mt-0.5">Aadhar: {passenger.aadhar}</span>}
                         </div>
                       )) : (
                         <div className="bg-gray-50 p-2 rounded">{booking.passengers}</div>
@@ -866,6 +908,7 @@ const BookingsTab = ({
                                 return passenger.dob;
                               }
                             })()}</span>}
+                            {passenger.aadhar && <span className="text-blue-600 text-xs block mt-1 ml-7">Aadhar: {passenger.aadhar}</span>}
                           </div>
                         )) : (
                           <div className="bg-gray-50 p-2 rounded">{booking.passengers}</div>
