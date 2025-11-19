@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Calendar, MapPin, User, Phone, Mail, Train, Bus, Plane, Car, Check } from "lucide-react";
+import { Calendar, MapPin, User, Phone, Mail, Train, Bus, Plane, Car, Check, ArrowLeftRight } from "lucide-react";
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -53,6 +53,20 @@ const Booking = () => {
   
   // State for advance booking toggle
   const [isAdvanceBooking, setIsAdvanceBooking] = useState(false);
+  
+  // Function to swap from and to stations
+  const handleSwapStations = () => {
+    // Swap the state values
+    const tempFrom = trainFromStation;
+    const tempTo = trainToStation;
+    
+    setTrainFromStation(tempTo);
+    setTrainToStation(tempFrom);
+    
+    // Update form values
+    setValue("from", tempTo, { shouldValidate: true });
+    setValue("to", tempFrom, { shouldValidate: true });
+  };
   
   // Preload station data immediately when page loads (background loading)
   useEffect(() => {
@@ -456,10 +470,10 @@ const Booking = () => {
                   </h2>
                   
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {bookingType === "train" ? (
-                        <>
-                          {/* Train booking with autocomplete */}
+                    {bookingType === "train" ? (
+                      <div className="relative">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* From Station */}
                           <div>
                             <StationAutocomplete
                               label="From"
@@ -479,6 +493,7 @@ const Booking = () => {
                             />
                           </div>
                           
+                          {/* To Station */}
                           <div>
                             <StationAutocomplete
                               label="To"
@@ -497,44 +512,71 @@ const Booking = () => {
                               {...register("to", { required: "Destination is required" })}
                             />
                           </div>
-                        </>
-                      ) : (
-                        <>
-                          {/* Other booking types with regular input */}
-                          <div>
-                            <label className="block text-gray-700 font-medium mb-2">
-                              From <span className="text-rose-500">*</span>
-                            </label>
-                            <div className="relative">
-                              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                              <input
-                                type="text"
-                                {...register("from", { required: "Origin is required" })}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                                placeholder="City/Station/Airport"
-                              />
-                            </div>
-                            {errors.from && <p className="text-red-500 text-sm mt-1">{String(errors.from.message)}</p>}
+                        </div>
+                        
+                        {/* Swap Button - Positioned between From and To */}
+                        <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 hidden md:block">
+                          <button
+                            type="button"
+                            onClick={handleSwapStations}
+                            className="bg-white border-2 border-travel-orange text-travel-orange rounded-full p-2.5 shadow-lg hover:bg-travel-orange hover:text-white transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-travel-orange focus:ring-offset-2"
+                            title="Swap stations"
+                            aria-label="Swap from and to stations"
+                          >
+                            <ArrowLeftRight className="w-5 h-5" />
+                          </button>
+                        </div>
+                        
+                        {/* Mobile Swap Button - Below the fields */}
+                        <div className="md:hidden mt-3 flex justify-center">
+                          <button
+                            type="button"
+                            onClick={handleSwapStations}
+                            className="flex items-center gap-2 bg-travel-orange text-white px-4 py-2 rounded-lg shadow-md hover:bg-orange-600 transition-all duration-300 active:scale-95 focus:outline-none focus:ring-2 focus:ring-travel-orange focus:ring-offset-2"
+                            title="Swap stations"
+                            aria-label="Swap from and to stations"
+                          >
+                            <ArrowLeftRight className="w-4 h-4" />
+                            <span className="text-sm font-medium">Swap Stations</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Other booking types with regular input */}
+                        <div>
+                          <label className="block text-gray-700 font-medium mb-2">
+                            From <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                            <input
+                              type="text"
+                              {...register("from", { required: "Origin is required" })}
+                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                              placeholder="City/Station/Airport"
+                            />
                           </div>
-                          
-                          <div>
-                            <label className="block text-gray-700 font-medium mb-2">
-                              To <span className="text-rose-500">*</span>
-                            </label>
-                            <div className="relative">
-                              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                              <input
-                                type="text"
-                                {...register("to", { required: "Destination is required" })}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                                placeholder="City/Station/Airport"
-                              />
-                            </div>
-                            {errors.to && <p className="text-red-500 text-sm mt-1">{String(errors.to.message)}</p>}
+                          {errors.from && <p className="text-red-500 text-sm mt-1">{String(errors.from.message)}</p>}
+                        </div>
+                        
+                        <div>
+                          <label className="block text-gray-700 font-medium mb-2">
+                            To <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                            <input
+                              type="text"
+                              {...register("to", { required: "Destination is required" })}
+                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                              placeholder="City/Station/Airport"
+                            />
                           </div>
-                        </>
-                      )}
-                    </div>
+                          {errors.to && <p className="text-red-500 text-sm mt-1">{String(errors.to.message)}</p>}
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>

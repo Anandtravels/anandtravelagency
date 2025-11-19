@@ -596,7 +596,14 @@ const BookingsTab = ({
                   <div className="mt-2 pt-2 border-t space-y-2">
                     <div className="flex items-center gap-2">
                       <Phone size={14} className="text-gray-400" />
-                      <a href={`tel:${booking.phone}`} className="text-sm hover:underline">{booking.phone}</a>
+                      <a 
+                        href={`https://wa.me/${booking.phone.replace(/\D/g, '')}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm hover:underline text-green-600 hover:text-green-700"
+                      >
+                        {booking.phone}
+                      </a>
                     </div>
                     <div className="flex items-center gap-2">
                       <Mail size={14} className="text-gray-400" />
@@ -807,8 +814,16 @@ const BookingsTab = ({
 
                 <div className="flex items-center flex-wrap gap-2 mt-3">
                   <div className="flex items-center gap-1 text-gray-600">
-                    <Phone size={14} className="text-blue-500" />
-                    <a href={`tel:${booking.phone}`} className="text-sm hover:underline">{booking.phone}</a>
+                    <Phone size={14} className="text-green-500" />
+                    <a 
+                      href={`https://wa.me/${booking.phone.replace(/\D/g, '')}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm hover:underline text-green-600 hover:text-green-700"
+                      title="Open WhatsApp chat"
+                    >
+                      {booking.phone}
+                    </a>
                   </div>
                   <div className="flex items-center gap-1 text-gray-600">
                     <Mail size={14} className="text-blue-500" />
