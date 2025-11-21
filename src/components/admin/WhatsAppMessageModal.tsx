@@ -28,7 +28,7 @@ const WhatsAppMessageModal = ({
 
   const handleBookingTypeChange = (type: string) => {
     const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
-    const bookingCharge = calculateBookingCharge(type, ticketCost).toFixed(2);
+    const bookingCharge = calculateBookingCharge(type, messageDetails.classPreference).toFixed(2);
     
     setMessageDetails({
       ...messageDetails,
@@ -37,10 +37,21 @@ const WhatsAppMessageModal = ({
     });
   };
 
+  const handleClassPreferenceChange = (classPreference: string) => {
+    const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
+    const bookingCharge = calculateBookingCharge(messageDetails.bookingType, classPreference).toFixed(2);
+    
+    setMessageDetails({
+      ...messageDetails,
+      classPreference: classPreference,
+      bookingCharge: bookingCharge
+    });
+  };
+
   const calculateTotal = (): { amount: string; details: string } => {
     const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
     const bookingCharge = parseFloat(messageDetails.bookingCharge) || 
-      calculateBookingCharge(messageDetails.bookingType, ticketCost);
+      calculateBookingCharge(messageDetails.bookingType, messageDetails.classPreference);
     const passengerCount = messageDetails.passengerCount || 1;
     
     if (!messageDetails.ticketCost) {
@@ -90,15 +101,31 @@ const WhatsAppMessageModal = ({
             </div>
             
             <div className="space-y-3">
-              <div>
-                <Label htmlFor="bookingType" className="text-sm">Booking Type</Label>
-                <select id="bookingType" className="w-full px-3 py-2 text-sm border rounded-md mt-1" value={messageDetails.bookingType} onChange={(e) => handleBookingTypeChange(e.target.value)}>
-                  <option value="General Booking">General Booking</option>
-                  <option value="Tatkal Booking">Tatkal Booking</option>
-                  <option value="Premium Booking">Premium Booking</option>
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  {messageDetails.bookingType === 'Tatkal Booking' ? 'Tatkal bookings have a fixed charge of ₹200.' : messageDetails.bookingType === 'Premium Booking' ? 'Premium bookings have a fixed charge of ₹250.' : 'General bookings have a fixed charge of ₹50.'}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="bookingType" className="text-sm">Booking Type</Label>
+                  <select id="bookingType" className="w-full px-3 py-2 text-sm border rounded-md mt-1" value={messageDetails.bookingType} onChange={(e) => handleBookingTypeChange(e.target.value)}>
+                    <option value="General Booking">General Booking</option>
+                    <option value="Tatkal Booking">Tatkal Booking</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="classPreference" className="text-sm">Class Preference</Label>
+                  <select id="classPreference" className="w-full px-3 py-2 text-sm border rounded-md mt-1" value={messageDetails.classPreference} onChange={(e) => handleClassPreferenceChange(e.target.value)}>
+                    <option value="SL">Sleeper (SL)</option>
+                    <option value="3AC/3E">3AC/3E</option>
+                    <option value="2AC">2AC</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 p-2 rounded-md border border-blue-200">
+                <p className="text-xs text-blue-700">
+                  💵 Booking Charge: ₹{parseFloat(messageDetails.bookingCharge || '0').toFixed(2)} per passenger
+                  {messageDetails.bookingType === 'General Booking' 
+                    ? ' (General: Fixed ₹100)'
+                    : ` (Tatkal ${messageDetails.classPreference === 'SL' ? 'Sleeper: ₹250' : messageDetails.classPreference === '3AC/3E' ? '3AC/3E: ₹350' : '2AC: ₹400'})`}
                 </p>
               </div>
               

@@ -22,7 +22,7 @@ interface BookingsTabProps {
   agents: any[];
   formatFirebaseTimestamp: (timestamp: any) => string;
   handleNoteChange: (id: string, note: string) => void;
-  updateBookingStatus: (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold') => Promise<void>;
+  updateBookingStatus: (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold', booking?: any) => Promise<void>;
   deleteBookings: (ids: string[]) => Promise<void>;
   openEditModal: (booking: any) => void;
   handleCall: (phone: string) => void;
@@ -558,7 +558,7 @@ const BookingsTab = ({
                 </div>
                 <select
                   value={booking.status || 'pending'}
-                  onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold')}
+                  onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold', booking)}
                   className={`px-3 py-1 rounded-full text-xs font-medium border ${
                     booking.status === 'completed' 
                       ? 'bg-green-100 text-green-800 border-green-200' 
@@ -763,7 +763,7 @@ const BookingsTab = ({
                 <div className="absolute right-4 top-4">
                   <select
                     value={booking.status || 'pending'}
-                    onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold')}
+                    onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold', booking)}
                     className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
                       booking.status === 'completed' 
                         ? 'bg-green-100 text-green-800 border-green-200' 

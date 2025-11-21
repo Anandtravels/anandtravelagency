@@ -6,11 +6,13 @@ import { useBookingManagement } from "@/hooks/useBookingManagement";
 import { useTicketAssignment } from "@/hooks/useTicketAssignment";
 import { useEditBookingModal } from "@/hooks/use-edit-booking-modal";
 import { useEnhancedWhatsAppModal } from "@/hooks/useEnhancedWhatsAppModal";
+import { useBookingInvoiceModal } from "@/hooks/useBookingInvoiceModal";
 import { useAdminNavigation } from "@/hooks/useAdminNavigation";
 import { formatFirebaseTimestamp } from "@/utils/adminHelpers";
 import AdminLayout from "@/components/admin/AdminLayout";
 import WhatsAppMessageModal from "@/components/admin/WhatsAppMessageModal";
 import EditBookingModal from "@/components/admin/EditBookingModal";
+import BookingPriceModal from "@/components/admin/BookingPriceModal";
 import { DeleteConfirmationModal } from "@/components/admin/DeleteConfirmationModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BookingsTab from "@/components/BookingsTab";
@@ -34,8 +36,25 @@ const Admin = () => {
   const location = useLocation();
   const { user, loading: authLoading, handleSignOut } = useAdminAuth();
   const { bookings, agents, loading: dataLoading, adminNotes, setAdminNotes } = useAdminData();
+  
+  // Initialize booking invoice modal
   const { 
-    updateBookingStatus, 
+    priceModalOpen, 
+    openPriceModal, 
+    closePriceModal, 
+    currentBooking: invoiceBooking,
+    generateInvoiceWithPrice, 
+    submitting: invoiceSubmitting 
+  } = useBookingInvoiceModal(user?.email);
+  
+  // Callback for when status changes to 'Booked'
+  const handleStatusChangeToBooked = (bookingId: string, booking: any) => {
+    openPriceModal(booking);
+  };
+  
+  const { 
+    updateBookingStatus,
+    updateBookingStatusDirect,
     initiateDelete, 
     confirmDelete, 
     undoDelete, 
@@ -44,7 +63,7 @@ const Admin = () => {
     bookingsToDelete,
     handleNoteChange, 
     debouncedNoteUpdate 
-  } = useBookingManagement(setAdminNotes);
+  } = useBookingManagement(setAdminNotes, handleStatusChangeToBooked);
   const { assignTicket, assignPackageTicket } = useTicketAssignment(bookings, agents);
   const { editModalOpen, setEditModalOpen, editBooking, editFormData, setEditFormData, openEditModal, handleSaveEdit } = useEditBookingModal();
   const { whatsappModal, setWhatsappModal, currentBooking, messageDetails, setMessageDetails, handleWhatsapp, sendWhatsappMessage, sending } = useEnhancedWhatsAppModal(user?.email);
@@ -215,6 +234,14 @@ const Admin = () => {
         setMessageDetails={setMessageDetails}
         onSendMessage={sendWhatsappMessage}
         sending={sending}
+      />
+
+      <BookingPriceModal
+        isOpen={priceModalOpen}
+        onOpenChange={closePriceModal}
+        booking={invoiceBooking}
+        onSubmit={generateInvoiceWithPrice}
+        submitting={invoiceSubmitting}
       />
 
       <EditBookingModal

@@ -72,6 +72,7 @@ const HotelManagementTab = ({ user }: HotelManagementTabProps) => {
   
   // Filter state
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [cityFilter, setCityFilter] = useState<string>('all');
   
   // Bulk selection state
   const [selectedHotelIds, setSelectedHotelIds] = useState<string[]>([]);
@@ -727,10 +728,15 @@ const HotelManagementTab = ({ user }: HotelManagementTabProps) => {
     ? roomTypes.filter(rt => rt.hotelId === selectedHotel.id)
     : [];
 
-  // Filter hotels based on status
-  const filteredHotels = statusFilter === 'all' 
-    ? hotels 
-    : hotels.filter(hotel => hotel.status === statusFilter);
+  // Get unique cities from hotels (sorted alphabetically)
+  const uniqueCities = Array.from(new Set(hotels.map(hotel => hotel.city)))
+    .filter(city => city) // Remove empty/null cities
+    .sort((a, b) => a.localeCompare(b));
+
+  // Filter hotels based on status and city
+  const filteredHotels = hotels
+    .filter(hotel => statusFilter === 'all' || hotel.status === statusFilter)
+    .filter(hotel => cityFilter === 'all' || hotel.city === cityFilter);
 
   return (
     <div className="space-y-6">
@@ -749,6 +755,18 @@ const HotelManagementTab = ({ user }: HotelManagementTabProps) => {
               <SelectItem value="all">All Hotels</SelectItem>
               <SelectItem value="active">Active Hotels</SelectItem>
               <SelectItem value="inactive">Inactive Hotels</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={cityFilter} onValueChange={setCityFilter}>
+            <SelectTrigger className="w-[180px]">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Filter by city" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Cities</SelectItem>
+              {uniqueCities.map((city) => (
+                <SelectItem key={city} value={city}>{city}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button onClick={() => setJsonImportModalOpen(true)} variant="outline">

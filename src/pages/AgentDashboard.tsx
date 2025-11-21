@@ -204,13 +204,21 @@ const AgentDashboard = () => {
 
   const calculateBookingCharge = (bookingType: string, basePrice: number): number => {
     switch(bookingType) {
+      case 'Tatkal Sleeper':
+        return 250;
+      case 'Tatkal 3AC':
+        return 350;
+      case 'Tatkal 2AC':
+        return 400;
       case 'Tatkal Booking':
-        return 200; // Fixed ₹200 for Tatkal
+        return 250; // Legacy support - default to Sleeper rate
       case 'Premium Booking':
-        return Math.max(200, basePrice * 0.15); // Minimum ₹200 or 15% whichever is higher
+        return 400; // Map Premium to Tatkal 2AC rate
+      case 'Advance Reservation':
+        return 150;
       case 'General Booking':
       default:
-        return 50; // Fixed ₹50 for General
+        return 100;
     }
   };
 

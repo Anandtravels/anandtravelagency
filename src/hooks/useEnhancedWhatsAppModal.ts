@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { Booking, MessageDetails } from '@/types/admin';
 import { Bill } from '@/types/upi';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc } from 'firebase/firestore';
 import { generateUPIQRCode } from '@/utils/qrCodeUtils';
 import { uploadQRCodeToCloudinary } from '@/utils/cloudinaryUpload';
-import { generateBillNumber } from '@/utils/billUtils';
 import { useToast } from '@/hooks/use-toast';
 
 export const useEnhancedWhatsAppModal = (userEmail?: string) => {
@@ -16,7 +15,7 @@ export const useEnhancedWhatsAppModal = (userEmail?: string) => {
   
   const [messageDetails, setMessageDetails] = useState<MessageDetails>({
     ticketCost: '', bookingCharge: '', totalAmount: '', additionalInfo: '',
-    bookingType: 'General Booking', passengerCount: 1, couponCode: '',
+    bookingType: 'General Booking', classPreference: 'SL', passengerCount: 1, couponCode: '',
     couponDiscount: 0, couponType: null
   });
 
@@ -40,7 +39,8 @@ export const useEnhancedWhatsAppModal = (userEmail?: string) => {
       })();
       
       let initialPassengerCount = Array.isArray(booking.passengers) ? booking.passengers.length : 1;
-      const initialBookingCharge = calculateBookingCharge(initialBookingType, 0);
+      const initialClassPreference = booking.train_class || booking.class_preference || 'SL';
+      const initialBookingCharge = calculateBookingCharge(initialBookingType, initialClassPreference);
 
       if (booking.coupon) {
         setMessageDetails({
@@ -49,6 +49,7 @@ export const useEnhancedWhatsAppModal = (userEmail?: string) => {
           totalAmount: '',
           additionalInfo: '',
           bookingType: initialBookingType,
+          classPreference: initialClassPreference,
           passengerCount: initialPassengerCount,
           couponCode: booking.coupon.code,
           couponDiscount: booking.coupon.discount,
@@ -61,6 +62,7 @@ export const useEnhancedWhatsAppModal = (userEmail?: string) => {
           totalAmount: '',
           additionalInfo: '',
           bookingType: initialBookingType,
+          classPreference: initialClassPreference,
           passengerCount: initialPassengerCount,
           couponCode: '',
           couponDiscount: 0,
@@ -72,12 +74,33 @@ export const useEnhancedWhatsAppModal = (userEmail?: string) => {
     }
   };
 
-  const calculateBookingCharge = (bookingType: string, ticketCost: number): number => {
-    switch(bookingType) {
-      case 'Tatkal Booking': return 200;
-      case 'Premium Booking': return 250;
-      case 'General Booking': default: return 50;
+  const calculateBookingCharge = (bookingType: string, classPreference?: string): number => {
+    // For General booking, always return 100 regardless of class
+    if (bookingType === 'General Booking' || bookingType === 'General') {
+      return 100;
     }
+    
+    // For Tatkal bookings, charge depends on class preference
+    if (bookingType === 'Tatkal Booking' || bookingType === 'Tatkal') {
+      switch(classPreference) {
+        case 'SL': // Sleeper
+        case 'Sleeper':
+          return 250;
+        case '3A': // 3AC
+        case '3E': // 3E
+        case '3AC':
+        case '3AC/3E':
+          return 350;
+        case '2A': // 2AC
+        case '2AC':
+          return 400;
+        default:
+          return 250; // Default to Sleeper rate
+      }
+    }
+    
+    // Legacy support
+    return 100;
   };
 
   const calculateTotalAmount = (): number => {
@@ -114,11 +137,10 @@ export const useEnhancedWhatsAppModal = (userEmail?: string) => {
       const accountName = upiSettings?.accountHolderName || 'Pinisetty Naga Satya Surya Shiva Anand';
       const paymentPhone = upiSettings?.paymentPhone || '8985816481';
       
-      // 2. Calculate totals
+      // 2. Calculate totals (no bill generation - only for invoice on status change)
       const totalAmount = calculateTotalAmount();
-      const billNumber = generateBillNumber();
       
-      // 3. Generate dynamic QR code WITH amount pre-filled
+      // 3. Generate dynamic QR code WITH amount pre-filled (no bill number needed)
       let qrCodeDataUrl = '';
       let qrCodeCloudinaryUrl = '';
       let useLocalQR = false;
@@ -129,14 +151,14 @@ export const useEnhancedWhatsAppModal = (userEmail?: string) => {
           upiId,
           accountName,
           totalAmount,
-          `Bill ${billNumber} - ${currentBooking.from} to ${currentBooking.to}`
+          `Payment - ${currentBooking.from} to ${currentBooking.to}`
         );
         
         console.log('QR code generated successfully');
         
         // Try to upload QR to Cloudinary and get public URL
         try {
-          qrCodeCloudinaryUrl = await uploadQRCodeToCloudinary(qrCodeDataUrl, billNumber);
+          qrCodeCloudinaryUrl = await uploadQRCodeToCloudinary(qrCodeDataUrl, `payment_${currentBooking.id}`);
           console.log('QR uploaded to Cloudinary:', qrCodeCloudinaryUrl);
         } catch (uploadError: any) {
           console.warn('Cloudinary upload failed, using local QR display:', uploadError.message);
@@ -159,50 +181,9 @@ export const useEnhancedWhatsAppModal = (userEmail?: string) => {
         // Continue without QR if it fails
       }
       
-      // 4. Create bill record in Firebase
+      // 4. Format passenger info (no bill generation - only on status change to 'Booked')
       const ticketCost = parseFloat(messageDetails.ticketCost) || 0;
       const bookingCharge = parseFloat(messageDetails.bookingCharge) || 0;
-      
-      // Build bill data object - only include optional fields if they have values
-      const billData: any = {
-        billNumber,
-        bookingId: currentBooking.id,
-        customerName: currentBooking.name,
-        customerPhone: currentBooking.phone,
-        serviceType: currentBooking.booking_type || 'train',
-        bookingType: messageDetails.bookingType,
-        passengerCount: messageDetails.passengerCount,
-        ticketCost,
-        bookingCharge,
-        totalAmount,
-        createdAt: serverTimestamp(),
-        createdBy: userEmail
-      };
-      
-      // Add optional fields only if they have values (Firestore doesn't accept undefined)
-      if (currentBooking.email) {
-        billData.customerEmail = currentBooking.email;
-      }
-      if (currentBooking.from) {
-        billData.journeyFrom = currentBooking.from;
-      }
-      if (currentBooking.to) {
-        billData.journeyTo = currentBooking.to;
-      }
-      if (currentBooking.journey_date) {
-        billData.journeyDate = currentBooking.journey_date;
-      }
-      if (messageDetails.couponCode && messageDetails.couponCode.trim() !== '') {
-        billData.couponCode = messageDetails.couponCode;
-      }
-      if (messageDetails.couponDiscount && messageDetails.couponDiscount > 0) {
-        billData.couponDiscount = messageDetails.couponDiscount;
-      }
-      if (qrCodeCloudinaryUrl) {
-        billData.qrCodeUrl = qrCodeCloudinaryUrl; // Store Cloudinary URL
-      }
-      
-      await addDoc(collection(db, 'bills'), billData);
       
       // 5. Format passenger info
       const formatPassengerInfo = () => {
@@ -254,12 +235,11 @@ Final Booking Charge: ₹${finalCharge.toFixed(2)}`;
       
       pricingDetails += `\n*Total Amount: ₹${totalAmount.toFixed(2)}*`;
 
-      // 7. Build WhatsApp message
+      // 7. Build WhatsApp message (without bill number - invoice only on status change)
       const message = 
 `🎫 *ANAND TRAVELS - BOOKING*
 
 Dear *${currentBooking.name}*,
-Bill No: *${billNumber}*
 
 ━━━━━━━━━━━━━━━
 *JOURNEY*
@@ -319,7 +299,7 @@ Amount is pre-filled. Just scan and confirm! ✅`;
               <!DOCTYPE html>
               <html>
               <head>
-                <title>Payment QR Code - ${billNumber}</title>
+                <title>Payment QR Code - ${currentBooking.name}</title>
                 <style>
                   body {
                     font-family: Arial, sans-serif;
@@ -457,7 +437,7 @@ Amount is pre-filled. Just scan and confirm! ✅`;
               <body>
                 <div class="container">
                   <h1>${qrCodeCloudinaryUrl ? '✅ Payment QR Code Sent Successfully!' : '🎉 Payment QR Code Ready!'}</h1>
-                  <div class="bill-number">Bill #${billNumber}</div>
+                  <div class="bill-number">Booking: ${currentBooking.name}</div>
                   
                   <div class="auto-download-notice" style="background: ${qrCodeCloudinaryUrl ? '#28a745' : '#ffc107'}; animation: none;">
                     ${qrCodeCloudinaryUrl ? '✅ QR Code uploaded to cloud & sent in WhatsApp message!' : '⚠️ QR Code ready - Download and share manually'}
@@ -544,7 +524,7 @@ Amount is pre-filled. Just scan and confirm! ✅`;
                     
                     const link = document.createElement('a');
                     link.href = '${qrCodeDataUrl}';
-                    link.download = 'Payment_QR_${billNumber}_${currentBooking.name.replace(/\s+/g, '_')}.png';
+                    link.download = 'Payment_QR_${currentBooking.name.replace(/\s+/g, '_')}.png';
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);

@@ -6,6 +6,7 @@ import { StationAutocomplete } from "@/components/StationAutocomplete";
 import { MultiSelectTrainAutocomplete } from "@/components/MultiSelectTrainAutocomplete";
 import { useState, useEffect } from "react";
 import { preloadStationData } from "@/utils/stationDataLoader";
+import { ArrowLeftRight } from "lucide-react";
 
 interface EditBookingModalProps {
   isOpen: boolean;
@@ -38,6 +39,16 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave();
+  };
+
+  // Handle station swap
+  const handleSwapStations = () => {
+    const temp = trainFromStation;
+    setTrainFromStation(trainToStation);
+    setTrainToStation(temp);
+    // Update formData
+    onFormChange({ target: { name: 'from', value: trainToStation } } as any);
+    onFormChange({ target: { name: 'to', value: temp } } as any);
   };
 
   return (
@@ -116,6 +127,19 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
                             }}
                             placeholder="Search station name or code..."
                           />
+                        </div>
+                        {/* Swap Button */}
+                        <div className="md:col-span-2 flex justify-center -mt-3 mb-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSwapStations}
+                            className="flex items-center gap-2 hover:bg-travel-orange hover:text-white transition-colors"
+                          >
+                            <ArrowLeftRight className="h-4 w-4" />
+                            Swap Stations
+                          </Button>
                         </div>
                       </>
                     ) : (

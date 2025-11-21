@@ -36,8 +36,8 @@ Passengers: 1
 ------------------
 Pricing Details:
 General Booking Cost: ₹200.00 × 1 = ₹200.00
-General Booking Charge: ₹50.00 × 1 = ₹50.00
-Total Amount: ₹250.00
+General Booking Charge: ₹100.00 × 1 = ₹100.00
+Total Amount: ₹300.00
 
 ------------------
 
@@ -102,8 +102,8 @@ Passengers: 1
 ━━━━━━━━━━━━━━━
 Pricing Details:
 General Booking Cost: ₹200.00 × 1 = ₹200.00
-General Booking Charge: ₹50.00 × 1 = ₹50.00
-Total Amount: ₹250.00
+General Booking Charge: ₹100.00 × 1 = ₹100.00
+Total Amount: ₹300.00
 
 ━━━━━━━━━━━━━━━
 PAYMENT

@@ -184,12 +184,12 @@ Total = (Ticket Cost × Passengers) + (Booking Charge × Passengers) - Discount
 
 **Example:**
 - 2 passengers
-- General booking (₹50 per person)
+- General booking (₹100 per person)
 - Ticket cost: ₹500 per person
 
 Calculation:
 - Tickets: ₹500 × 2 = ₹1,000
-- Charges: ₹50 × 2 = ₹100
+- Charges: ₹100 × 2 = ₹100
 - **Total: ₹1,100**
 
 ---

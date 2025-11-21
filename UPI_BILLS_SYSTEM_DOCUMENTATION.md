@@ -66,8 +66,8 @@ Service Type: General Booking
 ------------------
 *Pricing Details:*
 General Booking Cost: ₹500.00 × 2 = ₹1000.00
-General Booking Charge: ₹50.00 × 2 = ₹100.00
-*Total Amount: ₹1100.00*
+General Booking Charge: ₹100.00 × 2 = ₹200.00
+*Total Amount: ₹1200.00*
 
 ------------------
 

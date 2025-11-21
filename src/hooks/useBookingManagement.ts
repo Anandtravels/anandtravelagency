@@ -5,14 +5,46 @@ import { useToast } from '@/hooks/use-toast';
 import debounce from 'lodash/debounce';
 import { useAuth } from '@/lib/auth';
 
-export const useBookingManagement = (setAdminNotes: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>) => {
+export const useBookingManagement = (
+  setAdminNotes: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>,
+  onStatusChangeToBooked?: (bookingId: string, booking: any) => void
+) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [bookingsToDelete, setBookingsToDelete] = useState<string[]>([]);
   const [deletedBookings, setDeletedBookings] = useState<{ [key: string]: any }>({});
 
-  const updateBookingStatus = async (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold') => {
+  const updateBookingStatus = async (
+    bookingId: string, 
+    status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold',
+    booking?: any
+  ) => {
+    if (!user || user.email !== 'admin@anandtravels.com') {
+      toast({ title: "Unauthorized", description: "You don't have permission to do this.", variant: "destructive" });
+      return;
+    }
+
+    // If status is being changed to "booked", trigger the price modal instead
+    if (status === 'booked' && onStatusChangeToBooked && booking) {
+      onStatusChangeToBooked(bookingId, booking);
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, 'bookings', bookingId), {
+        status,
+        updated_at: serverTimestamp(),
+        updated_by: user.email,
+      });
+      toast({ title: "Status Updated", description: "Booking status updated successfully." });
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast({ title: "Update Failed", description: "Failed to update booking status.", variant: "destructive" });
+    }
+  };
+
+  const updateBookingStatusDirect = async (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold') => {
     if (!user || user.email !== 'admin@anandtravels.com') {
       toast({ title: "Unauthorized", description: "You don't have permission to do this.", variant: "destructive" });
       return;
@@ -139,7 +171,8 @@ export const useBookingManagement = (setAdminNotes: React.Dispatch<React.SetStat
   }, [debouncedNoteUpdate, setAdminNotes]);
 
   return { 
-    updateBookingStatus, 
+    updateBookingStatus,
+    updateBookingStatusDirect,
     initiateDelete, 
     confirmDelete,
     undoDelete,

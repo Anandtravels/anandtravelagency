@@ -61,6 +61,7 @@ export interface MessageDetails {
   totalAmount: string;
   additionalInfo: string;
   bookingType: string;
+  classPreference: string;
   passengerCount: number;
   couponCode: string;
   couponDiscount: number;
