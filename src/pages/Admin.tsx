@@ -29,6 +29,7 @@ import HotelAgentsTab from "@/components/admin/HotelAgentsTab";
 import TeamManagementTab from "@/components/admin/TeamManagementTab";
 import UPISettingsTab from "@/components/admin/UPISettingsTab";
 import BillsManagementTab from "@/components/admin/BillsManagementTab";
+import AgentTaskManagementTab from "@/components/admin/AgentTaskManagementTab";
 import { BarChart3 } from "lucide-react";
 
 const Admin = () => {
@@ -174,7 +175,13 @@ const Admin = () => {
             />
           </TabsContent>
 
-          <TabsContent value="eservices" className="space-y-6">
+          <TabsContent value="agent-tasks" className="space-y-6">
+            <AgentTaskManagementTab 
+              user={user}
+            />
+          </TabsContent>
+
+          <TabsContent value="team-management" className="space-y-6">
             <EServicesManagementTab 
               user={user} 
               formatFirebaseTimestamp={formatFirebaseTimestamp}

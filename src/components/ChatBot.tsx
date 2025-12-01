@@ -18,7 +18,7 @@ interface ChatBotProps {
 }
 
 // Google Gemini API configuration
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyA622_SixT7YKKh6h1fj-8O788xQ05oWwU';
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyB1OsVgvqouWHLju_ijYO_126qOqwD0KkU';
 
 // Initialize Google GenAI
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });

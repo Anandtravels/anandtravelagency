@@ -18,6 +18,7 @@ export const useAdminNavigation = () => {
       'hotel-agents',
       'messages',
       'agents',
+      'agent-tasks',
       'eservices',
       'visa-applications',
       'team-management',

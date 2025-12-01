@@ -12,7 +12,7 @@
 ## 🎉 What Was Accomplished
 
 ### ✅ **Core Upgrades**
-1. **API Key Updated:** New key integrated (AIzaSyA622_SixT7YKKh6h1fj-8O788xQ05oWwU)
+1. **API Key Updated:** New key integrated (see .env file)
 2. **Model Upgraded:** From gemini-1.5-flash → gemini-2.0-flash-exp
 3. **Configuration Made Flexible:** Model version now configurable via .env
 4. **API Endpoint Updated:** Now uses v1beta for latest features
@@ -85,7 +85,7 @@
 VITE_GEMINI_API_KEY=AIzaSyDD58R6k_IALIUvHyIrb5H6p8wVXGiOhik
 
 # After:
-+ VITE_GEMINI_API_KEY=AIzaSyA622_SixT7YKKh6h1fj-8O788xQ05oWwU
++ VITE_GEMINI_API_KEY=your_api_key_here
 + VITE_GEMINI_MODEL=gemini-2.0-flash-exp
 ```
 
@@ -99,7 +99,7 @@ VITE_GEMINI_API_KEY=AIzaSyDD58R6k_IALIUvHyIrb5H6p8wVXGiOhik
 - const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
 
 # After:
-+ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyA622_SixT7YKKh6h1fj-8O788xQ05oWwU';
++ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'your_api_key_here';
 + const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.0-flash-exp';
 + const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 ```
@@ -441,7 +441,7 @@ Follow `CHATBOT_TESTING_GUIDE.md` for:
 
 ### **All Objectives Achieved:**
 - ✅ Upgraded to Gemini 2.0 Flash Experimental
-- ✅ Integrated new API key (AIzaSyA622_SixT7YKKh6h1fj-8O788xQ05oWwU)
+- ✅ Integrated new API key (see .env file)
 - ✅ Made configuration flexible (.env based)
 - ✅ Enhanced AI capabilities (any topic, longer responses)
 - ✅ Improved error handling (detailed logs, fallback)

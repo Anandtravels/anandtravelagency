@@ -3,16 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Mail, MessageSquare } from "lucide-react";
+import { Phone, Mail, MessageSquare, ClipboardList, Wallet, BookOpen, Calendar, Star, Sparkles, User } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { CouponInput } from "@/components/CouponSystem/CouponInput";
+import { motion } from "framer-motion";
+import { useAgentTasks } from "@/hooks/useAgentTasks";
+import AgentTaskList from "@/components/agent/AgentTaskList";
+import AgentWalletCard from "@/components/agent/AgentWalletCard";
+import AgentRulesRegulations from "@/components/agent/AgentRulesRegulations";
 
 const AgentDashboard = () => {
   const { user, isAgent, signOut, loading } = useAuth();
@@ -23,17 +29,72 @@ const AgentDashboard = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [whatsappModal, setWhatsappModal] = useState(false);
   const [currentBooking, setCurrentBooking] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("tasks");
+  const [agentName, setAgentName] = useState<string>("");
   const [messageDetails, setMessageDetails] = useState({
     ticketCost: '',
     bookingCharge: '',
     totalAmount: '',
     additionalInfo: '',
     bookingType: 'General Booking',
-    // Add coupon related fields
     couponCode: '',
     couponDiscount: 0,
     couponType: null as 'fixed' | 'percentage' | null
   });
+
+  // Agent Tasks Hook
+  const { 
+    tasks, 
+    wallet, 
+    taskHistory, 
+    loading: tasksLoading, 
+    completeTask,
+    getPendingTasksCount
+  } = useAgentTasks(user?.email || undefined);
+
+  // Task status filter for agent view
+  const [taskStatusFilter, setTaskStatusFilter] = useState<string>('all');
+
+  // Fetch agent name from agents collection
+  useEffect(() => {
+    const fetchAgentName = async () => {
+      if (!user?.email) return;
+      
+      try {
+        const agentsRef = collection(db, 'agents');
+        const q = query(agentsRef, where('email', '==', user.email.toLowerCase()));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          if (!snapshot.empty) {
+            const agentData = snapshot.docs[0].data();
+            setAgentName(agentData.name || 'Agent');
+          }
+        });
+        
+        return () => unsubscribe();
+      } catch (error) {
+        console.error('Error fetching agent name:', error);
+      }
+    };
+    
+    if (user && isAgent) {
+      fetchAgentName();
+    }
+  }, [user, isAgent]);
+
+  // Handle task completion with celebration toast
+  const handleCompleteTask = async (taskId: string): Promise<boolean> => {
+    const success = await completeTask(taskId);
+    
+    if (success) {
+      toast({
+        title: "🎉 Congratulations!",
+        description: "Hey! You have earned your points. Complete more tasks to earn more! 🚀",
+        duration: 5000,
+      });
+    }
+    
+    return success;
+  };
   
   // Check authentication and fetch agent's bookings
   useEffect(() => {
@@ -374,136 +435,257 @@ Thank you for choosing Anand Travels!`;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="container py-4 px-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-bold text-travel-blue-dark">Agent Dashboard</h1>
-            <p className="text-sm text-gray-600">{user?.email}</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-50">
+        <div className="container py-3 px-3 sm:px-4 flex justify-between items-center">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-travel-blue-dark rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base">
+              {agentName.charAt(0).toUpperCase() || 'A'}
+            </div>
+            <div>
+              <h1 className="text-sm sm:text-base font-bold text-travel-blue-dark">Agent Dashboard</h1>
+              <p className="text-xs text-gray-500 truncate max-w-[140px] sm:max-w-none">{user?.email}</p>
+            </div>
           </div>
-          <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
+          <Button variant="outline" size="sm" onClick={handleSignOut} className="text-xs sm:text-sm">Sign Out</Button>
         </div>
       </header>
 
-      <main className="container p-4">
-        <div className="mb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 className="text-xl font-bold text-travel-blue-dark">Your Assigned Bookings</h2>
+      <main className="container p-3 sm:p-4 space-y-4">
+        {/* Welcome Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-travel-blue-dark via-travel-blue-medium to-travel-blue-dark rounded-xl p-3 sm:p-5 text-white shadow-lg relative z-0"
+        >
+          <div className="relative">
+            {/* Top row - Welcome message */}
+            <div className="flex items-center gap-2 sm:gap-3 mb-3">
+              <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg">
+                <User className="w-4 h-4 sm:w-6 sm:h-6" />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-lg md:text-xl font-bold flex items-center gap-1">
+                  Welcome, {agentName || 'Agent'} 
+                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-travel-orange" />
+                </h2>
+                <p className="text-[10px] sm:text-sm text-blue-100">Complete tasks to earn ATA points!</p>
+              </div>
+            </div>
             
-            <div className="relative">
-              <select
-                className="pl-3 pr-10 py-2 text-sm border rounded-md bg-white w-full"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">All Bookings ({bookings.length})</option>
-                <option value="pending">Pending ({bookings.filter(b => !b.status || b.status === 'pending').length})</option>
-                <option value="completed">Completed ({bookings.filter(b => b.status === 'completed').length})</option>
-              </select>
+            {/* Bottom row - Stats cards */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex-1 text-center bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2">
+                <p className="text-[10px] sm:text-xs text-blue-100">Pending</p>
+                <p className="text-base sm:text-xl font-bold">{getPendingTasksCount()}</p>
+              </div>
+              <div className="flex-1 text-center bg-travel-orange/90 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2">
+                <p className="text-[10px] sm:text-xs text-orange-100">ATA Points</p>
+                <p className="text-base sm:text-xl font-bold flex items-center justify-center gap-1">
+                  <Star className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {wallet?.balance || 0}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {isLoading ? (
-          <div className="text-center py-10">
-            <div className="h-8 w-8 mx-auto animate-spin rounded-full border-4 border-travel-blue-dark border-r-transparent"></div>
-            <p className="mt-4 text-gray-500">Loading your bookings...</p>
-          </div>
-        ) : filteredBookings().length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredBookings().map((booking) => (
-              <Card key={booking.id} className="overflow-hidden">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">{booking.name}</CardTitle>
-                      <p className="text-sm text-gray-500">{formatDate(booking.created_at)}</p>
-                    </div>
-                    <select
-                      value={booking.status || 'pending'}
-                      onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        booking.status === 'completed' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="completed">Completed</option>
-                    </select>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Phone size={16} className="text-gray-400" />
-                      <span>{booking.phone}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Mail size={16} className="text-gray-400" />
-                      <span>{booking.email}</span>
-                    </div>
-                    <div className="border-t border-gray-100 pt-3">
-                      <p><span className="font-medium">Service:</span> {booking.booking_type || 'Not specified'}</p>
-                      <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
-                      <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
-                      <div className="mt-2">
-                        <span className="font-medium">Passengers:</span>
-                        <div className="ml-2 mt-1">
-                          {Array.isArray(booking.passengers) ? booking.passengers
-                            .filter((passenger: any) => passenger && (passenger.name || passenger.age || passenger.gender))
-                            .map((passenger: any, idx: number) => (
-                            <div key={idx} className="text-sm bg-gray-50 p-1 rounded mb-1">
-                              {passenger.name || 'N/A'} ({passenger.age || 'N/A'} yrs, {passenger.gender || 'N/A'})
+        {/* Tabs Navigation */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4 gap-0.5 bg-gray-100 shadow-sm rounded-lg p-0.5 h-auto">
+            <TabsTrigger value="tasks" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-blue-dark data-[state=active]:text-white rounded-md">
+              <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Tasks</span>
+            </TabsTrigger>
+            <TabsTrigger value="wallet" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-orange data-[state=active]:text-white rounded-md">
+              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Wallet</span>
+            </TabsTrigger>
+            <TabsTrigger value="bookings" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-teal data-[state=active]:text-white rounded-md">
+              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Bookings</span>
+            </TabsTrigger>
+            <TabsTrigger value="rules" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-blue-medium data-[state=active]:text-white rounded-md">
+              <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Rules</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Tasks Tab */}
+          <TabsContent value="tasks" className="mt-4">
+            <div className="grid lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2 order-2 lg:order-1">
+                {/* Task Filter Dropdown */}
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm sm:text-base font-semibold text-travel-blue-dark">Your Tasks</h3>
+                  <select
+                    value={taskStatusFilter}
+                    onChange={(e) => setTaskStatusFilter(e.target.value)}
+                    className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm border border-gray-200 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-travel-blue-dark/20"
+                  >
+                    <option value="all">All Tasks ({tasks.length})</option>
+                    <option value="pending">Pending ({tasks.filter(t => t.status === 'pending').length})</option>
+                    <option value="in-progress">In Progress ({tasks.filter(t => t.status === 'in-progress').length})</option>
+                    <option value="completed">Completed ({tasks.filter(t => t.status === 'completed' || t.status === 'verified').length})</option>
+                  </select>
+                </div>
+                <AgentTaskList 
+                  tasks={taskStatusFilter === 'all' 
+                    ? tasks 
+                    : taskStatusFilter === 'completed' 
+                      ? tasks.filter(t => t.status === 'completed' || t.status === 'verified')
+                      : tasks.filter(t => t.status === taskStatusFilter)
+                  } 
+                  onCompleteTask={handleCompleteTask}
+                  loading={tasksLoading}
+                  showAllTasks={taskStatusFilter !== 'all'}
+                />
+              </div>
+              <div className="order-1 lg:order-2">
+                <AgentWalletCard wallet={wallet} recentHistory={taskHistory.slice(0, 5)} />
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Wallet Tab */}
+          <TabsContent value="wallet" className="mt-4">
+            <div className="max-w-md mx-auto">
+              <AgentWalletCard wallet={wallet} recentHistory={taskHistory} />
+            </div>
+          </TabsContent>
+
+          {/* Bookings Tab */}
+          <TabsContent value="bookings" className="mt-6">
+            <div className="mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  Your Assigned Bookings
+                </h2>
+                
+                <div className="relative">
+                  <select
+                    className="pl-3 pr-10 py-2 text-sm border rounded-md bg-white w-full shadow-sm"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="all">All Bookings ({bookings.length})</option>
+                    <option value="pending">Pending ({bookings.filter(b => !b.status || b.status === 'pending').length})</option>
+                    <option value="completed">Completed ({bookings.filter(b => b.status === 'completed').length})</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {isLoading ? (
+              <div className="text-center py-10">
+                <div className="h-8 w-8 mx-auto animate-spin rounded-full border-4 border-blue-600 border-r-transparent"></div>
+                <p className="mt-4 text-gray-500">Loading your bookings...</p>
+              </div>
+            ) : filteredBookings().length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredBookings().map((booking) => (
+                  <Card key={booking.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">{booking.name}</CardTitle>
+                          <p className="text-sm text-gray-500">{formatDate(booking.created_at)}</p>
+                        </div>
+                        <select
+                          value={booking.status || 'pending'}
+                          onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            booking.status === 'completed' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-2">
+                      <div className="space-y-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Phone size={16} className="text-gray-400" />
+                          <span>{booking.phone}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail size={16} className="text-gray-400" />
+                          <span>{booking.email}</span>
+                        </div>
+                        <div className="border-t border-gray-100 pt-3">
+                          <p><span className="font-medium">Service:</span> {booking.booking_type || 'Not specified'}</p>
+                          <p><span className="font-medium">Journey:</span> {booking.from} to {booking.to}</p>
+                          <p><span className="font-medium">Date:</span> {booking.journey_date}</p>
+                          <div className="mt-2">
+                            <span className="font-medium">Passengers:</span>
+                            <div className="ml-2 mt-1">
+                              {Array.isArray(booking.passengers) ? booking.passengers
+                                .filter((passenger: any) => passenger && (passenger.name || passenger.age || passenger.gender))
+                                .map((passenger: any, idx: number) => (
+                                <div key={idx} className="text-sm bg-gray-50 p-1 rounded mb-1">
+                                  {passenger.name || 'N/A'} ({passenger.age || 'N/A'} yrs, {passenger.gender || 'N/A'})
+                                </div>
+                              )) : (
+                                <div>{booking.passengers}</div>
+                              )}
                             </div>
-                          )) : (
-                            <div>{booking.passengers}</div>
+                          </div>
+                          {booking.additional_requirements && (
+                            <div className="mt-2">
+                              <span className="font-medium">Special Requirements:</span>
+                              <p className="mt-1 text-sm bg-gray-50 p-2 rounded">{booking.additional_requirements}</p>
+                            </div>
                           )}
                         </div>
-                      </div>
-                      {booking.additional_requirements && (
-                        <div className="mt-2">
-                          <span className="font-medium">Special Requirements:</span>
-                          <p className="mt-1 text-sm bg-gray-50 p-2 rounded">{booking.additional_requirements}</p>
-                        </div>
-                      )}
-                    </div>
 
-                    <div className="pt-3 border-t border-gray-100 flex justify-between">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleCall(booking.phone)}
-                          className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
-                          title="Call"
-                        >
-                          <Phone size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleWhatsapp(booking.phone, booking)}
-                          className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
-                          title="WhatsApp"
-                        >
-                          <MessageSquare size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleEmail(booking.email)}
-                          className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
-                          title="Email"
-                        >
-                          <Mail size={16} />
-                        </button>
+                        <div className="pt-3 border-t border-gray-100 flex justify-between">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleCall(booking.phone)}
+                              className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors"
+                              title="Call"
+                            >
+                              <Phone size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleWhatsapp(booking.phone, booking)}
+                              className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition-colors"
+                              title="WhatsApp"
+                            >
+                              <MessageSquare size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleEmail(booking.email)}
+                              className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors"
+                              title="Email"
+                            >
+                              <Mail size={16} />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-10 bg-white rounded-lg shadow-sm">
-            <p className="text-gray-500">No {statusFilter === 'all' ? '' : statusFilter} bookings assigned to you.</p>
-          </div>
-        )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-10 bg-white rounded-lg shadow-sm">
+                <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                <p className="text-gray-500">No {statusFilter === 'all' ? '' : statusFilter} bookings assigned to you.</p>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Rules Tab */}
+          <TabsContent value="rules" className="mt-6">
+            <AgentRulesRegulations />
+          </TabsContent>
+        </Tabs>
       </main>
 
       {/* WhatsApp Message Modal */}

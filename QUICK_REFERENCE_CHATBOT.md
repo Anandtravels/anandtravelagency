@@ -21,7 +21,7 @@
 
 ### 1. `.env` ✅
 ```bash
-VITE_GEMINI_API_KEY=AIzaSyA622_SixT7YKKh6h1fj-8O788xQ05oWwU
+VITE_GEMINI_API_KEY=your_api_key_here
 VITE_GEMINI_MODEL=gemini-2.0-flash-exp
 ```
 
@@ -57,7 +57,7 @@ cat .env
 
 Should show:
 ```
-VITE_GEMINI_API_KEY=AIzaSyA622_SixT7YKKh6h1fj-8O788xQ05oWwU
+VITE_GEMINI_API_KEY=your_api_key_here
 VITE_GEMINI_MODEL=gemini-2.0-flash-exp
 ```
 

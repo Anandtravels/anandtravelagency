@@ -15,7 +15,7 @@ Successfully upgraded the Anand Travel Agency chatbot from **Gemini 1.5 Flash** 
 
 ```properties
 # Updated API Key
-VITE_GEMINI_API_KEY=AIzaSyA622_SixT7YKKh6h1fj-8O788xQ05oWwU
+VITE_GEMINI_API_KEY=your_api_key_here
 
 # New: Configurable Model Version
 VITE_GEMINI_MODEL=gemini-2.0-flash-exp
@@ -41,7 +41,7 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemi
 
 **After:**
 ```typescript
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyA622_SixT7YKKh6h1fj-8O788xQ05oWwU';
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'your_api_key_here';
 const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.0-flash-exp';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 ```

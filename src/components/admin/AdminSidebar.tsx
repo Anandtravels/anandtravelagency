@@ -17,7 +17,8 @@ import {
   FileText,
   FileCheck,
   CreditCard,
-  Receipt
+  Receipt,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -147,6 +148,12 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
       icon: UserCheck,
       description: 'Manage Agents',
       badge: counts.agents > 0 ? counts.agents : undefined
+    },
+    {
+      title: 'Agent Tasks',
+      href: '/admin#agent-tasks',
+      icon: ClipboardList,
+      description: 'Task & Rewards'
     },
     {
       title: 'Team Management',
