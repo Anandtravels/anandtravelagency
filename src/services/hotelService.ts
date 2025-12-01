@@ -221,19 +221,42 @@ export class HotelService {
 
   static async getRoomTypesByHotel(hotelId: string): Promise<RoomType[]> {
     try {
-      const querySnapshot = await getDocs(
-        query(
-          collection(db, 'room_types'), 
-          where('hotelId', '==', hotelId),
-          where('status', '==', 'active'),
-          orderBy('pricePerNight', 'asc')
-        )
-      );
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        created_at: doc.data().created_at?.toDate() || new Date()
-      })) as RoomType[];
+      // Try with full query first (requires composite index)
+      try {
+        const querySnapshot = await getDocs(
+          query(
+            collection(db, 'room_types'), 
+            where('hotelId', '==', hotelId),
+            where('status', '==', 'active'),
+            orderBy('pricePerNight', 'asc')
+          )
+        );
+        return querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          created_at: doc.data().created_at?.toDate() || new Date()
+        })) as RoomType[];
+      } catch (indexError) {
+        // Fallback: simpler query without orderBy (doesn't require composite index)
+        console.warn('Composite index missing, using fallback query for room types');
+        const querySnapshot = await getDocs(
+          query(
+            collection(db, 'room_types'), 
+            where('hotelId', '==', hotelId)
+          )
+        );
+        const roomTypes = querySnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            created_at: doc.data().created_at?.toDate() || new Date()
+          })) as RoomType[];
+        
+        // Filter active and sort in memory
+        return roomTypes
+          .filter(rt => rt.status === 'active')
+          .sort((a, b) => a.pricePerNight - b.pricePerNight);
+      }
     } catch (error) {
       console.error('Error getting room types:', error);
       throw error;
@@ -257,13 +280,15 @@ export class HotelService {
         created_at: serverTimestamp()
       });
       
-      // Update room availability
-      await this.updateRoomAvailability(
-        bookingData.roomTypeId, 
-        bookingData.checkInDate, 
-        bookingData.checkOutDate, 
-        -bookingData.numberOfRooms
-      );
+      // Update room availability only if roomTypeId is provided (not for direct inquiries)
+      if (bookingData.roomTypeId && bookingData.roomTypeId.trim() !== '') {
+        await this.updateRoomAvailability(
+          bookingData.roomTypeId, 
+          bookingData.checkInDate, 
+          bookingData.checkOutDate, 
+          -bookingData.numberOfRooms
+        );
+      }
       
       return docRef.id;
     } catch (error) {
@@ -370,6 +395,12 @@ export class HotelService {
     endDate: string, 
     roomChange: number
   ): Promise<void> {
+    // Skip if roomTypeId is empty or invalid
+    if (!roomTypeId || roomTypeId.trim() === '') {
+      console.log('Skipping room availability update - no room type specified');
+      return;
+    }
+    
     try {
       const start = new Date(startDate);
       const end = new Date(endDate);

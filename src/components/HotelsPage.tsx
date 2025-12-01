@@ -45,10 +45,10 @@ const HotelsPage = () => {
   // Search filters
   const [filters, setFilters] = useState<HotelSearchFilters>({
     city: searchParams.get('city') || '',
-    checkInDate: searchParams.get('checkIn') || '',
-    checkOutDate: searchParams.get('checkOut') || '',
-    numberOfRooms: parseInt(searchParams.get('rooms') || '1'),
-    numberOfGuests: parseInt(searchParams.get('guests') || '2'),
+    checkInDate: '',
+    checkOutDate: '',
+    numberOfRooms: 1,
+    numberOfGuests: 2,
     priceRange: { min: 0, max: 10000 },
     amenities: [],
     rating: 0,
@@ -66,31 +66,35 @@ const HotelsPage = () => {
     { id: 'gym', label: 'Fitness Center', icon: Dumbbell },
   ];
 
-  // Load hotels
+  // Load hotels with real-time updates
   useEffect(() => {
-    const loadHotels = async () => {
-      setLoading(true);
-      try {
-        const hotelsData = await HotelService.searchHotels(filters);
-        setHotels(hotelsData);
-      } catch (error) {
-        console.error('Error loading hotels:', error);
-        toast({
-          title: "Loading Failed",
-          description: "Failed to load hotels. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    setLoading(true);
+    
+    // Use real-time listener for instant updates when hotels are added/modified
+    const unsubscribe = HotelService.onHotelsChange((allHotels) => {
+      // Filter for active hotels only on user-facing page
+      const activeHotels = allHotels.filter(hotel => hotel.status === 'active');
+      setHotels(activeHotels);
+      setLoading(false);
+    });
 
-    loadHotels();
-  }, [filters, toast]);
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
 
   // Filter and sort hotels
   const filteredHotels = useMemo(() => {
     let filtered = [...hotels];
+
+    // Apply search filter (matches city OR hotel name)
+    if (filters.city && filters.city.trim()) {
+      const searchLower = filters.city.toLowerCase().trim();
+      filtered = filtered.filter(hotel => 
+        hotel.city.toLowerCase().includes(searchLower) ||
+        hotel.name.toLowerCase().includes(searchLower) ||
+        (hotel.address && hotel.address.toLowerCase().includes(searchLower))
+      );
+    }
 
     // Apply price filter
     if (filters.priceRange) {
@@ -139,25 +143,17 @@ const HotelsPage = () => {
     const updated = { ...filters, ...newFilters };
     setFilters(updated);
     
-    // Update URL params
+    // Update URL params - only city for clean URLs
     const params = new URLSearchParams();
     if (updated.city) params.set('city', updated.city);
-    if (updated.checkInDate) params.set('checkIn', updated.checkInDate);
-    if (updated.checkOutDate) params.set('checkOut', updated.checkOutDate);
-    if (updated.numberOfRooms) params.set('rooms', updated.numberOfRooms.toString());
-    if (updated.numberOfGuests) params.set('guests', updated.numberOfGuests.toString());
     
-    setSearchParams(params);
+    setSearchParams(params, { replace: true });
   };
 
   // Handle search from search bar
   const handleSearch = (searchData: any) => {
     updateFilters({
-      city: searchData.city,
-      checkInDate: searchData.checkInDate,
-      checkOutDate: searchData.checkOutDate,
-      numberOfRooms: searchData.numberOfRooms,
-      numberOfGuests: searchData.numberOfGuests
+      city: searchData.city
     });
   };
 
@@ -179,12 +175,8 @@ const HotelsPage = () => {
             {/* Search Form */}
             <HotelSearchBar
               city={filters.city}
-              checkInDate={filters.checkInDate}
-              checkOutDate={filters.checkOutDate}
-              numberOfRooms={filters.numberOfRooms}
-              numberOfGuests={filters.numberOfGuests}
               onSearch={handleSearch}
-              className="max-w-6xl mx-auto"
+              className="max-w-4xl mx-auto"
             />
           </div>
         </div>
@@ -195,10 +187,11 @@ const HotelsPage = () => {
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
-                {filters.city ? `Hotels in ${filters.city}` : 'Available Hotels'}
+                {filters.city ? `Search results for "${filters.city}"` : 'All Available Hotels'}
               </h2>
               <p className="text-gray-600 mt-1">
                 {filteredHotels.length} hotel{filteredHotels.length !== 1 ? 's' : ''} found
+                {filters.city && hotels.length !== filteredHotels.length && ` (${hotels.length} total)`}
               </p>
             </div>
             

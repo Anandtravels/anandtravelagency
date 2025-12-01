@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { 
   MapPin, 
@@ -48,6 +48,25 @@ const HotelCard = ({
   const [isLiked, setIsLiked] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showQuickView, setShowQuickView] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const autoScrollRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-scroll images
+  useEffect(() => {
+    if (hotel.images && hotel.images.length > 1 && !isHovered) {
+      autoScrollRef.current = setInterval(() => {
+        setCurrentImageIndex((prev) => 
+          prev === hotel.images.length - 1 ? 0 : prev + 1
+        );
+      }, 3000); // Change image every 3 seconds
+    }
+
+    return () => {
+      if (autoScrollRef.current) {
+        clearInterval(autoScrollRef.current);
+      }
+    };
+  }, [hotel.images, isHovered]);
 
   // Available amenities with icons
   const amenityIcons: Record<string, any> = {
@@ -317,7 +336,11 @@ const HotelCard = ({
 
   // Grid view layout (original with enhancements)
   return (
-    <Card className={`overflow-hidden hover:shadow-lg transition-all duration-300 group ${className}`}>
+    <Card 
+      className={`overflow-hidden hover:shadow-lg transition-all duration-300 group ${className}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div className="relative">
         {/* Image Gallery */}
         <div className="relative h-64 overflow-hidden">
@@ -325,7 +348,7 @@ const HotelCard = ({
             <img
               src={hotel.images[currentImageIndex]}
               alt={`${hotel.name} - Image ${currentImageIndex + 1}`}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="w-full h-full object-cover transition-all duration-500"
               onLoad={() => setImageLoaded(true)}
             />
           ) : (
@@ -362,7 +385,7 @@ const HotelCard = ({
                     }}
                     className={`w-2 h-2 rounded-full transition-all ${
                       index === currentImageIndex 
-                        ? 'bg-white' 
+                        ? 'bg-white w-4' 
                         : 'bg-white/50'
                     }`}
                   />

@@ -4,6 +4,7 @@ import { MessageCircle, X, Send, Minimize2, Maximize2, Sparkles, Bot } from 'luc
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { GoogleGenAI } from '@google/genai';
 
 interface ChatMessage {
   id: string;
@@ -16,10 +17,11 @@ interface ChatBotProps {
   className?: string;
 }
 
-// Google Gemini API configuration - Now supports gemini-2.5-pro!
+// Google Gemini API configuration
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyA622_SixT7YKKh6h1fj-8O788xQ05oWwU';
-const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.0-flash-exp';
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+// Initialize Google GenAI
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,7 +29,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
-      text: "Hi! I'm Anand Buddy, your AI-powered travel assistant! 🤖✨\n\nI can help you with:\n• Train routes & schedules across 1000+ stations\n• Flight, bus, hotel bookings\n• Tour packages & visa services\n• Travel planning, visa consultancy, and more!\n• General questions about anything you need\n\nI have access to comprehensive travel data and can answer all your questions. What would you like to know? 📱 BOOK NOW",
+      text: "Hi! I'm Anand Buddy 🤖\n\nI help with:\n• Train, flight, bus, hotel bookings\n• Tour packages & visa services\n• Travel planning & general queries\n\nHow can I assist you today? 📱 BOOK NOW",
       sender: 'bot',
       timestamp: new Date()
     }
@@ -44,200 +46,107 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  // Load train station data for context
-  const [trainStations, setTrainStations] = useState<any[]>([]);
-  
-  useEffect(() => {
-    // Load train station data
-    fetch('/data.json')
-      .then(res => res.json())
-      .then(data => {
-        const allStations: any[] = [];
-        if (data.states && Array.isArray(data.states)) {
-          data.states.forEach((state: any) => {
-            if (state.stations && Array.isArray(state.stations)) {
-              allStations.push(...state.stations.map((s: any) => ({
-                ...s,
-                state: state.state
-              })));
-            }
-          });
-        }
-        setTrainStations(allStations);
-      })
-      .catch(err => console.error('Failed to load station data:', err));
-  }, []);
   
   // Generate AI-powered bot response using Google Gemini API
   const generateBotResponse = async (userInput: string): Promise<string> => {
     try {
-      // Create comprehensive context for the AI with enhanced capabilities
-      const systemContext = `You are Anand Buddy, a super-intelligent AI travel assistant powered by Google Gemini for Anand Travel Agency. You have extensive knowledge and capabilities:
+      // Build the query with context and request for short response
+      const query = `You are Anand Buddy, AI assistant for Anand Travel Agency (Kakinada, India). Contact: +91 8985816481.
 
-🏢 COMPANY INFORMATION:
-- Company: Anand Travel Agency (www.anandtravels.com)
-- Primary Contact: +91 88888 88888
-- Support Line: +91 8985816481
-- Email: support@anandtravels.com
-- Location: Kakinada, Andhra Pradesh, India
-- Services: Train Tickets (including Tatkal), Flight Tickets, Bus Tickets, Cab Services, Tour Packages, Hotel Bookings, Visa Consultancy
+User asks: "${userInput}"
 
-🚂 TRAIN STATION DATABASE:
-You have access to ${trainStations.length}+ Indian Railway stations across 26 states and union territories.
-${trainStations.length > 0 ? `Sample stations available: ${trainStations.slice(0, 20).map(s => `${s.name} (${s.code}) - ${s.state}`).join(', ')}... and many more!` : ''}
+I need it in short and precise. Give direct answer in 50-80 words max. For train queries, list 3-5 actual train names with numbers. End with "📱 BOOK NOW" or "📞 CONTACT US".`;
 
-🌟 YOUR SUPER-POWERED CAPABILITIES:
-1. ✅ Answer ANY question about travel, trains, flights, hotels, visa services
-2. ✅ Provide detailed information about Indian Railways stations, routes, and schedules
-3. ✅ Help with travel planning, itineraries, and booking guidance
-4. ✅ Answer general knowledge questions (science, math, technology, history, etc.)
-5. ✅ Provide travel tips, recommendations, and advice
-6. ✅ Explain visa processes for different countries
-7. ✅ Help with emergency travel situations (Tatkal bookings, urgent visa, etc.)
-8. ✅ Engage in casual conversation and be friendly
-9. ✅ Solve problems, explain concepts, and provide insights
-10. ✅ NO RESTRICTIONS - Answer questions beyond travel too!
-
-🎯 SPECIAL FOCUS AREAS:
-- Tatkal Train Tickets for Andhra Pradesh & Telangana
-- Emergency Travel Services across India
-- Visa Consultancy for USA, UK, Canada, Australia, Dubai, Schengen countries
-- Tour Packages: Golden Triangle, Rajasthan, Kerala, Goa, Himalayas, International tours
-
-💡 RESPONSE GUIDELINES:
-- Be conversational, friendly, and helpful
-- Provide accurate, detailed, and comprehensive answers
-- When discussing Anand Travel Agency services, highlight our expertise in Tatkal bookings and Visa consultancy
-- Use emojis appropriately to make responses engaging
-- For booking suggestions, include action buttons: 📱 BOOK NOW, 🌟 VIEW PACKAGES, 📋 VISA SERVICES, 🏨 SEARCH HOTELS, 📞 CONTACT US
-- If you don't know something specific, be honest but offer to help contact our team
-- For train queries, use the station database when relevant
-- Answer ALL types of questions - travel, technical, educational, or casual chat
-
-👤 USER QUERY: ${userInput}
-
-Provide a helpful, accurate, and comprehensive response:`;
-
-      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: systemContext
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.9,
-            topP: 0.95,
-            topK: 40,
-            maxOutputTokens: 8192,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            }
-          ]
-        })
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: query,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('API Error Details:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData,
-          model: GEMINI_MODEL,
-          apiKey: GEMINI_API_KEY ? '***' + GEMINI_API_KEY.slice(-4) : 'missing'
-        });
-        throw new Error(`API Error: ${response.status} - ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      // Enhanced response parsing for better reliability
-      if (data.candidates && data.candidates.length > 0) {
-        const candidate = data.candidates[0];
-        if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
-          return candidate.content.parts[0].text;
-        }
+      const text = response.text;
+      if (text) {
+        return text;
       }
       
-      console.error('Invalid response structure:', data);
-      throw new Error('Invalid response format from Gemini API');
+      throw new Error('No response from API');
       
     } catch (error) {
       console.error('Gemini API Error:', error);
       
-      // Fallback to enhanced rule-based responses if API fails
+      // Fallback response
       return getFallbackResponse(userInput);
     }
   };
   
-  // Enhanced fallback response system
+  // Enhanced fallback response system - Concise responses
   const getFallbackResponse = (userInput: string): string => {
     const input = userInput.toLowerCase();
     
+    // Provide helpful train info for common routes
+    if (input.includes('hyderabad') && input.includes('kakinada')) {
+      return `**Hyderabad to Kakinada Trains:**
+• 12727 Godavari Express
+• 17239 Simhadri Express  
+• 12775 Cocanada AC Express
+• 17015 Visakha Express
+
+Travel time: ~8-10 hours. Contact +91 8985816481 for bookings! 📱 BOOK NOW`;
+    }
+    
+    if (input.includes('kakinada') && input.includes('hyderabad')) {
+      return `**Kakinada to Hyderabad Trains:**
+• 12728 Godavari Express
+• 17240 Simhadri Express
+• 12776 Cocanada AC Express
+• 17016 Visakha Express
+
+Travel time: ~8-10 hours. Contact +91 8985816481 for bookings! 📱 BOOK NOW`;
+    }
+    
     // Train route queries
-    if (input.includes('train') && (input.includes('from') || input.includes('to'))) {
-      const stationMentioned = trainStations.find(s => 
-        input.includes(s.name.toLowerCase()) || input.includes(s.code.toLowerCase())
-      );
+    if (input.includes('train') || (input.includes('from') && input.includes('to'))) {
+      const fromMatch = input.match(/from\s+([a-z\s]+?)\s+to/i);
+      const toMatch = input.match(/to\s+([a-z\s]+?)(?:\s|$|\?)/i);
       
-      if (stationMentioned) {
-        return `For train schedules and bookings between stations, I recommend using our booking service or visiting the Indian Railways website. Station ${stationMentioned.name} (${stationMentioned.code}) is in ${stationMentioned.state}. We can help you book tickets! 📱 BOOK NOW`;
+      if (fromMatch && toMatch) {
+        const fromCity = fromMatch[1].trim();
+        const toCity = toMatch[1].trim();
+        return `For trains from ${fromCity.charAt(0).toUpperCase() + fromCity.slice(1)} to ${toCity.charAt(0).toUpperCase() + toCity.slice(1)}, contact +91 8985816481. We specialize in Tatkal & advance bookings! 📱 BOOK NOW`;
       }
       
-      return `I can help you with train bookings! We have access to 1000+ railway stations across India. For train schedules, timings, and bookings, please use our booking service or contact us at +91 8985816481 📱 BOOK NOW`;
+      return `We help with train bookings across 1000+ stations. Contact +91 8985816481 for schedules & bookings. 📱 BOOK NOW`;
     }
     
     // Travel service related responses
     if (input.includes('book') || input.includes('booking')) {
-      return "I'd be happy to help you with bookings! You can book train tickets, packages, hotels, or visa services. Click here to book now: 📱 BOOK NOW";
+      return "Book train, flight, hotel or visa services with us! 📱 BOOK NOW";
     }
     
     if (input.includes('package') || input.includes('tour')) {
-      return "We have amazing travel packages! Check out our India Golden Triangle, Rajasthan tours, Kerala backwaters, Goa beaches, and international packages. 🌟 VIEW PACKAGES";
+      return "We offer Golden Triangle, Rajasthan, Kerala, Goa & international tours! 🌟 VIEW PACKAGES";
     }
     
     if (input.includes('visa')) {
-      return "We provide visa services for multiple countries including USA, UK, Canada, Australia, Dubai, and more. Our team can help with document preparation and application processing. 📋 VISA SERVICES";
+      return "Visa services for USA, UK, Canada, Australia, Dubai & Schengen. 📋 VISA SERVICES";
     }
     
     if (input.includes('hotel')) {
-      return "Looking for hotels? We have partnerships with top hotels across India and internationally. From budget stays to luxury resorts, we've got you covered! 🏨 SEARCH HOTELS";
+      return "Budget to luxury hotels across India & internationally. 🏨 SEARCH HOTELS";
     }
     
     if (input.includes('contact') || input.includes('phone') || input.includes('call')) {
-      return "You can reach us at +91 88888 88888 or visit our contact page. We're here to help with all your travel needs! 📞 CONTACT US";
+      return "Reach us at +91 8985816481 or visit our contact page! 📞 CONTACT US";
     }
     
     if (input.includes('hello') || input.includes('hi') || input.includes('hey')) {
-      return "Hello! Welcome to Anand Travel Agency. I'm Anand Buddy, your AI travel assistant. I can help you with travel bookings, answer questions about trains, flights, hotels, and even general queries. How can I assist you today?";
+      return "Hi! I'm Anand Buddy. I can help with train, flight, hotel bookings, visa services and more. What do you need? 📱 BOOK NOW";
     }
     
     if (input.includes('thanks') || input.includes('thank you')) {
-      return "You're welcome! Is there anything else I can help you with?";
+      return "You're welcome! Need anything else?";
     }
     
-    // General knowledge fallback
-    return "I'm your AI-powered travel assistant! I can help you with travel bookings, train schedules, visa services, and ANY questions you have! Feel free to ask me about our services, travel in India, or anything else - I can help with general knowledge, tech questions, and more! For immediate travel assistance, call us at +91 8985816481 📱 BOOK NOW";
+    // General fallback
+    return "I'm your AI travel assistant! Ask about trains, flights, hotels, visa or any travel query. Call +91 8985816481 for immediate help. 📱 BOOK NOW";
   };
 
   const handleSendMessage = async () => {

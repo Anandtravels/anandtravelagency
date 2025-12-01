@@ -6,7 +6,8 @@ import {
   Users, 
   Search,
   Plus,
-  Minus
+  Minus,
+  X
 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -64,6 +65,7 @@ const HotelSearchBar = ({
   
   // Autocomplete state
   const [allHotels, setAllHotels] = useState<Hotel[]>([]);
+  const [allCities, setAllCities] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<Array<{type: 'city' | 'hotel', value: string, city?: string}>>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
@@ -75,7 +77,23 @@ const HotelSearchBar = ({
     const loadHotels = async () => {
       try {
         const hotelsData = await HotelService.getAllHotels();
-        setAllHotels(hotelsData);
+        // Filter to only active hotels for display
+        const activeHotels = hotelsData.filter(h => h.status === 'active');
+        setAllHotels(activeHotels);
+        
+        // Extract unique cities from ALL hotels and sort alphabetically
+        const uniqueCities = new Set<string>();
+        hotelsData.forEach(hotel => {
+          if (hotel.city && hotel.city.trim()) {
+            uniqueCities.add(hotel.city.trim());
+          }
+        });
+        const sortedCities = Array.from(uniqueCities)
+          .filter(city => city) // Remove empty strings
+          .sort((a, b) => a.localeCompare(b));
+        setAllCities(sortedCities);
+        
+        console.log('Loaded cities:', sortedCities); // Debug log
       } catch (error) {
         console.error('Error loading hotels for autocomplete:', error);
       }
@@ -106,51 +124,63 @@ const HotelSearchBar = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle input changes
+  // Handle input changes and trigger search as user types
   const updateSearchData = (field: keyof HotelSearchFilters, value: string | number) => {
-    setSearchData(prev => ({
-      ...prev,
+    const newData = {
+      ...searchData,
       [field]: value
-    }));
+    };
+    setSearchData(newData);
 
     // Handle autocomplete for city field
     if (field === 'city' && typeof value === 'string') {
       handleCityInputChange(value);
+      
+      // Trigger search as user types (debounced effect via parent)
+      if (onSearch) {
+        onSearch(newData);
+      }
     }
   };
 
   // Handle city input change for autocomplete
   const handleCityInputChange = (input: string) => {
     if (!input.trim()) {
-      setSuggestions([]);
-      setShowSuggestions(false);
+      // Show all cities alphabetically when input is empty
+      const citySuggestions = allCities.map(cityName => ({
+        type: 'city' as const,
+        value: cityName
+      }));
+      setSuggestions(citySuggestions);
+      setShowSuggestions(citySuggestions.length > 0);
+      setActiveSuggestionIndex(-1);
       return;
     }
 
     const searchTerm = input.toLowerCase().trim();
-    const uniqueCities = new Set<string>();
     const hotelSuggestions: Array<{type: 'city' | 'hotel', value: string, city?: string}> = [];
 
-    // First, collect unique cities
-    allHotels.forEach(hotel => {
-      if (hotel.status === 'active') {
-        uniqueCities.add(hotel.city);
-      }
-    });
+    // Add matching cities from allCities (prioritize cities that start with the search term)
+    const matchingCities = allCities
+      .filter(cityName => cityName.toLowerCase().includes(searchTerm))
+      .sort((a, b) => {
+        const aStarts = a.toLowerCase().startsWith(searchTerm);
+        const bStarts = b.toLowerCase().startsWith(searchTerm);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return a.localeCompare(b);
+      });
 
-    // Add matching cities
-    uniqueCities.forEach(cityName => {
-      if (cityName.toLowerCase().includes(searchTerm)) {
-        hotelSuggestions.push({
-          type: 'city',
-          value: cityName
-        });
-      }
+    matchingCities.forEach(cityName => {
+      hotelSuggestions.push({
+        type: 'city',
+        value: cityName
+      });
     });
 
     // Add matching hotel names
     allHotels.forEach(hotel => {
-      if (hotel.status === 'active' && hotel.name.toLowerCase().includes(searchTerm)) {
+      if (hotel.name.toLowerCase().includes(searchTerm)) {
         hotelSuggestions.push({
           type: 'hotel',
           value: hotel.name,
@@ -159,10 +189,24 @@ const HotelSearchBar = ({
       }
     });
 
-    // Limit suggestions to 8 items
-    setSuggestions(hotelSuggestions.slice(0, 8));
+    // Limit suggestions to 15 items (cities first, then hotels)
+    setSuggestions(hotelSuggestions.slice(0, 15));
     setShowSuggestions(hotelSuggestions.length > 0);
     setActiveSuggestionIndex(-1);
+  };
+
+  // Show default city suggestions on focus
+  const handleInputFocus = () => {
+    if (!searchData.city.trim() && allCities.length > 0) {
+      const citySuggestions = allCities.map(cityName => ({
+        type: 'city' as const,
+        value: cityName
+      }));
+      setSuggestions(citySuggestions);
+      setShowSuggestions(true);
+    } else if (searchData.city && suggestions.length > 0) {
+      setShowSuggestions(true);
+    }
   };
 
   // Handle suggestion click
@@ -219,67 +263,8 @@ const HotelSearchBar = ({
   const validateSearch = (): boolean => {
     if (!searchData.city.trim()) {
       toast({
-        title: "City Required",
-        description: "Please enter a destination city",
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    if (!searchData.checkInDate) {
-      toast({
-        title: "Check-in Date Required",
-        description: "Please select a check-in date",
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    if (!searchData.checkOutDate) {
-      toast({
-        title: "Check-out Date Required",
-        description: "Please select a check-out date",
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    const checkIn = new Date(searchData.checkInDate);
-    const checkOut = new Date(searchData.checkOutDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (checkIn < today) {
-      toast({
-        title: "Invalid Check-in Date",
-        description: "Check-in date cannot be in the past",
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    if (checkOut <= checkIn) {
-      toast({
-        title: "Invalid Check-out Date",
-        description: "Check-out date must be after check-in date",
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    if (searchData.numberOfRooms < 1 || searchData.numberOfRooms > 10) {
-      toast({
-        title: "Invalid Number of Rooms",
-        description: "Number of rooms must be between 1 and 10",
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    if (searchData.numberOfGuests < 1 || searchData.numberOfGuests > 20) {
-      toast({
-        title: "Invalid Number of Guests",
-        description: "Number of guests must be between 1 and 20",
+        title: "Search Required",
+        description: "Please enter a city or hotel name to search",
         variant: "destructive"
       });
       return false;
@@ -296,13 +281,8 @@ const HotelSearchBar = ({
       onSearch(searchData);
     } else {
       // Navigate to hotels page with search params
-      const params = new URLSearchParams({
-        city: searchData.city,
-        checkIn: searchData.checkInDate,
-        checkOut: searchData.checkOutDate,
-        rooms: searchData.numberOfRooms.toString(),
-        guests: searchData.numberOfGuests.toString()
-      });
+      const params = new URLSearchParams();
+      if (searchData.city) params.set('city', searchData.city);
       navigate(`/hotels?${params.toString()}`);
     }
   };
@@ -314,52 +294,41 @@ const HotelSearchBar = ({
     }
   }, [searchData, autoSearch, onSearch]);
 
-  // Calculate number of nights
-  const calculateNights = () => {
-    if (searchData.checkInDate && searchData.checkOutDate) {
-      const checkIn = new Date(searchData.checkInDate);
-      const checkOut = new Date(searchData.checkOutDate);
-      const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    }
-    return 0;
-  };
-
-  // Format date for display
-  const formatDateDisplay = (dateString: string) => {
-    if (!dateString) return 'Select date';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', { 
-      day: '2-digit', 
-      month: 'short'
-    });
-  };
-
   return (
-    <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Destination */}
-        <div className="lg:col-span-1" ref={wrapperRef}>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Destination
-          </label>
+    <div className={`bg-white rounded-lg shadow-lg p-4 ${className}`}>
+      <div className="flex flex-col sm:flex-row gap-3">
+        {/* Destination Search */}
+        <div className="flex-1" ref={wrapperRef}>
           <div className="relative">
             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" size={18} />
             <Input
               ref={inputRef}
               type="text"
-              placeholder="City or hotel name"
+              placeholder="Search city or hotel name..."
               value={searchData.city}
               onChange={(e) => updateSearchData('city', e.target.value)}
               onKeyDown={handleKeyDown}
-              onFocus={() => {
-                if (searchData.city && suggestions.length > 0) {
-                  setShowSuggestions(true);
-                }
-              }}
-              className="pl-10"
+              onFocus={handleInputFocus}
+              className="pl-10 pr-10 h-12 text-base"
               autoComplete="off"
             />
+            {/* Clear Button */}
+            {searchData.city && (
+              <button
+                onClick={() => {
+                  setSearchData(prev => ({ ...prev, city: '' }));
+                  setSuggestions([]);
+                  setShowSuggestions(false);
+                  if (onSearch) {
+                    onSearch({ ...searchData, city: '' });
+                  }
+                }}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10 p-1"
+                title="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
             
             {/* Autocomplete Suggestions */}
             {showSuggestions && suggestions.length > 0 && (
@@ -398,148 +367,35 @@ const HotelSearchBar = ({
           </div>
         </div>
         
-        {/* Check-in */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Check-in
-          </label>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <Input
-              type="date"
-              value={searchData.checkInDate}
-              onChange={(e) => updateSearchData('checkInDate', e.target.value)}
-              min={getMinDate()}
-              className="pl-10"
-            />
-          </div>
-        </div>
-        
-        {/* Check-out */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Check-out
-            {calculateNights() > 0 && (
-              <span className="ml-2 text-xs text-gray-500">
-                ({calculateNights()} night{calculateNights() > 1 ? 's' : ''})
-              </span>
-            )}
-          </label>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <Input
-              type="date"
-              value={searchData.checkOutDate}
-              onChange={(e) => updateSearchData('checkOutDate', e.target.value)}
-              min={getMinCheckoutDate()}
-              className="pl-10"
-            />
-          </div>
-        </div>
-        
-        {/* Guests & Rooms */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Guests & Rooms
-          </label>
-          <Popover open={guestsPopoverOpen} onOpenChange={setGuestsPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start text-left font-normal h-10"
-              >
-                <Users className="w-4 h-4 mr-2 text-gray-400" />
-                <span className="truncate">
-                  {searchData.numberOfGuests} guest{searchData.numberOfGuests > 1 ? 's' : ''}, {searchData.numberOfRooms} room{searchData.numberOfRooms > 1 ? 's' : ''}
-                </span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80" align="start">
-              <div className="space-y-4">
-                {/* Guests */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">Guests</div>
-                    <div className="text-sm text-gray-500">Number of guests</div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateSearchData('numberOfGuests', Math.max(1, searchData.numberOfGuests - 1))}
-                      disabled={searchData.numberOfGuests <= 1}
-                    >
-                      <Minus className="w-4 h-4" />
-                    </Button>
-                    <span className="w-8 text-center">{searchData.numberOfGuests}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateSearchData('numberOfGuests', Math.min(20, searchData.numberOfGuests + 1))}
-                      disabled={searchData.numberOfGuests >= 20}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Rooms */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">Rooms</div>
-                    <div className="text-sm text-gray-500">Number of rooms</div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateSearchData('numberOfRooms', Math.max(1, searchData.numberOfRooms - 1))}
-                      disabled={searchData.numberOfRooms <= 1}
-                    >
-                      <Minus className="w-4 h-4" />
-                    </Button>
-                    <span className="w-8 text-center">{searchData.numberOfRooms}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateSearchData('numberOfRooms', Math.min(10, searchData.numberOfRooms + 1))}
-                      disabled={searchData.numberOfRooms >= 10}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <Button 
-                  onClick={() => setGuestsPopoverOpen(false)}
-                  className="w-full"
-                  size="sm"
-                >
-                  Done
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-        
         {/* Search Button */}
-        <div className="flex items-end">
-          <Button 
-            onClick={handleSearch}
-            className="w-full bg-travel-orange hover:bg-travel-orange/90 text-white h-10"
-          >
-            <Search className="w-4 h-4 mr-2" />
-            Search
-          </Button>
-        </div>
+        <Button 
+          onClick={handleSearch}
+          className="bg-travel-orange hover:bg-travel-orange/90 text-white h-12 px-6 sm:w-auto w-full"
+        >
+          <Search className="w-4 h-4 mr-2" />
+          Search Hotels
+        </Button>
       </div>
 
-      {/* Quick Info */}
-      {searchData.city && searchData.checkInDate && searchData.checkOutDate && (
-        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-          <div className="text-sm text-gray-600">
-            <span className="font-medium">{searchData.city}</span> • {formatDateDisplay(searchData.checkInDate)} to {formatDateDisplay(searchData.checkOutDate)} • {calculateNights()} night{calculateNights() > 1 ? 's' : ''} • {searchData.numberOfGuests} guest{searchData.numberOfGuests > 1 ? 's' : ''} • {searchData.numberOfRooms} room{searchData.numberOfRooms > 1 ? 's' : ''}
-          </div>
+      {/* Active Filter Display */}
+      {searchData.city && (
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-sm text-gray-500">Showing results for:</span>
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-travel-orange/10 text-travel-orange">
+            <MapPin className="w-3 h-3 mr-1" />
+            {searchData.city}
+            <button
+              onClick={() => {
+                setSearchData(prev => ({ ...prev, city: '' }));
+                if (onSearch) {
+                  onSearch({ ...searchData, city: '' });
+                }
+              }}
+              className="ml-2 hover:text-travel-orange/70"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </span>
         </div>
       )}
     </div>

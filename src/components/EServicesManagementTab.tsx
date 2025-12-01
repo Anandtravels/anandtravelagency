@@ -6,19 +6,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, doc, updateDoc, deleteDoc, serverTimestamp, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { TrashIcon, PencilIcon, Check, X, Phone, Mail, FileText, Download, Eye, Filter, DollarSign, Save } from "lucide-react";
+import { TrashIcon, PencilIcon, Check, X, Phone, Mail, FileText, Download, Eye, Filter, DollarSign, Save, Globe, EyeOff, Settings2 } from "lucide-react";
 import { debounce } from 'lodash';
 import { E_SERVICE_TYPES, EServiceRequest } from "@/types/eservices";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
 import EServiceExcelExportButton from "@/components/admin/EServiceExcelExportButton";
 import EServiceFeeManagement from "@/components/admin/EServiceFeeManagement";
 import { useForm } from "react-hook-form";
+import { usePageVisibility } from "@/hooks/usePageVisibility";
 
 interface EServicesManagementTabProps {
   user: any;
@@ -38,6 +40,9 @@ const EServicesManagementTab = ({ user, formatFirebaseTimestamp }: EServicesMana
   const [viewingRequest, setViewingRequest] = useState<EServiceRequest | null>(null);
   const [editingRequest, setEditingRequest] = useState<EServiceRequest | null>(null);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  
+  // Page visibility settings
+  const { visibility, loading: visibilityLoading, updatePageVisibility, isPageVisible } = usePageVisibility();
 
   // Fetch requests from Firebase
   useEffect(() => {
@@ -259,7 +264,7 @@ const EServicesManagementTab = ({ user, formatFirebaseTimestamp }: EServicesMana
 
       {/* Tabs for Request Management and Fee Management */}
       <Tabs defaultValue="requests" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="requests" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
             Application Requests
@@ -267,6 +272,10 @@ const EServicesManagementTab = ({ user, formatFirebaseTimestamp }: EServicesMana
           <TabsTrigger value="fee-management" className="flex items-center gap-2">
             <DollarSign className="w-4 h-4" />
             Fee Management
+          </TabsTrigger>
+          <TabsTrigger value="page-settings" className="flex items-center gap-2">
+            <Settings2 className="w-4 h-4" />
+            Page Settings
           </TabsTrigger>
         </TabsList>
 
@@ -825,6 +834,120 @@ const EServicesManagementTab = ({ user, formatFirebaseTimestamp }: EServicesMana
             user={user}
             formatFirebaseTimestamp={formatFirebaseTimestamp}
           />
+        </TabsContent>
+
+        <TabsContent value="page-settings" className="space-y-6">
+          {/* Page Visibility Settings */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <Globe className="h-6 w-6 text-travel-blue-dark" />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Page Visibility Settings</h2>
+                <p className="text-gray-600">Control which pages are visible to users on the website</p>
+              </div>
+            </div>
+
+            {/* E-Services Page Visibility Toggle */}
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <FileText className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">E-Services Page</CardTitle>
+                      <CardDescription className="text-sm">
+                        Show or hide the E-Services page in the main navigation menu
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant={isPageVisible('eservices') ? "default" : "secondary"}>
+                      {isPageVisible('eservices') ? (
+                        <>
+                          <Eye className="w-3 h-3 mr-1" />
+                          Visible
+                        </>
+                      ) : (
+                        <>
+                          <EyeOff className="w-3 h-3 mr-1" />
+                          Hidden
+                        </>
+                      )}
+                    </Badge>
+                    <Switch
+                      checked={isPageVisible('eservices')}
+                      onCheckedChange={(checked) => {
+                        if (user?.email === 'admin@anandtravels.com') {
+                          updatePageVisibility('eservices', checked, user.email);
+                        } else {
+                          toast({
+                            title: 'Unauthorized',
+                            description: 'Only admin can change page visibility settings',
+                            variant: 'destructive'
+                          });
+                        }
+                      }}
+                      disabled={visibilityLoading || user?.email !== 'admin@anandtravels.com'}
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">What this affects:</h4>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      <li>• The "E-Services" link in the main navigation menu</li>
+                      <li>• The E-Services page at /eservices</li>
+                      <li>• Mobile menu E-Services option</li>
+                    </ul>
+                  </div>
+                  
+                  {!isPageVisible('eservices') && (
+                    <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <EyeOff className="w-5 h-5 text-orange-600 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-orange-800">Page is currently hidden</h4>
+                          <p className="text-sm text-orange-700 mt-1">
+                            Users will not be able to see the E-Services page in the navigation menu. 
+                            Direct access to /eservices will still work but the link won't be visible.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {visibility.lastUpdated && (
+                    <div className="text-xs text-gray-500 pt-2 border-t">
+                      Last updated: {formatFirebaseTimestamp(visibility.lastUpdated)} by {visibility.updatedBy}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Instructions */}
+            <Card className="bg-blue-50 border-blue-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-blue-800">
+                  <Settings2 className="h-5 w-5" />
+                  Page Visibility Guidelines
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-blue-700">
+                <ul className="space-y-2 text-sm">
+                  <li>• Toggle ON to show the E-Services page in the website navigation</li>
+                  <li>• Toggle OFF to hide the E-Services page from users</li>
+                  <li>• Changes take effect immediately across the website</li>
+                  <li>• Hidden pages can still be accessed directly via URL if needed</li>
+                  <li>• Existing applications and data are not affected by visibility changes</li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

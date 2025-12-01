@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
-import logo from "../assets/logo.png"; // Update logo import
+import logo from "../assets/logo.png";
+import { usePageVisibility } from "@/hooks/usePageVisibility";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isPageVisible, loading: visibilityLoading } = usePageVisibility();
+
+  // Check if E-Services page is visible
+  const showEServices = isPageVisible('eservices');
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -30,9 +35,11 @@ const Navbar = () => {
             <Link to="/hotels" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
               Hotels
             </Link>
-            <Link to="/eservices" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
-              E-Services
-            </Link>
+            {showEServices && (
+              <Link to="/eservices" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
+                E-Services
+              </Link>
+            )}
             <Link to="/visa-services" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
               Visa Services
             </Link>
@@ -89,13 +96,15 @@ const Navbar = () => {
             >
               Hotels
             </Link>
-            <Link 
-              to="/eservices" 
-              className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors py-2 border-b border-gray-100"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              E-Services
-            </Link>
+            {showEServices && (
+              <Link 
+                to="/eservices" 
+                className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors py-2 border-b border-gray-100"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                E-Services
+              </Link>
+            )}
             <Link 
               to="/visa-services" 
               className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors py-2 border-b border-gray-100"

@@ -552,15 +552,10 @@ Thank you for choosing Anand Travels!`;
                       value={messageDetails.ticketCost}
                       onChange={(e) => {
                         const newTicketCost = e.target.value;
-                        const bookingCharge = calculateBookingCharge(
-                          messageDetails.bookingType, 
-                          parseFloat(newTicketCost) || 0
-                        ).toFixed(2);
-                        
+                        // Keep the existing booking charge - don't recalculate when ticket cost changes
                         setMessageDetails({
                           ...messageDetails,
-                          ticketCost: newTicketCost,
-                          bookingCharge: bookingCharge
+                          ticketCost: newTicketCost
                         });
                       }}
                     />

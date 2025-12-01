@@ -139,8 +139,8 @@ const WhatsAppMessageModal = ({
                   <Label htmlFor="ticketCost" className="text-sm">Ticket Cost (₹)</Label>
                   <Input id="ticketCost" type="number" value={messageDetails.ticketCost} onChange={(e) => {
                       const newTicketCost = e.target.value;
-                      const bookingCharge = calculateBookingCharge(messageDetails.bookingType, parseFloat(newTicketCost) || 0).toFixed(2);
-                      setMessageDetails({ ...messageDetails, ticketCost: newTicketCost, bookingCharge: bookingCharge });
+                      // Keep the existing booking charge - don't recalculate when ticket cost changes
+                      setMessageDetails({ ...messageDetails, ticketCost: newTicketCost });
                     }} className="mt-1 text-sm" />
                 </div>
               </div>

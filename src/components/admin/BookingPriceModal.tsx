@@ -84,20 +84,24 @@ const BookingPriceModal = ({
   }, [booking]);
 
   const handleBookingTypeChange = (type: string) => {
-    const bookingCharge = calculateBookingCharge(type, priceDetails.classPreference);
-    setPriceDetails({
-      ...priceDetails,
-      bookingType: type,
-      bookingCharge: bookingCharge
+    setPriceDetails(prev => {
+      const bookingCharge = calculateBookingCharge(type, prev.classPreference);
+      return {
+        ...prev,
+        bookingType: type,
+        bookingCharge: bookingCharge
+      };
     });
   };
 
   const handleClassPreferenceChange = (classPreference: string) => {
-    const bookingCharge = calculateBookingCharge(priceDetails.bookingType, classPreference);
-    setPriceDetails({
-      ...priceDetails,
-      classPreference: classPreference,
-      bookingCharge: bookingCharge
+    setPriceDetails(prev => {
+      const bookingCharge = calculateBookingCharge(prev.bookingType, classPreference);
+      return {
+        ...prev,
+        classPreference: classPreference,
+        bookingCharge: bookingCharge
+      };
     });
   };
 
@@ -251,7 +255,10 @@ const BookingPriceModal = ({
                     min="0"
                     step="0.01"
                     value={priceDetails.ticketCost || ''}
-                    onChange={(e) => setPriceDetails({...priceDetails, ticketCost: parseFloat(e.target.value) || 0})}
+                    onChange={(e) => {
+                      const newTicketCost = parseFloat(e.target.value) || 0;
+                      setPriceDetails(prev => ({...prev, ticketCost: newTicketCost}));
+                    }}
                     className={`mt-1 ${errors.ticketCost ? 'border-red-500' : ''}`}
                     placeholder="Enter ticket cost"
                     disabled={submitting}
@@ -266,7 +273,10 @@ const BookingPriceModal = ({
                     type="number"
                     min="1"
                     value={priceDetails.passengerCount}
-                    onChange={(e) => setPriceDetails({...priceDetails, passengerCount: parseInt(e.target.value) || 1})}
+                    onChange={(e) => {
+                      const newPassengerCount = parseInt(e.target.value) || 1;
+                      setPriceDetails(prev => ({...prev, passengerCount: newPassengerCount}));
+                    }}
                     className={`mt-1 ${errors.passengerCount ? 'border-red-500' : ''}`}
                     disabled={submitting}
                   />
@@ -292,7 +302,10 @@ const BookingPriceModal = ({
                 <Textarea
                   id="additionalInfo"
                   value={priceDetails.additionalInfo}
-                  onChange={(e) => setPriceDetails({...priceDetails, additionalInfo: e.target.value})}
+                  onChange={(e) => {
+                    const newInfo = e.target.value;
+                    setPriceDetails(prev => ({...prev, additionalInfo: newInfo}));
+                  }}
                   placeholder="Any special notes or requirements..."
                   className="mt-1 min-h-[80px]"
                   disabled={submitting}
