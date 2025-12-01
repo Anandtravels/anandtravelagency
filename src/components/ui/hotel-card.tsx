@@ -14,7 +14,6 @@ import {
   Calendar,
   Users,
   Eye,
-  Heart,
   Share2,
   Phone,
   Clock
@@ -45,7 +44,6 @@ const HotelCard = ({
   viewMode = 'grid'
 }: HotelCardProps) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isLiked, setIsLiked] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showQuickView, setShowQuickView] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -134,13 +132,6 @@ const HotelCard = ({
 
   const nights = calculateNights();
 
-  // Handle like toggle
-  const handleLikeToggle = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsLiked(!isLiked);
-  };
-
   // Handle share
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -204,14 +195,6 @@ const HotelCard = ({
 
             {/* Action Buttons */}
             <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={handleLikeToggle}
-                className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
-                  isLiked ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-700 hover:bg-white'
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-              </button>
               <button
                 onClick={handleShare}
                 className="p-2 rounded-full bg-white/80 text-gray-700 hover:bg-white backdrop-blur-sm transition-colors"
@@ -396,14 +379,6 @@ const HotelCard = ({
 
           {/* Action Buttons */}
           <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={handleLikeToggle}
-              className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
-                isLiked ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-700 hover:bg-white'
-              }`}
-            >
-              <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-            </button>
             <button
               onClick={handleShare}
               className="p-2 rounded-full bg-white/80 text-gray-700 hover:bg-white backdrop-blur-sm transition-colors"

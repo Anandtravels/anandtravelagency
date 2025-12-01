@@ -791,16 +791,18 @@ const HotelDetail = () => {
                     </div>
                   </div>
                   
-                  {/* Rating Badge */}
-                  <div className="flex items-center gap-3 bg-green-50 px-4 py-2 rounded-xl">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                      <span className="text-xl font-bold text-gray-900">{hotel.rating.toFixed(1)}</span>
+                  {/* Rating Badge - only show if there are reviews */}
+                  {hotel.rating > 0 && hotel.reviews > 0 && (
+                    <div className="flex items-center gap-3 bg-green-50 px-4 py-2 rounded-xl">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                        <span className="text-xl font-bold text-gray-900">{hotel.rating.toFixed(1)}</span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">{hotel.reviews}</span> reviews
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">{hotel.reviews}</span> reviews
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Quick Info */}

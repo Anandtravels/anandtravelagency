@@ -77,20 +77,8 @@ export const useWhatsAppModal = () => {
       if (Array.isArray(currentBooking.passengers)) {
         let info = `*Passengers:* ${currentBooking.passengers.length}\n`;
         currentBooking.passengers.forEach((p: any, i: number) => {
-          info += `   ${i + 1}. ${p.name} (${p.age} yrs, ${p.gender})`;
-          // Add DOB if available
-          if (p.dob) {
-            try {
-              const date = new Date(p.dob);
-              const day = String(date.getDate()).padStart(2, '0');
-              const month = String(date.getMonth() + 1).padStart(2, '0');
-              const year = date.getFullYear();
-              info += ` - DOB: ${day}/${month}/${year}`;
-            } catch (e) {
-              // If date parsing fails, skip DOB
-            }
-          }
-          info += '\n';
+          // DOB excluded from WhatsApp message for privacy
+          info += `   ${i + 1}. ${p.name} (${p.age} yrs, ${p.gender})\n`;
         });
         return info;
       }
