@@ -11,14 +11,15 @@ import { CouponInput } from "@/components/CouponSystem/CouponInput";
 import { StationAutocomplete } from "@/components/StationAutocomplete";
 import { MultiSelectTrainAutocomplete } from "@/components/MultiSelectTrainAutocomplete";
 import { preloadStationData } from "@/utils/stationDataLoader";
+import { trackButtonClick } from "@/services/clickTracker";
 
 const Booking = () => {
   const [bookingType, setBookingType] = useState("train");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [passengerCount, setPassengerCount] = useState(1);
-  const [passengers, setPassengers] = useState<Array<{ name: string; age: string; gender: string; dob?: string; aadhar?: string; }>>([
-    { name: '', age: '', gender: 'male', dob: '', aadhar: '' }
+  const [passengers, setPassengers] = useState<Array<{ name: string; age: string; gender: string; dob?: string; aadhar?: string; inputMode?: 'age' | 'dob'; }>>([
+    { name: '', age: '', gender: 'male', dob: '', aadhar: '', inputMode: 'age' }
   ]);
   const [flightTripType, setFlightTripType] = useState("one_way");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -144,7 +145,7 @@ const Booking = () => {
     setPassengerCount(count);
     setPassengers(prev => {
       if (count > prev.length) {
-        return [...prev, ...Array(count - prev.length).fill({ name: '', age: '', gender: 'male', dob: '', aadhar: '' })];
+        return [...prev, ...Array(count - prev.length).fill({ name: '', age: '', gender: 'male', dob: '', aadhar: '', inputMode: 'age' })];
       }
       return prev.slice(0, count);
     });
@@ -171,6 +172,59 @@ const Booking = () => {
     return `${birthYear}-${month}-${day}`;
   };
 
+  // Calculate Age from Date of Birth
+  const calculateAgeFromDOB = (dobString: string): string => {
+    if (!dobString) return '';
+    const dob = new Date(dobString);
+    if (isNaN(dob.getTime())) return '';
+    
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    
+    // Adjust age if birthday hasn't occurred this year
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    
+    return age >= 0 ? age.toString() : '';
+  };
+
+  // Parse DOB from various formats (DD/MM/YYYY, DD-MM-YYYY, DD MM YYYY, DD/MM/YY, DD-MM-YY)
+  const parseDOBInput = (input: string): string => {
+    if (!input) return '';
+    
+    // Remove extra spaces and normalize separators
+    const cleaned = input.trim().replace(/\s+/g, '/').replace(/-/g, '/');
+    const parts = cleaned.split('/');
+    
+    if (parts.length !== 3) return '';
+    
+    const day = parseInt(parts[0]);
+    const month = parseInt(parts[1]);
+    let year = parseInt(parts[2]);
+    
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return '';
+    if (day < 1 || day > 31 || month < 1 || month > 12) return '';
+    
+    // Handle 2-digit year (YY format)
+    if (year < 100) {
+      const currentYear = new Date().getFullYear();
+      const century = Math.floor(currentYear / 100) * 100;
+      // If 2-digit year would be in the future, assume previous century
+      year = year + century;
+      if (year > currentYear) {
+        year -= 100;
+      }
+    }
+    
+    // Validate year range
+    if (year < 1900 || year > new Date().getFullYear()) return '';
+    
+    // Return in YYYY-MM-DD format for internal use
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
   const formatDateToDDMMYYYY = (dateString: string): string => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -190,6 +244,23 @@ const Booking = () => {
         ...updatedPassengers[index],
         age: value,
         dob: dob
+      };
+    } else if (field === 'dobInput') {
+      // Parse DOB input and calculate age
+      const parsedDOB = parseDOBInput(value);
+      const age = calculateAgeFromDOB(parsedDOB);
+      updatedPassengers[index] = {
+        ...updatedPassengers[index],
+        dob: parsedDOB,
+        age: age
+      };
+    } else if (field === 'inputMode') {
+      // Switch input mode and clear values
+      updatedPassengers[index] = {
+        ...updatedPassengers[index],
+        inputMode: value as 'age' | 'dob',
+        age: '',
+        dob: ''
       };
     } else {
       updatedPassengers[index] = {
@@ -268,6 +339,9 @@ const Booking = () => {
   };
 
   const onSubmit = async (data) => {
+    // Track the booking submission
+    trackButtonClick(`Submit Booking - ${bookingType.charAt(0).toUpperCase() + bookingType.slice(1)}`);
+    
     setIsLoading(true);
     try {
       // Calculate final booking charge
@@ -347,7 +421,7 @@ const Booking = () => {
       // Reset form and all state values after successful submission
       reset();
       setPassengerCount(1);
-      setPassengers([{ name: '', age: '', gender: 'male', dob: '', aadhar: '' }]);
+      setPassengers([{ name: '', age: '', gender: 'male', dob: '', aadhar: '', inputMode: 'age' }]);
       setTrainFromStation("");
       setTrainToStation("");
       setPreferredTrains("");
@@ -940,7 +1014,7 @@ const Booking = () => {
                                   setPassengerCount(newCount);
                                   setPassengers(prev => [
                                     ...prev, 
-                                    ...Array(newCount - prev.length).fill({ name: '', age: '', gender: 'male' })
+                                    ...Array(newCount - prev.length).fill({ name: '', age: '', gender: 'male', dob: '', aadhar: '', inputMode: 'age' })
                                   ]);
                                   setValue("passengers", newCount.toString());
                                 }
@@ -969,18 +1043,54 @@ const Booking = () => {
                               </div>
                               
                               <div>
-                                <label className="block text-sm font-medium mb-1">Age</label>
-                                <input
-                                  type="number"
-                                  value={passenger.age || ''}
-                                  onChange={(e) => handlePassengerChange(index, 'age', e.target.value)}
-                                  className="w-full px-3 py-2 border rounded-md"
-                                  min="0"
-                                  max="120"
-                                  required
-                                />
-                                {passenger.age && passenger.dob && (
-                                  <p className="text-xs text-gray-500 mt-1">DOB: {formatDateToDDMMYYYY(passenger.dob)}</p>
+                                {/* Age/DOB Toggle */}
+                                <div className="flex items-center justify-between mb-1">
+                                  <label className="block text-sm font-medium">
+                                    {passenger.inputMode === 'dob' ? 'Date of Birth' : 'Age'}
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePassengerChange(index, 'inputMode', passenger.inputMode === 'age' ? 'dob' : 'age')}
+                                    className="text-xs text-travel-blue-dark hover:text-travel-orange underline transition-colors"
+                                  >
+                                    Enter {passenger.inputMode === 'age' ? 'DOB' : 'Age'} instead
+                                  </button>
+                                </div>
+                                
+                                {passenger.inputMode === 'dob' ? (
+                                  <>
+                                    <input
+                                      type="text"
+                                      placeholder="DD/MM/YYYY or DD/MM/YY"
+                                      onChange={(e) => handlePassengerChange(index, 'dobInput', e.target.value)}
+                                      className="w-full px-3 py-2 border rounded-md"
+                                      required
+                                    />
+                                    {passenger.dob && passenger.age && (
+                                      <p className="text-xs text-green-600 mt-1">
+                                        ✓ Age: {passenger.age} years (DOB: {formatDateToDDMMYYYY(passenger.dob)})
+                                      </p>
+                                    )}
+                                    <p className="text-xs text-gray-400 mt-1">Format: DD/MM/YYYY or DD/MM/YY</p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <input
+                                      type="number"
+                                      value={passenger.age || ''}
+                                      onChange={(e) => handlePassengerChange(index, 'age', e.target.value)}
+                                      className="w-full px-3 py-2 border rounded-md"
+                                      min="0"
+                                      max="120"
+                                      placeholder="Enter age"
+                                      required
+                                    />
+                                    {passenger.age && passenger.dob && (
+                                      <p className="text-xs text-green-600 mt-1">
+                                        ✓ DOB: {formatDateToDDMMYYYY(passenger.dob)}
+                                      </p>
+                                    )}
+                                  </>
                                 )}
                               </div>
                               

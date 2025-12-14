@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import logo from "../assets/logo.png";
 import { usePageVisibility } from "@/hooks/usePageVisibility";
+import { trackButtonClick } from "@/services/clickTracker";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -55,7 +56,11 @@ const Navbar = () => {
             <Link to="/contact" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
               Contact
             </Link>
-            <Link to="/booking" className="btn-primary">
+            <Link 
+              to="/booking" 
+              className="btn-primary"
+              onClick={() => trackButtonClick("Book Now - Navbar")}
+            >
               Book Now
             </Link>
           </nav>
@@ -143,7 +148,10 @@ const Navbar = () => {
             <Link 
               to="/booking" 
               className="btn-primary text-center"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => {
+                setIsMenuOpen(false);
+                trackButtonClick("Book Now - Navbar Mobile");
+              }}
             >
               Book Now
             </Link>

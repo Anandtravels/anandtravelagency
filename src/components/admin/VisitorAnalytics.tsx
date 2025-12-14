@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { Users, Eye, Calendar, TrendingUp, Clock, Globe, Package, MessageSquare, UserCheck, AlertCircle, CalendarClock } from 'lucide-react';
+import { Users, Eye, Calendar, TrendingUp, Clock, Globe, Package, MessageSquare, UserCheck, AlertCircle, CalendarClock, MousePointerClick } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useVisitorAnalytics } from '@/hooks/useVisitorAnalytics';
+import { useClickAnalytics } from '@/hooks/useClickTracker';
 import { useAdminSidebarData } from '@/hooks/useAdminSidebarData';
 
 interface StatCardProps {
@@ -39,20 +39,13 @@ const StatCard = ({ title, value, icon: Icon, description, color, isLoading }: S
         <p className="text-xs text-gray-500 mt-1">
           {description}
         </p>
-        {/* Live indicator for active users */}
-        {title === 'Live Users' && !isLoading && (
-          <div className="flex items-center mt-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2" />
-            <span className="text-xs text-green-600 font-medium">Real-time</span>
-          </div>
-        )}
       </CardContent>
     </Card>
   </motion.div>
 );
 
 const VisitorAnalytics = () => {
-  const { stats, loading, error } = useVisitorAnalytics();
+  const { stats, loading, error } = useClickAnalytics();
   const { counts, loading: countsLoading } = useAdminSidebarData();
 
   if (error) {
@@ -70,36 +63,29 @@ const VisitorAnalytics = () => {
 
   const statCards = [
     {
-      title: 'Live Users',
-      value: stats.liveUsers,
-      icon: Users,
-      description: 'Currently browsing',
-      color: 'bg-green-500'
-    },
-    {
       title: 'Total Visitors',
-      value: stats.totalVisitors,
+      value: stats.totalClicks,
       icon: Eye,
-      description: 'All time visits',
+      description: 'All time unique visitors',
       color: 'bg-blue-500'
     },
     {
-      title: 'Today',
-      value: stats.sessionsToday,
+      title: 'Today Visitors',
+      value: stats.todayClicks,
       icon: Calendar,
-      description: 'Sessions today',
+      description: 'Unique visitors today',
       color: 'bg-purple-500'
     },
     {
-      title: 'This Week',
-      value: stats.sessionsThisWeek,
+      title: 'Week Visitors',
+      value: stats.weekClicks,
       icon: TrendingUp,
       description: 'Last 7 days',
       color: 'bg-orange-500'
     },
     {
-      title: 'This Month',
-      value: stats.sessionsThisMonth,
+      title: 'Month Visitors',
+      value: stats.monthClicks,
       icon: Clock,
       description: 'Last 30 days',
       color: 'bg-indigo-500'
@@ -164,19 +150,19 @@ const VisitorAnalytics = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h2>
           <p className="text-sm text-gray-500 mt-1">
-            Real-time visitor statistics and business metrics
+            Visitor statistics based on button clicks and business metrics
           </p>
         </div>
         <div className="flex items-center space-x-2 text-xs text-gray-500">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span>Live updates</span>
+          <MousePointerClick className="w-4 h-4 text-blue-500" />
+          <span>Click-based tracking</span>
         </div>
       </div>
 
       {/* Website Analytics Section */}
       <div>
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Website Analytics</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((stat, index) => (
             <StatCard
               key={stat.title}
@@ -220,17 +206,17 @@ const VisitorAnalytics = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
                 <div className="space-y-1">
                   <p>
-                    <span className="font-medium text-green-600">{stats.liveUsers}</span>{' '}
-                    {stats.liveUsers === 1 ? 'user is' : 'users are'} currently browsing
+                    <span className="font-medium text-blue-600">{stats.todayClicks}</span>{' '}
+                    unique {stats.todayClicks === 1 ? 'visitor' : 'visitors'} today
                   </p>
                   <p>
-                    <span className="font-medium text-blue-600">{stats.sessionsToday}</span>{' '}
-                    {stats.sessionsToday === 1 ? 'session' : 'sessions'} recorded today
+                    <span className="font-medium text-purple-600">{stats.weekClicks}</span>{' '}
+                    {stats.weekClicks === 1 ? 'visitor' : 'visitors'} this week
                   </p>
                   <p>
-                    Weekly growth:{' '}
-                    <span className="font-medium text-purple-600">
-                      {stats.sessionsThisWeek} sessions
+                    Monthly activity:{' '}
+                    <span className="font-medium text-orange-600">
+                      {stats.monthClicks} visitors
                     </span>
                   </p>
                 </div>

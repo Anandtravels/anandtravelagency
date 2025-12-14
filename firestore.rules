@@ -85,5 +85,12 @@ service cloud.firestore {
       allow create: if true;
       allow update, delete: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
     }
+    
+    // Button click tracking for visitor analytics
+    match /button_clicks/{clickId} {
+      allow read: if request.auth != null;
+      allow create: if true; // Allow anyone to record button clicks
+      allow update, delete: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
   }
 }

@@ -29,6 +29,8 @@ export interface Bill {
   couponDiscount?: number;
   totalAmount: number;
   qrCodeUrl?: string;
+  agentPnr?: string;
+  agentBookingAccountId?: string;
   createdAt: any;
   createdBy: string;
 }

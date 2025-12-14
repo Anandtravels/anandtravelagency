@@ -98,6 +98,14 @@ export const useBookingInvoiceModal = (userEmail?: string) => {
         billData.additionalInfo = priceDetails.additionalInfo;
       }
 
+      // Add agent PNR and Booking Account ID if available
+      if (currentBooking.agentPnr && currentBooking.agentPnr.trim() !== '') {
+        billData.agentPnr = currentBooking.agentPnr;
+      }
+      if (currentBooking.agentBookingAccountId && currentBooking.agentBookingAccountId.trim() !== '') {
+        billData.agentBookingAccountId = currentBooking.agentBookingAccountId;
+      }
+
       // Create bill record in Firebase
       const billRef = await addDoc(collection(db, 'bills'), billData);
 

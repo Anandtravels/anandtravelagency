@@ -65,8 +65,28 @@ const BookingPriceModal = ({
           : 'General Booking';
       })();
       
+      // Map booking train_class to dropdown value
+      const mapTrainClassToDropdown = (trainClass: string | undefined): string => {
+        if (!trainClass) return 'SL';
+        switch (trainClass.toUpperCase()) {
+          case 'SL':
+          case '2S':
+            return 'SL'; // Sleeper category
+          case '3A':
+          case '3E':
+          case 'CC':
+            return '3AC/3E'; // AC 3 category
+          case '2A':
+          case '1A':
+          case 'EC':
+            return '2AC'; // AC 2 and above category
+          default:
+            return 'SL';
+        }
+      };
+      
       const passengerCount = Array.isArray(booking.passengers) ? booking.passengers.length : 1;
-      const initialClassPreference = booking.train_class || booking.class_preference || 'SL';
+      const initialClassPreference = mapTrainClassToDropdown(booking.train_class || booking.class_preference);
       const initialBookingCharge = calculateBookingCharge(initialBookingType, initialClassPreference);
 
       setPriceDetails({
@@ -199,8 +219,31 @@ const BookingPriceModal = ({
                 <p><span className="font-medium text-blue-700">Journey:</span> {booking.from} → {booking.to}</p>
                 <p><span className="font-medium text-blue-700">Date:</span> {booking.journey_date}</p>
                 <p><span className="font-medium text-blue-700">Service:</span> {booking.booking_type || 'Not specified'}</p>
+                {booking.train_class && (
+                  <p><span className="font-medium text-blue-700">Train Class:</span> <span className="bg-blue-100 px-2 py-0.5 rounded text-blue-900">{booking.train_class}</span></p>
+                )}
+                {booking.preferred_trains && (
+                  <p><span className="font-medium text-blue-700">Preferred Train(s):</span> <span className="bg-purple-100 px-2 py-0.5 rounded text-purple-900 font-mono">{booking.preferred_trains}</span></p>
+                )}
               </div>
             </div>
+
+            {/* Agent Submitted PNR Details - Only show if agent has completed */}
+            {booking.agentPnr && booking.agentBookingAccountId && (
+              <div className="bg-gradient-to-r from-teal-50 to-emerald-50 p-4 rounded-lg border border-teal-200">
+                <h3 className="font-semibold text-teal-900 mb-2 flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-5 h-5 bg-teal-500 text-white rounded-full text-xs">✓</span>
+                  Agent Submitted Details
+                </h3>
+                <div className="grid gap-2 text-sm">
+                  <p><span className="font-medium text-teal-700">Ticket PNR:</span> <span className="font-mono bg-teal-100 px-2 py-0.5 rounded text-teal-900">{booking.agentPnr}</span></p>
+                  <p><span className="font-medium text-teal-700">Booking Account ID:</span> <span className="font-mono bg-teal-100 px-2 py-0.5 rounded text-teal-900">{booking.agentBookingAccountId}</span></p>
+                  {booking.assignedAgent && (
+                    <p><span className="font-medium text-teal-700">Completed By Agent:</span> {booking.assignedAgent}</p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Price Details Form */}
             <div className="space-y-4">

@@ -53,17 +53,19 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
   const [calendarDate, setCalendarDate] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [bookingTypeFilter, setBookingTypeFilter] = useState<string>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
   
   const { toast } = useToast();
 
   const filteredBills = bills.filter(bill => {
-    // Search term filter
+    // Search term filter - now includes PNR search
     const search = searchTerm.toLowerCase();
     const matchesSearch = (
       bill.billNumber.toLowerCase().includes(search) ||
       bill.customerName.toLowerCase().includes(search) ||
       bill.customerPhone.includes(search) ||
-      bill.bookingType.toLowerCase().includes(search)
+      bill.bookingType.toLowerCase().includes(search) ||
+      (bill.agentPnr && bill.agentPnr.toLowerCase().includes(search))
     );
     
     // Calendar date filter
@@ -83,13 +85,25 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
       }
     }
     
+    // Month filter
+    let matchesMonth = true;
+    if (monthFilter !== 'all') {
+      try {
+        const billDate = bill.createdAt.toDate ? bill.createdAt.toDate() : new Date(bill.createdAt);
+        const billMonth = billDate.getMonth(); // 0-11
+        matchesMonth = billMonth === parseInt(monthFilter);
+      } catch (e) {
+        matchesMonth = false;
+      }
+    }
+    
     // Booking type filter
     let matchesBookingType = true;
     if (bookingTypeFilter !== 'all') {
       matchesBookingType = bill.bookingType.toLowerCase() === bookingTypeFilter.toLowerCase();
     }
     
-    return matchesSearch && matchesDate && matchesBookingType;
+    return matchesSearch && matchesDate && matchesMonth && matchesBookingType;
   });
 
   const handleViewBill = (billId: string) => {
@@ -183,12 +197,34 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               type="text"
-              placeholder="Search bills..."
+              placeholder="Search by name, phone, PNR..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
+          
+          {/* Month Filter Dropdown */}
+          <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Months</SelectItem>
+              <SelectItem value="0">January</SelectItem>
+              <SelectItem value="1">February</SelectItem>
+              <SelectItem value="2">March</SelectItem>
+              <SelectItem value="3">April</SelectItem>
+              <SelectItem value="4">May</SelectItem>
+              <SelectItem value="5">June</SelectItem>
+              <SelectItem value="6">July</SelectItem>
+              <SelectItem value="7">August</SelectItem>
+              <SelectItem value="8">September</SelectItem>
+              <SelectItem value="9">October</SelectItem>
+              <SelectItem value="10">November</SelectItem>
+              <SelectItem value="11">December</SelectItem>
+            </SelectContent>
+          </Select>
           
           {/* Booking Type Dropdown */}
           <Select value={bookingTypeFilter} onValueChange={setBookingTypeFilter}>
@@ -263,7 +299,7 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -290,20 +326,52 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
           </CardContent>
         </Card>
         
-        <Card>
+        {/* Selected Month Bills Count */}
+        <Card className={monthFilter !== 'all' ? 'border-purple-200 bg-purple-50' : ''}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">This Month</p>
+                <p className="text-sm text-gray-600">
+                  {monthFilter !== 'all' 
+                    ? `${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][parseInt(monthFilter)]} Bills`
+                    : 'This Month Bills'}
+                </p>
                 <p className="text-2xl font-bold text-purple-600">
-                  {bills.filter(bill => {
-                    const billDate = bill.createdAt.toDate ? bill.createdAt.toDate() : new Date(bill.createdAt);
-                    const now = new Date();
-                    return billDate.getMonth() === now.getMonth() && billDate.getFullYear() === now.getFullYear();
-                  }).length}
+                  {monthFilter !== 'all' 
+                    ? filteredBills.length
+                    : bills.filter(bill => {
+                        const billDate = bill.createdAt.toDate ? bill.createdAt.toDate() : new Date(bill.createdAt);
+                        const now = new Date();
+                        return billDate.getMonth() === now.getMonth() && billDate.getFullYear() === now.getFullYear();
+                      }).length}
                 </p>
               </div>
               <Calendar className="h-10 w-10 text-purple-600 opacity-20" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Selected Month Revenue */}
+        <Card className={monthFilter !== 'all' ? 'border-orange-200 bg-orange-50' : ''}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">
+                  {monthFilter !== 'all' 
+                    ? `${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][parseInt(monthFilter)]} Revenue`
+                    : 'This Month Revenue'}
+                </p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {monthFilter !== 'all'
+                    ? formatCurrency(filteredBills.reduce((sum, bill) => sum + bill.totalAmount, 0))
+                    : formatCurrency(bills.filter(bill => {
+                        const billDate = bill.createdAt.toDate ? bill.createdAt.toDate() : new Date(bill.createdAt);
+                        const now = new Date();
+                        return billDate.getMonth() === now.getMonth() && billDate.getFullYear() === now.getFullYear();
+                      }).reduce((sum, bill) => sum + bill.totalAmount, 0))}
+                </p>
+              </div>
+              <IndianRupee className="h-10 w-10 text-orange-600 opacity-20" />
             </div>
           </CardContent>
         </Card>

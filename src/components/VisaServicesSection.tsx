@@ -5,6 +5,7 @@ import { z } from "zod";
 import { FileText, Globe, Calendar, Send, CheckCircle, FileCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { useVisaForm } from "@/hooks/useVisaForm";
+import { trackButtonClick } from "@/services/clickTracker";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,6 +130,7 @@ const VisaServicesSection = () => {
   );
 
   const onSubmit = async (data: VisaFormData) => {
+    trackButtonClick("Visa Application Submit");
     await handleSubmit(data as VisaFormData);
     if (!isSubmitting) {
       form.reset();

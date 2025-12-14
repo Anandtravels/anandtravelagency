@@ -4,7 +4,7 @@ import { EditFormData } from "@/types/admin";
 import ProfitCalculator from "./ProfitCalculator";
 import { StationAutocomplete } from "@/components/StationAutocomplete";
 import { MultiSelectTrainAutocomplete } from "@/components/MultiSelectTrainAutocomplete";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { preloadStationData } from "@/utils/stationDataLoader";
 import { ArrowLeftRight } from "lucide-react";
 
@@ -21,6 +21,7 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
   const [trainFromStation, setTrainFromStation] = useState(formData.from || '');
   const [trainToStation, setTrainToStation] = useState(formData.to || '');
   const [preferredTrains, setPreferredTrains] = useState(formData.preferred_trains || '');
+  const isSwappingRef = useRef(false);
   
   // Preload station data when modal opens
   useEffect(() => {
@@ -30,7 +31,11 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
   }, [isOpen]);
   
   // Update station states when formData changes (when modal opens with booking data)
+  // Skip this effect during a swap operation to prevent race conditions
   useEffect(() => {
+    if (isSwappingRef.current) {
+      return;
+    }
     setTrainFromStation(formData.from || '');
     setTrainToStation(formData.to || '');
     setPreferredTrains(formData.preferred_trains || '');
@@ -43,12 +48,25 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
 
   // Handle station swap
   const handleSwapStations = () => {
-    const temp = trainFromStation;
-    setTrainFromStation(trainToStation);
-    setTrainToStation(temp);
-    // Update formData
-    onFormChange({ target: { name: 'from', value: trainToStation } } as any);
-    onFormChange({ target: { name: 'to', value: temp } } as any);
+    // Capture both values BEFORE any updates to avoid race conditions
+    const currentFrom = trainFromStation;
+    const currentTo = trainToStation;
+    
+    // Set flag to prevent useEffect from resetting values during swap
+    isSwappingRef.current = true;
+    
+    // Update local state
+    setTrainFromStation(currentTo);
+    setTrainToStation(currentFrom);
+    
+    // Update formData - use captured values to ensure both are swapped correctly
+    onFormChange({ target: { name: 'from', value: currentTo } } as any);
+    onFormChange({ target: { name: 'to', value: currentFrom } } as any);
+    
+    // Reset the swapping flag after updates are processed
+    setTimeout(() => {
+      isSwappingRef.current = false;
+    }, 0);
   };
 
   return (

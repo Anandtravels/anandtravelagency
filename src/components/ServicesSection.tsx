@@ -1,5 +1,6 @@
 import { Train, Bus, Plane, Car, Package, FileCheck } from "lucide-react";
 import { Link } from "react-router-dom";
+import { trackButtonClick } from "@/services/clickTracker";
 
 const ServicesSection = () => {
   const services = [
@@ -55,6 +56,7 @@ const ServicesSection = () => {
                 key={index}
                 to="/visa-services"
                 className="bg-white rounded-lg shadow-md p-8 flex flex-col items-center text-center transition-all duration-300 hover:scale-105 hover:shadow-lg group cursor-pointer"
+                onClick={() => trackButtonClick("Visa Services - Services Section")}
               >
                 <div className="mb-4 group-hover:text-travel-orange transition-colors">{service.icon}</div>
                 <h3 className="text-xl font-semibold mb-3 text-travel-blue-dark group-hover:text-travel-orange transition-colors">{service.title}</h3>

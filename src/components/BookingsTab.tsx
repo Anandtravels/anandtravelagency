@@ -22,7 +22,7 @@ interface BookingsTabProps {
   agents: any[];
   formatFirebaseTimestamp: (timestamp: any) => string;
   handleNoteChange: (id: string, note: string) => void;
-  updateBookingStatus: (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold', booking?: any) => Promise<void>;
+  updateBookingStatus: (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done', booking?: any) => Promise<void>;
   deleteBookings: (ids: string[]) => Promise<void>;
   openEditModal: (booking: any) => void;
   handleCall: (phone: string) => void;
@@ -95,6 +95,8 @@ const BookingsTab = ({
         filtered = filtered.filter(b => b.status === 'booked');
       } else if (statusFilter === 'hold') {
         filtered = filtered.filter(b => b.status === 'hold');
+      } else if (statusFilter === 'agent_done') {
+        filtered = filtered.filter(b => b.status === 'agent_done');
       } else if (statusFilter === 'advance_booking') {
         // Filter for advance bookings - show only bookings with advance_booking flag set to true
         filtered = filtered.filter(b => b.advance_booking === true);
@@ -292,6 +294,7 @@ const BookingsTab = ({
                 <option value="pending">Pending</option>
                 <option value="completed">Payment Done</option>
                 <option value="in_process">In Process</option>
+                <option value="agent_done">Agent Done</option>
                 <option value="booked">Booked</option>
                 <option value="hold">Hold</option>
                 <option value="advance_booking">Advance Booking</option>
@@ -544,9 +547,11 @@ const BookingsTab = ({
                           ? 'bg-purple-100 text-purple-800'
                           : booking.status === 'hold'
                           ? 'bg-amber-100 text-amber-800'
+                          : booking.status === 'agent_done'
+                          ? 'bg-teal-100 text-teal-800'
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {booking.status === 'completed' ? 'Payment Done' : booking.status === 'in_process' ? 'In Process' : booking.status === 'booked' ? 'Booked' : booking.status === 'hold' ? 'Hold' : 'Pending'}
+                        {booking.status === 'completed' ? 'Payment Done' : booking.status === 'in_process' ? 'In Process' : booking.status === 'booked' ? 'Booked' : booking.status === 'hold' ? 'Hold' : booking.status === 'agent_done' ? 'Agent Done' : 'Pending'}
                       </span>
                       {booking.advance_booking && (
                         <span className="inline-block px-2 py-0.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded text-xs font-semibold shadow-sm">
@@ -558,7 +563,7 @@ const BookingsTab = ({
                 </div>
                 <select
                   value={booking.status || 'pending'}
-                  onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold', booking)}
+                  onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done', booking)}
                   className={`px-3 py-1 rounded-full text-xs font-medium border ${
                     booking.status === 'completed' 
                       ? 'bg-green-100 text-green-800 border-green-200' 
@@ -568,11 +573,14 @@ const BookingsTab = ({
                       ? 'bg-purple-100 text-purple-800 border-purple-200'
                       : booking.status === 'hold'
                       ? 'bg-amber-100 text-amber-800 border-amber-200'
+                      : booking.status === 'agent_done'
+                      ? 'bg-teal-100 text-teal-800 border-teal-200'
                       : 'bg-yellow-100 text-yellow-800 border-yellow-200'
                   }`}
                 >
                   <option value="pending">Pending</option>
                   <option value="in_process">In Process</option>
+                  <option value="agent_done">Agent Done</option>
                   <option value="booked">Booked</option>
                   <option value="hold">Hold</option>
                   <option value="completed">Payment Done</option>
@@ -671,6 +679,23 @@ const BookingsTab = ({
                     </div>
                   </details>
                 )}
+
+                {/* Agent PNR Details - Show when agent has completed the booking */}
+                {booking.agentPnr && booking.agentBookingAccountId && (
+                  <details open className="bg-gradient-to-r from-teal-50 to-emerald-50 p-3 rounded-md shadow-sm border border-teal-200">
+                    <summary className="font-medium text-sm cursor-pointer text-teal-800 flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center w-4 h-4 bg-teal-500 text-white rounded-full text-[10px]">✓</span>
+                      Agent Submitted Details
+                    </summary>
+                    <div className="mt-2 pt-2 border-t border-teal-200 text-sm space-y-1.5">
+                      <p><span className="font-medium text-teal-700">Ticket PNR:</span> <span className="font-mono bg-teal-100 px-2 py-0.5 rounded text-teal-900">{booking.agentPnr}</span></p>
+                      <p><span className="font-medium text-teal-700">Booking Account ID:</span> <span className="font-mono bg-teal-100 px-2 py-0.5 rounded text-teal-900">{booking.agentBookingAccountId}</span></p>
+                      {booking.assignedAgent && (
+                        <p><span className="font-medium text-teal-700">Agent:</span> {booking.assignedAgent}</p>
+                      )}
+                    </div>
+                  </details>
+                )}
                 
                 <details className="bg-white p-3 rounded-md shadow-sm border border-gray-100">
                   <summary className="font-medium text-sm cursor-pointer">Admin Notes</summary>
@@ -763,7 +788,7 @@ const BookingsTab = ({
                 <div className="absolute right-4 top-4">
                   <select
                     value={booking.status || 'pending'}
-                    onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold', booking)}
+                    onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done', booking)}
                     className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
                       booking.status === 'completed' 
                         ? 'bg-green-100 text-green-800 border-green-200' 
@@ -773,11 +798,14 @@ const BookingsTab = ({
                         ? 'bg-purple-100 text-purple-800 border-purple-200'
                         : booking.status === 'hold'
                         ? 'bg-amber-100 text-amber-800 border-amber-200'
+                        : booking.status === 'agent_done'
+                        ? 'bg-teal-100 text-teal-800 border-teal-200'
                         : 'bg-yellow-100 text-yellow-800 border-yellow-200'
                     }`}
                   >
                     <option value="pending">Pending</option>
                     <option value="in_process">In Process</option>
+                    <option value="agent_done">Agent Done</option>
                     <option value="booked">Booked</option>
                     <option value="hold">Hold</option>
                     <option value="completed">Payment Done</option>
@@ -970,6 +998,31 @@ const BookingsTab = ({
                       )}
                     </div>
                   </details>
+
+                  {/* Agent PNR Details - Show when agent has completed the booking */}
+                  {booking.agentPnr && booking.agentBookingAccountId && (
+                    <details open>
+                      <summary className="cursor-pointer list-none font-medium text-sm text-teal-700 flex items-center">
+                        <span className="bg-teal-50 p-1 rounded mr-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </span>
+                        Agent Submitted Details
+                      </summary>
+                      <div className="pl-8 pt-2 text-sm">
+                        <div className="bg-gradient-to-r from-teal-50 to-emerald-50 p-3 rounded border border-teal-200">
+                          <div className="space-y-2">
+                            <p><span className="text-xs text-teal-700 font-medium">Ticket PNR:</span> <span className="font-mono bg-teal-100 px-2 py-0.5 rounded text-teal-900">{booking.agentPnr}</span></p>
+                            <p><span className="text-xs text-teal-700 font-medium">Booking Account ID:</span> <span className="font-mono bg-teal-100 px-2 py-0.5 rounded text-teal-900">{booking.agentBookingAccountId}</span></p>
+                            {booking.assignedAgent && (
+                              <p><span className="text-xs text-teal-700 font-medium">Completed By Agent:</span> <span className="text-sm">{booking.assignedAgent}</span></p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </details>
+                  )}
                   
                   <details>
                     <summary id={`notes-${booking.id}`} className="cursor-pointer list-none font-medium text-sm text-gray-700 flex items-center">

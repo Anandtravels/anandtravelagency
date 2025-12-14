@@ -5,6 +5,7 @@ import Footer from "../components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { trackButtonClick } from "@/services/clickTracker";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -27,6 +28,7 @@ const Contact = () => {
   
   const handleSubmit = async (e) => {
     e.preventDefault();
+    trackButtonClick("Contact Form Submit");
     setIsSubmitting(true);
     
     try {

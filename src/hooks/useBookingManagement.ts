@@ -17,7 +17,7 @@ export const useBookingManagement = (
 
   const updateBookingStatus = async (
     bookingId: string, 
-    status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold',
+    status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done',
     booking?: any
   ) => {
     if (!user || user.email !== 'admin@anandtravels.com') {
@@ -44,7 +44,7 @@ export const useBookingManagement = (
     }
   };
 
-  const updateBookingStatusDirect = async (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold') => {
+  const updateBookingStatusDirect = async (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done') => {
     if (!user || user.email !== 'admin@anandtravels.com') {
       toast({ title: "Unauthorized", description: "You don't have permission to do this.", variant: "destructive" });
       return;

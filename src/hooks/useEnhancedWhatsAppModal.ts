@@ -38,8 +38,28 @@ export const useEnhancedWhatsAppModal = (userEmail?: string) => {
           : 'General Booking';
       })();
       
+      // Map booking train_class to dropdown value
+      const mapTrainClassToDropdown = (trainClass: string | undefined): string => {
+        if (!trainClass) return 'SL';
+        switch (trainClass.toUpperCase()) {
+          case 'SL':
+          case '2S':
+            return 'SL'; // Sleeper category
+          case '3A':
+          case '3E':
+          case 'CC':
+            return '3AC/3E'; // AC 3 category
+          case '2A':
+          case '1A':
+          case 'EC':
+            return '2AC'; // AC 2 and above category
+          default:
+            return 'SL';
+        }
+      };
+      
       let initialPassengerCount = Array.isArray(booking.passengers) ? booking.passengers.length : 1;
-      const initialClassPreference = booking.train_class || booking.class_preference || 'SL';
+      const initialClassPreference = mapTrainClassToDropdown(booking.train_class || booking.class_preference);
       const initialBookingCharge = calculateBookingCharge(initialBookingType, initialClassPreference);
 
       if (booking.coupon) {
@@ -224,6 +244,11 @@ Final Booking Charge: ₹${finalCharge.toFixed(2)}`;
       pricingDetails += `\n*Total Amount: ₹${totalAmount.toFixed(2)}*`;
 
       // 7. Build WhatsApp message (without bill number - invoice only on status change)
+      const trainClassDisplay = messageDetails.classPreference === '3AC/3E' ? '3AC/3E' : 
+                                messageDetails.classPreference === '2AC' ? '2AC' : 
+                                messageDetails.classPreference === 'SL' ? 'Sleeper (SL)' : messageDetails.classPreference;
+      const preferredTrainsLine = currentBooking.preferred_trains ? `🚂 *Preferred Train(s):* ${currentBooking.preferred_trains}\n` : '';
+      
       const message = 
 `🎫 *ANAND TRAVELS - BOOKING*
 
@@ -234,7 +259,8 @@ Dear *${currentBooking.name}*,
 🚆 ${currentBooking.from} → ${currentBooking.to}
 📅 ${currentBooking.journey_date}
 🎯 ${messageDetails.bookingType}
-${passengerInfo}${currentBooking.additional_requirements ? `📝 ${currentBooking.additional_requirements}\n` : ''}
+💺 *Class:* ${trainClassDisplay}
+${preferredTrainsLine}${passengerInfo}${currentBooking.additional_requirements ? `📝 ${currentBooking.additional_requirements}\n` : ''}
 ━━━━━━━━━━━━━━━
 ${pricingDetails}
 ${messageDetails.additionalInfo ? `\n${messageDetails.additionalInfo}\n` : ''}

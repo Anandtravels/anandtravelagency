@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Mail, MessageSquare, ClipboardList, Wallet, BookOpen, Calendar, Star, Sparkles, User } from "lucide-react";
+import { Phone, Mail, MessageSquare, ClipboardList, Wallet, BookOpen, Calendar, Star, Sparkles, User, Key } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ import { useAgentTasks } from "@/hooks/useAgentTasks";
 import AgentTaskList from "@/components/agent/AgentTaskList";
 import AgentWalletCard from "@/components/agent/AgentWalletCard";
 import AgentRulesRegulations from "@/components/agent/AgentRulesRegulations";
+import AgentBookingCredentials from "@/components/agent/AgentBookingCredentials";
 
 const AgentDashboard = () => {
   const { user, isAgent, signOut, loading } = useAuth();
@@ -41,6 +42,19 @@ const AgentDashboard = () => {
     couponDiscount: 0,
     couponType: null as 'fixed' | 'percentage' | null
   });
+
+  // PNR Completion Modal state
+  const [pnrModalOpen, setPnrModalOpen] = useState(false);
+  const [pnrBooking, setPnrBooking] = useState<any>(null);
+  const [pnrDetails, setPnrDetails] = useState({
+    ticketPnr: '',
+    bookingAccountId: ''
+  });
+  const [pnrSubmitting, setPnrSubmitting] = useState(false);
+  const [useManualEntry, setUseManualEntry] = useState(false);
+
+  // Saved booking credentials for dropdown
+  const [savedCredentials, setSavedCredentials] = useState<{id: string, bookingId: string, label?: string}[]>([]);
 
   // Agent Tasks Hook
   const { 
@@ -80,6 +94,29 @@ const AgentDashboard = () => {
       fetchAgentName();
     }
   }, [user, isAgent]);
+
+  // Fetch saved booking credentials for dropdown
+  useEffect(() => {
+    if (!user?.email) return;
+
+    const credentialsRef = collection(db, 'agent_booking_credentials');
+    const q = query(
+      credentialsRef,
+      where('agentEmail', '==', user.email.toLowerCase()),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const credentialsList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        bookingId: doc.data().bookingId,
+        label: doc.data().label
+      }));
+      setSavedCredentials(credentialsList);
+    });
+
+    return () => unsubscribe();
+  }, [user?.email]);
 
   // Handle task completion with celebration toast
   const handleCompleteTask = async (taskId: string): Promise<boolean> => {
@@ -195,7 +232,15 @@ const AgentDashboard = () => {
     }
   };
 
-  const updateBookingStatus = async (bookingId: string, status: 'pending' | 'completed') => {
+  const updateBookingStatus = async (bookingId: string, status: 'pending' | 'completed', booking?: any) => {
+    // If agent is trying to mark as completed, show the PNR modal instead
+    if (status === 'completed' && booking) {
+      setPnrBooking(booking);
+      setPnrDetails({ ticketPnr: '', bookingAccountId: '' });
+      setPnrModalOpen(true);
+      return;
+    }
+
     try {
       await updateDoc(doc(db, 'bookings', bookingId), { 
         status,
@@ -214,6 +259,51 @@ const AgentDashboard = () => {
         description: "Failed to update booking status",
         variant: "destructive"
       });
+    }
+  };
+
+  // Submit PNR details and mark as agent_done
+  const handlePnrSubmit = async () => {
+    if (!pnrBooking) return;
+    
+    if (!pnrDetails.ticketPnr.trim() || !pnrDetails.bookingAccountId.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in both Ticket PNR and Booking Account ID",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setPnrSubmitting(true);
+    try {
+      await updateDoc(doc(db, 'bookings', pnrBooking.id), { 
+        status: 'agent_done',
+        agentPnr: pnrDetails.ticketPnr.trim(),
+        agentBookingAccountId: pnrDetails.bookingAccountId.trim(),
+        agentCompletedAt: serverTimestamp(),
+        updated_at: serverTimestamp(),
+        updated_by: user?.email
+      });
+      
+      toast({
+        title: "Booking Completed",
+        description: "PNR details submitted successfully. Status updated to Agent Done.",
+      });
+      
+      setPnrModalOpen(false);
+      setPnrBooking(null);
+      setPnrDetails({ ticketPnr: '', bookingAccountId: '' });
+      setUseManualEntry(false);
+    } catch (error) {
+      console.error("Error updating booking with PNR:", error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to submit PNR details",
+        variant: "destructive"
+      });
+    } finally {
+      setPnrSubmitting(false);
     }
   };
 
@@ -493,7 +583,7 @@ Thank you for choosing Anand Travels!`;
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 gap-0.5 bg-gray-100 shadow-sm rounded-lg p-0.5 h-auto">
+          <TabsList className="grid w-full grid-cols-5 gap-0.5 bg-gray-100 shadow-sm rounded-lg p-0.5 h-auto">
             <TabsTrigger value="tasks" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-blue-dark data-[state=active]:text-white rounded-md">
               <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden xs:inline">Tasks</span>
@@ -501,6 +591,10 @@ Thank you for choosing Anand Travels!`;
             <TabsTrigger value="wallet" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-orange data-[state=active]:text-white rounded-md">
               <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden xs:inline">Wallet</span>
+            </TabsTrigger>
+            <TabsTrigger value="credentials" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white rounded-md">
+              <Key className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">IDs</span>
             </TabsTrigger>
             <TabsTrigger value="bookings" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-teal data-[state=active]:text-white rounded-md">
               <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -555,6 +649,13 @@ Thank you for choosing Anand Travels!`;
             </div>
           </TabsContent>
 
+          {/* Credentials Tab */}
+          <TabsContent value="credentials" className="mt-4">
+            {user?.email && (
+              <AgentBookingCredentials agentEmail={user.email} agentName={agentName} />
+            )}
+          </TabsContent>
+
           {/* Bookings Tab */}
           <TabsContent value="bookings" className="mt-6">
             <div className="mb-6">
@@ -594,16 +695,20 @@ Thank you for choosing Anand Travels!`;
                           <p className="text-sm text-gray-500">{formatDate(booking.created_at)}</p>
                         </div>
                         <select
-                          value={booking.status || 'pending'}
-                          onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed')}
+                          value={booking.status === 'agent_done' ? 'agent_done' : (booking.status || 'pending')}
+                          onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed', booking)}
+                          disabled={booking.status === 'agent_done'}
                           className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            booking.status === 'completed' 
+                            booking.status === 'agent_done'
+                              ? 'bg-teal-100 text-teal-800'
+                              : booking.status === 'completed' 
                               ? 'bg-green-100 text-green-800' 
                               : 'bg-yellow-100 text-yellow-800'
-                          }`}
+                          } ${booking.status === 'agent_done' ? 'cursor-not-allowed opacity-75' : ''}`}
                         >
                           <option value="pending">Pending</option>
                           <option value="completed">Completed</option>
+                          {booking.status === 'agent_done' && <option value="agent_done">Agent Done</option>}
                         </select>
                       </div>
                     </CardHeader>
@@ -803,6 +908,149 @@ Thank you for choosing Anand Travels!`;
             </Button>
             <Button onClick={sendWhatsappMessage}>
               Send to WhatsApp
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PNR Completion Modal */}
+      <Dialog open={pnrModalOpen} onOpenChange={setPnrModalOpen}>
+        <DialogContent className="sm:max-w-[450px] w-[95%]">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-gray-900">
+              Complete Booking - Enter Ticket Details
+            </DialogTitle>
+          </DialogHeader>
+          
+          {pnrBooking && (
+            <div className="space-y-4 my-4">
+              {/* Booking Summary */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                <h3 className="font-semibold text-blue-900 mb-2 text-sm">Booking Summary</h3>
+                <div className="grid gap-1 text-sm">
+                  <p><span className="font-medium text-blue-700">Customer:</span> {pnrBooking.name}</p>
+                  <p><span className="font-medium text-blue-700">Journey:</span> {pnrBooking.from} → {pnrBooking.to}</p>
+                  <p><span className="font-medium text-blue-700">Date:</span> {pnrBooking.journey_date}</p>
+                </div>
+              </div>
+
+              {/* PNR Input Fields */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="ticketPnr" className="text-sm font-medium">
+                    Ticket PNR Number <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="ticketPnr"
+                    value={pnrDetails.ticketPnr}
+                    onChange={(e) => setPnrDetails(prev => ({ ...prev, ticketPnr: e.target.value.toUpperCase() }))}
+                    placeholder="e.g., 1234567890"
+                    className="mt-1"
+                    maxLength={15}
+                    disabled={pnrSubmitting}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Enter the 10-digit PNR number from the booked ticket</p>
+                </div>
+
+                <div>
+                  <Label htmlFor="bookingAccountId" className="text-sm font-medium">
+                    Booking Account ID <span className="text-red-500">*</span>
+                  </Label>
+                  
+                  {/* Dropdown for saved credentials or manual entry option */}
+                  {savedCredentials.length > 0 && !useManualEntry ? (
+                    <div className="space-y-2 mt-1">
+                      <select
+                        id="bookingAccountId"
+                        value={pnrDetails.bookingAccountId}
+                        onChange={(e) => setPnrDetails(prev => ({ ...prev, bookingAccountId: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        disabled={pnrSubmitting}
+                      >
+                        <option value="">Select a saved booking ID</option>
+                        {savedCredentials.map((cred) => (
+                          <option key={cred.id} value={cred.bookingId}>
+                            {cred.label ? `${cred.label} (${cred.bookingId})` : cred.bookingId}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUseManualEntry(true);
+                          setPnrDetails(prev => ({ ...prev, bookingAccountId: '' }));
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Or enter a new booking ID manually
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 mt-1">
+                      <Input
+                        id="bookingAccountId"
+                        value={pnrDetails.bookingAccountId}
+                        onChange={(e) => setPnrDetails(prev => ({ ...prev, bookingAccountId: e.target.value }))}
+                        placeholder="e.g., IRCTC Username or ID"
+                        disabled={pnrSubmitting}
+                      />
+                      {savedCredentials.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUseManualEntry(false);
+                            setPnrDetails(prev => ({ ...prev, bookingAccountId: '' }));
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Select from saved booking IDs
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    {savedCredentials.length > 0 
+                      ? "Select from your saved IDs or enter a new one" 
+                      : "Enter the IRCTC account/ID from which the ticket was booked"
+                    }
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                <p className="text-xs text-amber-800">
+                  <strong>Note:</strong> After submitting, the booking status will be changed to "Agent Done" and the admin will be notified to complete the process.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setPnrModalOpen(false);
+                setPnrBooking(null);
+                setPnrDetails({ ticketPnr: '', bookingAccountId: '' });
+                setUseManualEntry(false);
+              }}
+              disabled={pnrSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handlePnrSubmit}
+              disabled={pnrSubmitting || !pnrDetails.ticketPnr.trim() || !pnrDetails.bookingAccountId.trim()}
+              className="bg-teal-600 hover:bg-teal-700"
+            >
+              {pnrSubmitting ? (
+                <>
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                  Submitting...
+                </>
+              ) : (
+                'Submit & Complete'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

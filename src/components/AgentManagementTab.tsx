@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { collection, getDocs, orderBy, query, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp, addDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { TrashIcon, PencilIcon } from "lucide-react";
+import { TrashIcon, PencilIcon, KeyIcon, Copy, Eye, EyeOff, CheckCircle2, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface AgentManagementTabProps {
   user: any;
@@ -26,6 +27,76 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
     password: ''
   });
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
+
+  // View Agent Booking IDs state
+  const [viewCredentialsModal, setViewCredentialsModal] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<any>(null);
+  const [agentCredentials, setAgentCredentials] = useState<any[]>([]);
+  const [loadingCredentials, setLoadingCredentials] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // View agent booking credentials
+  const handleViewCredentials = async (agent: any) => {
+    setSelectedAgent(agent);
+    setViewCredentialsModal(true);
+    setLoadingCredentials(true);
+    setVisiblePasswords(new Set());
+
+    try {
+      const credentialsRef = collection(db, 'agent_booking_credentials');
+      const q = query(
+        credentialsRef,
+        where('agentEmail', '==', agent.email.toLowerCase()),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const credentials = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAgentCredentials(credentials);
+    } catch (error) {
+      console.error("Error fetching credentials:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load booking credentials",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingCredentials(false);
+    }
+  };
+
+  const togglePasswordVisibility = (credentialId: string) => {
+    setVisiblePasswords(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(credentialId)) {
+        newSet.delete(credentialId);
+      } else {
+        newSet.add(credentialId);
+      }
+      return newSet;
+    });
+  };
+
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      toast({
+        title: "Copied!",
+        description: `Copied to clipboard`,
+      });
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (error) {
+      toast({
+        title: "Copy Failed",
+        description: "Please copy manually",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Agent functions
   const createAgent = async (data: any) => {
@@ -376,6 +447,13 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
                 <p className="text-sm text-gray-500">{agent.email}</p>
               </div>
               <div className="flex gap-2">
+                <button 
+                  onClick={() => handleViewCredentials(agent)} 
+                  className="p-2 hover:bg-purple-100 rounded-full transition-colors duration-200 group"
+                  title="View Booking IDs"
+                >
+                  <KeyIcon size={16} className="text-purple-600" />
+                </button>
                 <button onClick={() => handleEditAgent(agent)} className="p-2 hover:bg-gray-100 rounded-full">
                   <PencilIcon size={16} className="text-blue-600" />
                 </button>
@@ -390,9 +468,114 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
               <p><span className="font-medium">Phone:</span> {agent.phone}</p>
               <p><span className="font-medium">Address:</span> {agent.address}</p>
             </div>
+            {/* View Booking IDs Button */}
+            <div className="mt-4 pt-3 border-t">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleViewCredentials(agent)}
+                className="w-full gap-2 text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300"
+              >
+                <KeyIcon size={14} />
+                View Booking IDs
+              </Button>
+            </div>
           </div>
         ))}
       </div>
+
+      {/* View Agent Booking IDs Modal */}
+      <Dialog open={viewCredentialsModal} onOpenChange={setViewCredentialsModal}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyIcon className="w-5 h-5 text-purple-600" />
+              {selectedAgent?.name}'s Booking IDs
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="mt-4">
+            {loadingCredentials ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-r-transparent"></div>
+              </div>
+            ) : agentCredentials.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <KeyIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm">No booking credentials saved by this agent yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {agentCredentials.map((credential) => (
+                  <div 
+                    key={credential.id} 
+                    className="bg-gradient-to-br from-gray-50 to-white border rounded-lg p-4"
+                  >
+                    {credential.label && (
+                      <p className="text-xs font-medium text-purple-600 mb-2 uppercase tracking-wide">
+                        {credential.label}
+                      </p>
+                    )}
+                    
+                    {/* Booking ID */}
+                    <div className="mb-3">
+                      <label className="text-xs text-gray-500 block mb-1">Booking ID</label>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 bg-blue-50 px-3 py-2 rounded text-sm font-mono text-blue-800 truncate">
+                          {credential.bookingId}
+                        </code>
+                        <button
+                          onClick={() => copyToClipboard(credential.bookingId, `ID-${credential.id}`)}
+                          className="p-2 hover:bg-gray-100 rounded-md shrink-0"
+                          title="Copy Booking ID"
+                        >
+                          {copiedField === `ID-${credential.id}` ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <Copy className="w-4 h-4 text-gray-500" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Password */}
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Password</label>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 bg-amber-50 px-3 py-2 rounded text-sm font-mono text-amber-800 truncate">
+                          {visiblePasswords.has(credential.id) ? credential.password : '••••••••'}
+                        </code>
+                        <button
+                          onClick={() => togglePasswordVisibility(credential.id)}
+                          className="p-2 hover:bg-gray-100 rounded-md shrink-0"
+                          title={visiblePasswords.has(credential.id) ? "Hide Password" : "Show Password"}
+                        >
+                          {visiblePasswords.has(credential.id) ? (
+                            <EyeOff className="w-4 h-4 text-gray-500" />
+                          ) : (
+                            <Eye className="w-4 h-4 text-gray-500" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => copyToClipboard(credential.password, `PWD-${credential.id}`)}
+                          className="p-2 hover:bg-gray-100 rounded-md shrink-0"
+                          title="Copy Password"
+                        >
+                          {copiedField === `PWD-${credential.id}` ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <Copy className="w-4 h-4 text-gray-500" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

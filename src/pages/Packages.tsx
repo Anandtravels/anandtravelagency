@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import QuoteSection from "../components/QuoteSection";
 import { useDynamicPackages } from "@/hooks/useDynamicPackages";
+import { trackButtonClick } from "@/services/clickTracker";
 
 // Auto-scrolling image carousel component
 const AutoScrollCarousel = ({ images, alt }: { images: string[], alt: string }) => {
@@ -196,6 +197,7 @@ const Packages = () => {
                     key={pkg.id} 
                     to={`/packages/${pkg.id}`}
                     className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 flex flex-col h-[520px] group cursor-pointer"
+                    onClick={() => trackButtonClick(`View Package - ${pkg.title}`)}
                   >
                     {/* Auto-Scrolling Image Carousel */}
                     <div className="h-56 overflow-hidden relative">

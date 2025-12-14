@@ -97,6 +97,12 @@ const WhatsAppMessageModal = ({
                 <p className="flex items-start"><span className="font-medium min-w-[80px] inline-block">Journey:</span><span className="break-all">{currentBooking.from} to {currentBooking.to}</span></p>
                 <p className="flex items-start"><span className="font-medium min-w-[80px] inline-block">Date:</span><span>{currentBooking.journey_date}</span></p>
                 <p className="flex items-start"><span className="font-medium min-w-[80px] inline-block">Service:</span><span>{currentBooking.booking_type || 'Not specified'}</span></p>
+                {currentBooking.train_class && (
+                  <p className="flex items-start"><span className="font-medium min-w-[80px] inline-block">Train Class:</span><span className="bg-blue-100 px-2 py-0.5 rounded text-blue-800">{currentBooking.train_class}</span></p>
+                )}
+                {currentBooking.preferred_trains && (
+                  <p className="flex items-start"><span className="font-medium min-w-[80px] inline-block">Preferred:</span><span className="bg-purple-100 px-2 py-0.5 rounded text-purple-800 font-mono">{currentBooking.preferred_trains}</span></p>
+                )}
               </div>
             </div>
             

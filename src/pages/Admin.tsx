@@ -181,7 +181,7 @@ const Admin = () => {
             />
           </TabsContent>
 
-          <TabsContent value="team-management" className="space-y-6">
+          <TabsContent value="eservices" className="space-y-6">
             <EServicesManagementTab 
               user={user} 
               formatFirebaseTimestamp={formatFirebaseTimestamp}

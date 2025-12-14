@@ -212,6 +212,40 @@ const InvoicePrint: React.FC = () => {
               </div>
             </div>
 
+            {/* Ticket Information - Agent PNR & Booking Account ID */}
+            {(bill.agentPnr || bill.agentBookingAccountId) && (
+              <div className="mb-10">
+                <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl p-6 border-2 border-teal-200">
+                  <h2 className="text-sm font-bold text-teal-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <span className="bg-teal-500 text-white px-2 py-1 rounded flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      TICKET INFORMATION
+                    </span>
+                  </h2>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {bill.agentPnr && (
+                      <div className="bg-white rounded-lg p-4 border border-teal-200 shadow-sm">
+                        <p className="text-xs text-teal-600 uppercase tracking-wide font-medium">Ticket PNR Number</p>
+                        <p className="text-2xl font-bold text-teal-900 mt-2 font-mono tracking-wider">
+                          {bill.agentPnr}
+                        </p>
+                      </div>
+                    )}
+                    {bill.agentBookingAccountId && (
+                      <div className="bg-white rounded-lg p-4 border border-teal-200 shadow-sm">
+                        <p className="text-xs text-teal-600 uppercase tracking-wide font-medium">Booking Account ID</p>
+                        <p className="text-xl font-bold text-teal-900 mt-2 font-mono">
+                          {bill.agentBookingAccountId}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Elegant Divider */}
             <div className="relative my-10">
               <div className="absolute inset-0 flex items-center">

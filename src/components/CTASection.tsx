@@ -1,5 +1,6 @@
 
 import { Link } from "react-router-dom";
+import { trackButtonClick } from "@/services/clickTracker";
 
 const CTASection = () => {
   return (
@@ -25,10 +26,18 @@ const CTASection = () => {
               Contact Anand Travel Agency now for confirmed reservations and hassle-free travel across India!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/booking" className="btn-primary text-lg px-8 py-3">
+              <Link 
+                to="/booking" 
+                className="btn-primary text-lg px-8 py-3"
+                onClick={() => trackButtonClick("Book Now - CTA")}
+              >
                 Book Now
               </Link>
-              <Link to="/contact" className="bg-white text-travel-blue-dark hover:bg-gray-100 font-medium text-lg px-8 py-3 rounded-md transition-colors">
+              <Link 
+                to="/contact" 
+                className="bg-white text-travel-blue-dark hover:bg-gray-100 font-medium text-lg px-8 py-3 rounded-md transition-colors"
+                onClick={() => trackButtonClick("Contact Us - CTA")}
+              >
                 Contact Us
               </Link>
             </div>

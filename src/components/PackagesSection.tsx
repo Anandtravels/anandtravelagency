@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Clock, Calendar, MapPin, Star } from "lucide-react";
 import { useDynamicPackages } from "@/hooks/useDynamicPackages";
+import { trackButtonClick } from "@/services/clickTracker";
 
 // Auto-scrolling image carousel component
 const AutoScrollCarousel = ({ images, alt }: { images: string[], alt: string }) => {
@@ -121,6 +122,7 @@ const PackagesSection = () => {
                 key={pkg.id} 
                 to={`/packages/${pkg.id}`}
                 className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 flex flex-col h-[520px] group cursor-pointer"
+                onClick={() => trackButtonClick(`View Package - ${pkg.title}`)}
               >
                 {/* Auto-Scrolling Image Carousel */}
                 <div className="h-56 overflow-hidden relative">
@@ -188,7 +190,11 @@ const PackagesSection = () => {
         )}
         
         <div className="text-center mt-12">
-          <Link to="/packages" className="btn-primary">
+          <Link 
+            to="/packages" 
+            className="btn-primary"
+            onClick={() => trackButtonClick("View All Packages")}
+          >
             View All Packages
           </Link>
         </div>
