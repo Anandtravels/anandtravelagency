@@ -970,7 +970,7 @@ const BookingsTab = ({
                       Additional Details
                     </summary>
                     <div className="pl-8 pt-2 text-sm space-y-2">
-                      {(booking.travel_class || booking.class_preference || booking.train_booking_type || booking.train_class) && (
+                      {(booking.travel_class || booking.class_preference || booking.train_booking_type || booking.train_class || booking.preferred_trains) && (
                         <div className="bg-purple-50 p-2 rounded border border-purple-100">
                           {booking.travel_class && <p><span className="text-xs text-purple-700">Travel Class:</span> <span className="text-sm">{booking.travel_class}</span></p>}
                           {booking.class_preference && <p><span className="text-xs text-purple-700">Class Preference:</span> <span className="text-sm">{booking.class_preference}</span></p>}

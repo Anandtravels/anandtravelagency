@@ -316,7 +316,7 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Revenue</p>
+                <p className="text-sm text-gray-600">Total Turnover</p>
                 <p className="text-2xl font-bold text-green-600">
                   {formatCurrency(bills.reduce((sum, bill) => sum + bill.totalAmount, 0))}
                 </p>
@@ -351,15 +351,15 @@ const BillsManagementTab = ({ user }: BillsManagementTabProps) => {
           </CardContent>
         </Card>
         
-        {/* Selected Month Revenue */}
+        {/* Selected Month Turnover */}
         <Card className={monthFilter !== 'all' ? 'border-orange-200 bg-orange-50' : ''}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">
                   {monthFilter !== 'all' 
-                    ? `${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][parseInt(monthFilter)]} Revenue`
-                    : 'This Month Revenue'}
+                    ? `${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][parseInt(monthFilter)]} Turnover`
+                    : 'This Month Turnover'}
                 </p>
                 <p className="text-2xl font-bold text-orange-600">
                   {monthFilter !== 'all'
