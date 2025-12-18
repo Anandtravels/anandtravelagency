@@ -309,7 +309,7 @@ export const MultiSelectTrainAutocomplete = ({
 
       {/* Help text */}
       <p className="text-gray-500 text-xs mt-1">
-        Press Enter to add a train, or select from suggestions. Press Backspace to remove the last train.
+        💡 <strong>Tip:</strong> Type any train number/name and press <kbd className="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Enter</kbd> to add manually, or select from suggestions. Press <kbd className="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Backspace</kbd> to remove.
       </p>
 
       {/* Dropdown */}
@@ -357,10 +357,15 @@ export const MultiSelectTrainAutocomplete = ({
         </ul>
       )}
 
-      {/* No results message */}
+      {/* No results message - with action hint for manual entry */}
       {isOpen && !isLoading && !loadError && inputValue && filteredTrains.length === 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4 text-center text-gray-500 text-sm">
-          No trains found. Press Enter to add "{inputValue}" as custom text.
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4">
+          <div className="text-center">
+            <p className="text-gray-600 text-sm mb-2">No trains found for "{inputValue}"</p>
+            <p className="text-gray-500 text-xs">
+              Press <kbd className="px-1.5 py-0.5 bg-blue-100 text-blue-800 border border-blue-200 rounded text-xs font-semibold">Enter ↵</kbd> to add as custom entry
+            </p>
+          </div>
         </div>
       )}
     </div>

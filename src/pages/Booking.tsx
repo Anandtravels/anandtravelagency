@@ -1293,11 +1293,11 @@ const Booking = () => {
                           </li>
                           <li className="flex items-start gap-2">
                             <span className="text-travel-orange font-bold">✓</span>
-                            <span>Tatkal bookings open at 10:00 AM for AC classes</span>
+                            <span>Tatkal bookings open at 10:15 AM for AC classes</span>
                           </li>
                           <li className="flex items-start gap-2">
                             <span className="text-travel-orange font-bold">✓</span>
-                            <span>Tatkal bookings open at 11:00 AM for non-AC classes</span>
+                            <span>Tatkal bookings open at 11:15 AM for non-AC classes</span>
                           </li>
                           <li className="flex items-start gap-2">
                             <span className="text-travel-orange font-bold">✓</span>
@@ -1307,7 +1307,7 @@ const Booking = () => {
                       </div>
                       
                       <div className="bg-travel-blue-dark/10 p-4 rounded-lg">
-                        <h4 className="font-medium text-travel-blue-dark mb-2">Our Tatkal Success Rate</h4>
+                        <h4 className="font-medium text-travel-blue-dark mb-2">Our Emergency Train ticket  Success Rate</h4>
                         <div className="flex items-center gap-2">
                           <div className="w-full bg-gray-200 rounded-full h-2.5">
                             <div className="bg-travel-orange h-2.5 rounded-full" style={{ width: "95%" }}></div>

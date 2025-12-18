@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import '@/styles/bookingSuccess.css';
@@ -20,8 +19,6 @@ interface BookingSuccessProps {
 }
 
 const BookingSuccess = ({ show, onClose, bookingDetails }: BookingSuccessProps) => {
-  const [progress, setProgress] = useState(100);
-
   // Function to get the correct booking charge based on booking type
   const getBookingChargeByType = (bookingType?: string): number => {
     if (!bookingType) return 50; // Default to General Booking
@@ -40,27 +37,6 @@ const BookingSuccess = ({ show, onClose, bookingDetails }: BookingSuccessProps) 
   // Calculate the correct original amount based on booking type
   const originalAmount = bookingDetails?.coupon?.originalAmount || 
                         getBookingChargeByType(bookingDetails?.bookingType);
-
-  useEffect(() => {
-    if (show) {
-      setProgress(100);
-      const startTime = Date.now();
-      const duration = 5000; // 5 seconds
-
-      const timer = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
-        setProgress(remaining);
-
-        if (elapsed >= duration) {
-          clearInterval(timer);
-          onClose();
-        }
-      }, 16);
-
-      return () => clearInterval(timer);
-    }
-  }, [show, onClose]);
 
   return (
     <AnimatePresence>
@@ -180,10 +156,10 @@ const BookingSuccess = ({ show, onClose, bookingDetails }: BookingSuccessProps) 
                   className="text-center"
                 >
                   <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-                    Booking Submitted Successfully
+                    Booking Request Submitted Successfully
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300">
-                    We've received your booking request. Our team will contact you shortly!
+                    Our team will contact you before the day of your journey by 8:00 AM.
                   </p>
                 </motion.div>
 
@@ -207,22 +183,19 @@ const BookingSuccess = ({ show, onClose, bookingDetails }: BookingSuccessProps) 
                   </div>
                 )}
 
-                {/* Progress bar */}
+                {/* Close Button */}
                 <motion.div 
                   className="mt-8"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 1.2 }}
                 >
-                  <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-gradient-to-r from-travel-blue-dark to-travel-orange rounded-full"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-center text-gray-500 mt-2">
-                    Closing in {Math.ceil(progress / 20)} seconds
-                  </p>
+                  <button
+                    onClick={onClose}
+                    className="w-full py-3 px-6 bg-gradient-to-r from-travel-blue-dark to-travel-blue-medium text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-travel-blue-dark focus:ring-offset-2"
+                  >
+                    Close
+                  </button>
                 </motion.div>
               </div>
             </motion.div>
