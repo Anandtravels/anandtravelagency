@@ -22,7 +22,7 @@ interface BookingsTabProps {
   agents: any[];
   formatFirebaseTimestamp: (timestamp: any) => string;
   handleNoteChange: (id: string, note: string) => void;
-  updateBookingStatus: (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done', booking?: any) => Promise<void>;
+  updateBookingStatus: (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done' | 'failed' | 'refund', booking?: any) => Promise<void>;
   deleteBookings: (ids: string[]) => Promise<void>;
   openEditModal: (booking: any) => void;
   handleCall: (phone: string) => void;
@@ -97,6 +97,13 @@ const BookingsTab = ({
         filtered = filtered.filter(b => b.status === 'hold');
       } else if (statusFilter === 'agent_done') {
         filtered = filtered.filter(b => b.status === 'agent_done');
+      } else if (statusFilter === 'failed') {
+        filtered = filtered.filter(b => b.status === 'failed');
+      } else if (statusFilter === 'refund') {
+        filtered = filtered.filter(b => b.status === 'refund');
+      } else if (statusFilter === 'assigned') {
+        // Filter for bookings that are assigned to an agent
+        filtered = filtered.filter(b => b.assignedAgent && b.assignedAgent !== '');
       } else if (statusFilter === 'advance_booking') {
         // Filter for advance bookings - show only bookings with advance_booking flag set to true
         filtered = filtered.filter(b => b.advance_booking === true);
@@ -297,6 +304,9 @@ const BookingsTab = ({
                 <option value="agent_done">Agent Done</option>
                 <option value="booked">Booked</option>
                 <option value="hold">Hold</option>
+                <option value="failed">Failed</option>
+                <option value="refund">Refund</option>
+                <option value="assigned">Assigned</option>
                 <option value="advance_booking">Advance Booking</option>
               </select>
             </div>
@@ -549,9 +559,13 @@ const BookingsTab = ({
                           ? 'bg-amber-100 text-amber-800'
                           : booking.status === 'agent_done'
                           ? 'bg-teal-100 text-teal-800'
+                          : booking.status === 'failed'
+                          ? 'bg-red-100 text-red-800'
+                          : booking.status === 'refund'
+                          ? 'bg-pink-100 text-pink-800'
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {booking.status === 'completed' ? 'Payment Done' : booking.status === 'in_process' ? 'In Process' : booking.status === 'booked' ? 'Booked' : booking.status === 'hold' ? 'Hold' : booking.status === 'agent_done' ? 'Agent Done' : 'Pending'}
+                        {booking.status === 'completed' ? 'Payment Done' : booking.status === 'in_process' ? 'In Process' : booking.status === 'booked' ? 'Booked' : booking.status === 'hold' ? 'Hold' : booking.status === 'agent_done' ? 'Agent Done' : booking.status === 'failed' ? 'Failed' : booking.status === 'refund' ? 'Refund' : 'Pending'}
                       </span>
                       {booking.advance_booking && (
                         <span className="inline-block px-2 py-0.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded text-xs font-semibold shadow-sm">
@@ -563,7 +577,7 @@ const BookingsTab = ({
                 </div>
                 <select
                   value={booking.status || 'pending'}
-                  onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done', booking)}
+                  onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done' | 'failed' | 'refund', booking)}
                   className={`px-3 py-1 rounded-full text-xs font-medium border ${
                     booking.status === 'completed' 
                       ? 'bg-green-100 text-green-800 border-green-200' 
@@ -575,6 +589,10 @@ const BookingsTab = ({
                       ? 'bg-amber-100 text-amber-800 border-amber-200'
                       : booking.status === 'agent_done'
                       ? 'bg-teal-100 text-teal-800 border-teal-200'
+                      : booking.status === 'failed'
+                      ? 'bg-red-100 text-red-800 border-red-200'
+                      : booking.status === 'refund'
+                      ? 'bg-pink-100 text-pink-800 border-pink-200'
                       : 'bg-yellow-100 text-yellow-800 border-yellow-200'
                   }`}
                 >
@@ -583,6 +601,8 @@ const BookingsTab = ({
                   <option value="agent_done">Agent Done</option>
                   <option value="booked">Booked</option>
                   <option value="hold">Hold</option>
+                  <option value="failed">Failed</option>
+                  <option value="refund">Refund</option>
                   <option value="completed">Payment Done</option>
                 </select>
               </div>
@@ -788,7 +808,7 @@ const BookingsTab = ({
                 <div className="absolute right-4 top-4">
                   <select
                     value={booking.status || 'pending'}
-                    onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done', booking)}
+                    onChange={(e) => updateBookingStatus(booking.id, e.target.value as 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done' | 'failed' | 'refund', booking)}
                     className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
                       booking.status === 'completed' 
                         ? 'bg-green-100 text-green-800 border-green-200' 
@@ -800,6 +820,10 @@ const BookingsTab = ({
                         ? 'bg-amber-100 text-amber-800 border-amber-200'
                         : booking.status === 'agent_done'
                         ? 'bg-teal-100 text-teal-800 border-teal-200'
+                        : booking.status === 'failed'
+                        ? 'bg-red-100 text-red-800 border-red-200'
+                        : booking.status === 'refund'
+                        ? 'bg-pink-100 text-pink-800 border-pink-200'
                         : 'bg-yellow-100 text-yellow-800 border-yellow-200'
                     }`}
                   >
@@ -808,6 +832,8 @@ const BookingsTab = ({
                     <option value="agent_done">Agent Done</option>
                     <option value="booked">Booked</option>
                     <option value="hold">Hold</option>
+                    <option value="failed">Failed</option>
+                    <option value="refund">Refund</option>
                     <option value="completed">Payment Done</option>
                   </select>
                 </div>
