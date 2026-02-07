@@ -231,15 +231,18 @@ const Careers = () => {
       <Navbar />
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="relative bg-gray-50 overflow-hidden">
-          <div className="container-custom py-20 md:py-28 lg:py-36 relative z-10">
+        <section 
+          className="relative w-screen h-[calc(100vh-80px)] bg-cover bg-center bg-no-repeat overflow-hidden flex items-center -ml-[calc((100vw-100%)/2)]"
+          style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('https://res.cloudinary.com/dvmrhs2ek/image/upload/v1770469542/mphqbyokceqppnws8c4p.png')" }}
+        >
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 lg:py-36 relative z-10">
             <div className="max-w-3xl mx-auto text-center">
               {/* Title */}
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="text-3xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight"
+                className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight"
               >
                 Join Our Team at{" "}
                 <span className="text-travel-orange">Anand Travel Agency</span>
@@ -250,7 +253,7 @@ const Careers = () => {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.15 }}
-                className="text-base md:text-lg lg:text-xl text-gray-600 mb-10 leading-relaxed max-w-2xl mx-auto"
+                className="text-base md:text-lg lg:text-xl text-gray-200 mb-10 leading-relaxed max-w-2xl mx-auto"
               >
                 Start your career with us and gain real work experience in a growing travel startup.
               </motion.p>
@@ -273,7 +276,7 @@ const Careers = () => {
                   size="lg"
                   variant="outline"
                   onClick={() => document.getElementById('openings')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-100 text-lg px-10 py-6 rounded-lg transition-all duration-200"
+                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-gray-900 text-lg px-10 py-6 rounded-lg transition-all duration-300"
                 >
                   View Openings <ChevronDown className="ml-2 h-5 w-5" />
                 </Button>
