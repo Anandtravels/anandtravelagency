@@ -11,6 +11,7 @@ const Navbar = () => {
 
   // Check if E-Services page is visible
   const showEServices = isPageVisible('eservices');
+  const showCareers = isPageVisible('careers');
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -56,6 +57,11 @@ const Navbar = () => {
             <Link to="/contact" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
               Contact
             </Link>
+            {showCareers && (
+              <Link to="/careers" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
+                Careers
+              </Link>
+            )}
             <Link 
               to="/booking" 
               className="btn-primary"
@@ -145,6 +151,15 @@ const Navbar = () => {
             >
               Contact
             </Link>
+            {showCareers && (
+              <Link 
+                to="/careers" 
+                className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors py-2 border-b border-gray-100"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Careers
+              </Link>
+            )}
             <Link 
               to="/booking" 
               className="btn-primary text-center"

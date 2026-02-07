@@ -8,15 +8,17 @@ export interface PageVisibilitySettings {
   hotels: boolean;
   visaServices: boolean;
   packages: boolean;
+  careers: boolean;
   lastUpdated?: any;
   updatedBy?: string;
 }
 
 const DEFAULT_VISIBILITY: PageVisibilitySettings = {
-  eservices: true,
+  eservices: false,
   hotels: true,
   visaServices: true,
-  packages: true
+  packages: true,
+  careers: false
 };
 
 export const usePageVisibility = () => {
@@ -34,10 +36,11 @@ export const usePageVisibility = () => {
         if (docSnap.exists()) {
           const data = docSnap.data() as PageVisibilitySettings;
           setVisibility({
-            eservices: data.eservices ?? true,
+            eservices: data.eservices ?? false,
             hotels: data.hotels ?? true,
             visaServices: data.visaServices ?? true,
             packages: data.packages ?? true,
+            careers: data.careers ?? false,
             lastUpdated: data.lastUpdated,
             updatedBy: data.updatedBy
           });
@@ -92,7 +95,8 @@ export const usePageVisibility = () => {
 
   // Check if a specific page is visible
   const isPageVisible = (page: keyof PageVisibilitySettings): boolean => {
-    return visibility[page] ?? true;
+    if (loading) return false; // Don't show pages until settings are loaded
+    return visibility[page] ?? false;
   };
 
   return {

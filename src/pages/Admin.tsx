@@ -30,6 +30,7 @@ import TeamManagementTab from "@/components/admin/TeamManagementTab";
 import UPISettingsTab from "@/components/admin/UPISettingsTab";
 import BillsManagementTab from "@/components/admin/BillsManagementTab";
 import AgentTaskManagementTab from "@/components/admin/AgentTaskManagementTab";
+import CareersManagementTab from "@/components/admin/CareersManagementTab";
 import { BarChart3 } from "lucide-react";
 
 const Admin = () => {
@@ -227,6 +228,12 @@ const Admin = () => {
 
           <TabsContent value="bills" className="space-y-6">
             <BillsManagementTab 
+              user={user}
+            />
+          </TabsContent>
+
+          <TabsContent value="careers" className="space-y-6">
+            <CareersManagementTab 
               user={user}
             />
           </TabsContent>

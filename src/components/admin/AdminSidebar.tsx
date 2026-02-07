@@ -18,7 +18,8 @@ import {
   FileCheck,
   CreditCard,
   Receipt,
-  ClipboardList
+  ClipboardList,
+  Briefcase
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -172,6 +173,12 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
       href: '/admin#bills',
       icon: Receipt,
       description: 'Invoice Management'
+    },
+    {
+      title: 'Careers',
+      href: '/admin#careers',
+      icon: Briefcase,
+      description: 'Jobs & Applications'
     },
     {
       title: 'Coupons',

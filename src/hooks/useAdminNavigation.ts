@@ -23,7 +23,8 @@ export const useAdminNavigation = () => {
       'visa-applications',
       'team-management',
       'upi-settings',
-      'bills'
+      'bills',
+      'careers'
     ].includes(hash)) {
       setActiveTab(hash);
     } else {

@@ -31,6 +31,7 @@ import TravelAgencyKakinada from "./pages/TravelAgencyKakinada";
 import TatkalTrainTicketsAndhraPradesh from "./pages/TatkalTrainTicketsAndhraPradesh";
 import AITravelAgencyIndia from "./pages/AITravelAgencyIndia";
 import InvoicePrint from "./pages/InvoicePrint";
+import Careers from "./pages/Careers";
 import logo from './assets/poster.png';
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -109,6 +110,7 @@ const App = () => {
                 <Route path="/booking" element={<Booking />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/careers" element={<Careers />} />
                 <Route path="/visa-services" element={<VisaServices />} />
                 <Route path="/eservices" element={<EServices />} />
                 <Route path="/eservices/apply/:serviceType" element={<EServiceApplication />} />

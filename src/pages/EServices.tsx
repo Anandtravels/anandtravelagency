@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   FileText, 
@@ -19,11 +19,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
+import { usePageVisibility } from "@/hooks/usePageVisibility";
 
 const EServices = () => {
+  const navigate = useNavigate();
+  const { isPageVisible, loading: visibilityLoading } = usePageVisibility();
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const { serviceTypes, getActiveServiceTypes, loading, error } = useDynamicEServiceTypes();
   const { user } = useAuth();
+
+  // Redirect if page is toggled OFF (skip for admin)
+  useEffect(() => {
+    if (!visibilityLoading && !isPageVisible('eservices') && user?.email !== 'admin@anandtravels.com') {
+      navigate('/', { replace: true });
+    }
+  }, [visibilityLoading, isPageVisible, user, navigate]);
   
   // Debug logs
   console.log('Service types loaded:', Object.keys(serviceTypes).length);
