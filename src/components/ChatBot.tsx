@@ -17,11 +17,43 @@ interface ChatBotProps {
   className?: string;
 }
 
-// Google Gemini API configuration
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyB1OsVgvqouWHLju_ijYO_126qOqwD0KkU';
+// Get all API keys from environment variables (supports multiple keys for fallback)
+const getApiKeys = (): string[] => {
+  const keys: string[] = [];
+  
+  // Try numbered keys first (VITE_GEMINI_API_KEY_1, VITE_GEMINI_API_KEY_2, etc.)
+  for (let i = 1; i <= 10; i++) {
+    const key = import.meta.env[`VITE_GEMINI_API_KEY_${i}`];
+    if (key && key.trim() && !key.includes('your_')) {
+      keys.push(key.trim());
+    }
+  }
+  
+  // Also check the old single key format for backward compatibility
+  const singleKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (singleKey && singleKey.trim() && !singleKey.includes('your_') && !keys.includes(singleKey.trim())) {
+    keys.push(singleKey.trim());
+  }
+  
+  return keys;
+};
 
-// Initialize Google GenAI
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+// Get the Gemini model from environment
+const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash';
+
+// Track which API key index is currently working
+let currentKeyIndex = 0;
+const apiKeys = getApiKeys();
+
+// Create AI instances for each key (lazy initialization)
+const aiInstances: Map<string, GoogleGenAI> = new Map();
+
+const getAiInstance = (apiKey: string): GoogleGenAI => {
+  if (!aiInstances.has(apiKey)) {
+    aiInstances.set(apiKey, new GoogleGenAI({ apiKey }));
+  }
+  return aiInstances.get(apiKey)!;
+};
 
 const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -47,34 +79,70 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
     scrollToBottom();
   }, [messages]);
   
-  // Generate AI-powered bot response using Google Gemini API
+  // Generate AI-powered bot response using Google Gemini API with multi-key fallback
   const generateBotResponse = async (userInput: string): Promise<string> => {
-    try {
-      // Build the query with context and request for short response
-      const query = `You are Anand Buddy, AI assistant for Anand Travel Agency (Kakinada, India). Contact: +91 8985816481.
+    // Check if any API keys are available
+    if (apiKeys.length === 0) {
+      console.warn('No Gemini API keys configured. Using fallback responses.');
+      return getFallbackResponse(userInput);
+    }
+
+    // Build the query with context and request for short response
+    const query = `You are Anand Buddy, AI assistant for Anand Travel Agency (Kakinada, India). Contact: +91 8985816481.
 
 User asks: "${userInput}"
 
 I need it in short and precise. Give direct answer in 50-80 words max. For train queries, list 3-5 actual train names with numbers. End with "📱 BOOK NOW" or "📞 CONTACT US".`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: query,
-      });
+    // Try each API key until one works
+    const startIndex = currentKeyIndex;
+    let attempts = 0;
+    
+    while (attempts < apiKeys.length) {
+      const keyIndex = (startIndex + attempts) % apiKeys.length;
+      const apiKey = apiKeys[keyIndex];
+      
+      try {
+        const ai = getAiInstance(apiKey);
+        const response = await ai.models.generateContent({
+          model: GEMINI_MODEL,
+          contents: query,
+        });
 
-      const text = response.text;
-      if (text) {
-        return text;
+        const text = response.text;
+        if (text) {
+          // This key worked, remember it for next time
+          currentKeyIndex = keyIndex;
+          console.log(`API Key ${keyIndex + 1} succeeded`);
+          return text;
+        }
+        
+        throw new Error('No response from API');
+        
+      } catch (error: any) {
+        console.warn(`API Key ${keyIndex + 1} failed:`, error?.message || error);
+        
+        // Check if it's a rate limit or quota error - try next key
+        const errorMessage = error?.message?.toLowerCase() || '';
+        if (errorMessage.includes('quota') || 
+            errorMessage.includes('rate') || 
+            errorMessage.includes('limit') ||
+            errorMessage.includes('429') ||
+            errorMessage.includes('403') ||
+            errorMessage.includes('invalid') ||
+            errorMessage.includes('api key')) {
+          attempts++;
+          continue;
+        }
+        
+        // For other errors (network, timeout, etc.), try next key
+        attempts++;
       }
-      
-      throw new Error('No response from API');
-      
-    } catch (error) {
-      console.error('Gemini API Error:', error);
-      
-      // Fallback response
-      return getFallbackResponse(userInput);
     }
+    
+    // All keys failed, use fallback
+    console.error('All API keys exhausted. Using fallback response.');
+    return getFallbackResponse(userInput);
   };
   
   // Enhanced fallback response system - Concise responses
