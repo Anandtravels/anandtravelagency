@@ -27,7 +27,9 @@ import {
   ChevronUp,
   MessageSquare,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Copy,
+  UserCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,6 +64,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Job {
   id: string;
@@ -122,6 +125,15 @@ const CareersManagementTab: React.FC<CareersManagementTabProps> = ({ user }) => 
   // Application detail
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [appDetailOpen, setAppDetailOpen] = useState(false);
+
+  // Shortlist selection state
+  const [selectedApplicationIds, setSelectedApplicationIds] = useState<Set<string>>(new Set());
+  const [showShortlist, setShowShortlist] = useState(false);
+
+  // Delete application state
+  const [deleteAppDialogOpen, setDeleteAppDialogOpen] = useState(false);
+  const [deletingAppId, setDeletingAppId] = useState<string | null>(null);
+  const [deletingAppName, setDeletingAppName] = useState<string>('');
 
   // Fetch jobs in real-time
   useEffect(() => {
@@ -260,6 +272,92 @@ const CareersManagementTab: React.FC<CareersManagementTabProps> = ({ user }) => 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Toggle application selection for shortlist
+  const toggleApplicationSelection = (appId: string) => {
+    setSelectedApplicationIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(appId)) {
+        newSet.delete(appId);
+      } else {
+        newSet.add(appId);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all filtered applications
+  const selectAllApplications = () => {
+    const allIds = filteredApplications.map(app => app.id);
+    setSelectedApplicationIds(new Set(allIds));
+  };
+
+  // Clear all selections
+  const clearAllSelections = () => {
+    setSelectedApplicationIds(new Set());
+  };
+
+  // Get shortlisted candidates
+  const getShortlistedCandidates = () => {
+    return applications.filter(app => selectedApplicationIds.has(app.id));
+  };
+
+  // Copy shortlisted candidates to clipboard
+  const copyShortlistedToClipboard = () => {
+    const shortlisted = getShortlistedCandidates();
+    if (shortlisted.length === 0) {
+      toast({ title: 'No Selection', description: 'Please select candidates first.', variant: 'destructive' });
+      return;
+    }
+
+    let text = '=== SHORTLISTED CANDIDATES ===\n\n';
+    shortlisted.forEach((app, index) => {
+      text += `${index + 1}. ${app.fullName}\n`;
+      text += `   Mobile: ${app.phone}\n`;
+      text += `   Email: ${app.email}\n\n`;
+    });
+    text += `Total: ${shortlisted.length} candidate(s)`;
+
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: 'Copied!', description: `${shortlisted.length} shortlisted candidate(s) copied to clipboard.` });
+    }).catch(() => {
+      toast({ title: 'Error', description: 'Failed to copy to clipboard.', variant: 'destructive' });
+    });
+  };
+
+  // Delete application
+  const handleDeleteApplication = async () => {
+    if (!deletingAppId) return;
+    try {
+      await deleteDoc(doc(db, 'career_applications', deletingAppId));
+      toast({ title: 'Application Deleted', description: `Application from "${deletingAppName}" has been removed.` });
+      // Remove from selection if selected
+      setSelectedApplicationIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(deletingAppId);
+        return newSet;
+      });
+      // Close detail dialog if open
+      if (selectedApp?.id === deletingAppId) {
+        setAppDetailOpen(false);
+        setSelectedApp(null);
+      }
+    } catch (error) {
+      console.error('Error deleting application:', error);
+      toast({ title: 'Error', description: 'Failed to delete application.', variant: 'destructive' });
+    } finally {
+      setDeleteAppDialogOpen(false);
+      setDeletingAppId(null);
+      setDeletingAppName('');
+    }
+  };
+
+  const openDeleteAppDialog = (appId: string, appName: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setDeletingAppId(appId);
+    setDeletingAppName(appName);
+    setDeleteAppDialogOpen(true);
   };
 
   const handleViewResume = (app: Application) => {
@@ -477,6 +575,98 @@ const CareersManagementTab: React.FC<CareersManagementTabProps> = ({ user }) => 
             </Select>
           </div>
 
+          {/* Shortlist Actions Bar */}
+          <Card className="border-2 border-dashed border-green-200 bg-green-50/50">
+            <CardContent className="p-4">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <UserCheck className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Shortlist Candidates</p>
+                    <p className="text-sm text-gray-500">
+                      {selectedApplicationIds.size === 0 
+                        ? 'Select candidates using checkboxes' 
+                        : `${selectedApplicationIds.size} candidate(s) selected`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={selectAllApplications}
+                    disabled={filteredApplications.length === 0}
+                    className="text-xs"
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearAllSelections}
+                    disabled={selectedApplicationIds.size === 0}
+                    className="text-xs"
+                  >
+                    Clear All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowShortlist(!showShortlist)}
+                    disabled={selectedApplicationIds.size === 0}
+                    className="text-xs border-green-300 text-green-700 hover:bg-green-100"
+                  >
+                    {showShortlist ? <ChevronUp className="h-3 w-3 mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />}
+                    View Shortlist
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={copyShortlistedToClipboard}
+                    disabled={selectedApplicationIds.size === 0}
+                    className="bg-green-600 hover:bg-green-700 text-white text-xs"
+                  >
+                    <Copy className="h-3 w-3 mr-1" /> Copy Shortlist
+                  </Button>
+                </div>
+              </div>
+
+              {/* Shortlisted Candidates Preview */}
+              {showShortlist && selectedApplicationIds.size > 0 && (
+                <div className="mt-4 pt-4 border-t border-green-200">
+                  <h4 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                    <UserCheck className="h-4 w-4" />
+                    Shortlisted Candidates ({selectedApplicationIds.size})
+                  </h4>
+                  <div className="bg-white rounded-lg border border-green-200 divide-y divide-green-100 max-h-60 overflow-y-auto">
+                    {getShortlistedCandidates().map((app, index) => (
+                      <div key={app.id} className="flex items-center justify-between p-3 hover:bg-green-50">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium text-green-700 w-6">{index + 1}.</span>
+                          <div>
+                            <p className="font-medium text-gray-900">{app.fullName}</p>
+                            <p className="text-sm text-gray-500 flex items-center gap-1">
+                              <Phone className="h-3 w-3" /> {app.phone}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleApplicationSelection(app.id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
@@ -510,21 +700,38 @@ const CareersManagementTab: React.FC<CareersManagementTabProps> = ({ user }) => 
           ) : (
             <div className="space-y-3">
               {filteredApplications.map((app) => (
-                <Card key={app.id} className="hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => { setSelectedApp(app); setAppDetailOpen(true); }}>
+                <Card 
+                  key={app.id} 
+                  className={`hover:shadow-md transition-shadow cursor-pointer ${selectedApplicationIds.has(app.id) ? 'ring-2 ring-green-500 bg-green-50/30' : ''}`}
+                  onClick={() => { setSelectedApp(app); setAppDetailOpen(true); }}
+                >
                   <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-gray-900">{app.fullName}</h3>
-                        <Badge className={getStatusBadge(app.status)}>{app.status}</Badge>
+                    {/* Checkbox for selection */}
+                    <div className="flex items-start gap-3">
+                      <div className="pt-1">
+                        <Checkbox
+                          checked={selectedApplicationIds.has(app.id)}
+                          onCheckedChange={() => toggleApplicationSelection(app.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="border-gray-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                        />
                       </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
-                        <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{app.email}</span>
-                        <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{app.phone}</span>
-                        <span className="flex items-center gap-1"><Globe className="h-3 w-3" />Hindi: {app.knowsHindi}</span>
-                        <span className="flex items-center gap-1"><Laptop className="h-3 w-3" />Laptop: {app.hasLaptop}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-gray-900">{app.fullName}</h3>
+                          <Badge className={getStatusBadge(app.status)}>{app.status}</Badge>
+                          {selectedApplicationIds.has(app.id) && (
+                            <Badge className="bg-green-100 text-green-700 text-xs">Shortlisted</Badge>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
+                          <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{app.email}</span>
+                          <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{app.phone}</span>
+                          <span className="flex items-center gap-1"><Globe className="h-3 w-3" />Hindi: {app.knowsHindi}</span>
+                          <span className="flex items-center gap-1"><Laptop className="h-3 w-3" />Laptop: {app.hasLaptop}</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">{formatDate(app.createdAt)}</p>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1">{formatDate(app.createdAt)}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {app.resumeData && (
@@ -552,6 +759,12 @@ const CareersManagementTab: React.FC<CareersManagementTabProps> = ({ user }) => 
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => updateApplicationStatus(app.id, 'Rejected')} className="text-red-600">
                             <XCircle className="h-4 w-4 mr-2" /> Mark Rejected
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => openDeleteAppDialog(app.id, app.fullName, e as any)} 
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete Application
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -736,11 +949,38 @@ const CareersManagementTab: React.FC<CareersManagementTabProps> = ({ user }) => 
                 >
                   <XCircle className="h-4 w-4 mr-1" /> Rejected
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openDeleteAppDialog(selectedApp.id, selectedApp.fullName)}
+                  className="border-red-200 text-red-600 hover:bg-red-50 ml-auto"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" /> Delete
+                </Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Application Confirmation */}
+      <AlertDialog open={deleteAppDialogOpen} onOpenChange={setDeleteAppDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Application?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the application from <strong>{deletingAppName}</strong>? 
+              This action cannot be undone and all application data will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteApplication} className="bg-red-600 hover:bg-red-700">
+              Delete Application
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
