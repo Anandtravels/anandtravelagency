@@ -262,6 +262,38 @@ const CareersManagementTab: React.FC<CareersManagementTabProps> = ({ user }) => 
     document.body.removeChild(link);
   };
 
+  const handleViewResume = (app: Application) => {
+    if (!app.resumeData) return;
+    // Open resume in a new tab for viewing
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${app.resumeFileName || 'Resume'} - ${app.fullName}</title>
+            <style>
+              body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f5f5f5; }
+              iframe, embed, img { max-width: 100%; max-height: 100vh; border: none; }
+              .container { width: 100%; height: 100vh; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              ${app.resumeData.startsWith('data:application/pdf') 
+                ? `<embed src="${app.resumeData}" type="application/pdf" width="100%" height="100%" />`
+                : app.resumeData.startsWith('data:image') 
+                  ? `<img src="${app.resumeData}" alt="Resume" />`
+                  : `<iframe src="${app.resumeData}" width="100%" height="100%"></iframe>`
+              }
+            </div>
+          </body>
+        </html>
+      `);
+      newWindow.document.close();
+    }
+  };
+
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'N/A';
     try {
@@ -496,9 +528,14 @@ const CareersManagementTab: React.FC<CareersManagementTabProps> = ({ user }) => 
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {app.resumeData && (
-                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownloadResume(app); }}>
-                          <Download className="h-4 w-4 mr-1" /> Resume
-                        </Button>
+                        <>
+                          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleViewResume(app); }} title="View Resume">
+                            <Eye className="h-4 w-4 mr-1" /> View
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDownloadResume(app); }} title="Download Resume">
+                            <Download className="h-4 w-4 mr-1" /> Resume
+                          </Button>
+                        </>
                       )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -651,10 +688,13 @@ const CareersManagementTab: React.FC<CareersManagementTabProps> = ({ user }) => 
               </div>
 
               {selectedApp.resumeData && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <FileText className="h-4 w-4 text-gray-400" />
                   <span className="text-sm">{selectedApp.resumeFileName || 'Resume'}</span>
-                  <Button variant="outline" size="sm" onClick={() => handleDownloadResume(selectedApp)}>
+                  <Button variant="outline" size="sm" onClick={() => handleViewResume(selectedApp)} title="View Resume">
+                    <Eye className="h-3 w-3 mr-1" /> View
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleDownloadResume(selectedApp)} title="Download Resume">
                     <Download className="h-3 w-3 mr-1" /> Download
                   </Button>
                 </div>
