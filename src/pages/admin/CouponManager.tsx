@@ -448,8 +448,7 @@ const CouponManager = () => {
       return 'Tatkal Booking';  
     } else if (bookingType.toLowerCase() === 'train' || 
               bookingType.toLowerCase() === 'bus' || 
-              bookingType.toLowerCase() === 'flight' || 
-              bookingType.toLowerCase() === 'cab') {
+              bookingType.toLowerCase() === 'flight') {
       return `${bookingType.charAt(0).toUpperCase() + bookingType.slice(1)} (General)`;
     } else {
       return bookingType;

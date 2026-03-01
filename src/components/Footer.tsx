@@ -152,11 +152,6 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/services#cab" className="text-gray-300 hover:text-travel-orange transition-colors">
-                  City-to-City Cab Services
-                </Link>
-              </li>
-              <li>
                 <Link to="/packages" className="text-gray-300 hover:text-travel-orange transition-colors">
                   Tour Packages
                 </Link>

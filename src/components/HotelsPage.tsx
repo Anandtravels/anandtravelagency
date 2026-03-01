@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { 
   Wifi, 
   Car, 
@@ -11,7 +11,8 @@ import {
   Grid,
   List,
   MapPin,
-  Filter
+  Filter,
+  Building2
 } from "lucide-react";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
@@ -31,10 +32,14 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { usePageVisibility } from "../hooks/usePageVisibility";
+import { Link } from "react-router-dom";
 
 const HotelsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const { isPageVisible, loading: visibilityLoading } = usePageVisibility();
   
   // State
   const [hotels, setHotels] = useState<Hotel[]>([]);
@@ -156,6 +161,34 @@ const HotelsPage = () => {
       city: searchData.city
     });
   };
+
+  // Check if hotels page is visible
+  const showHotels = isPageVisible('hotels');
+
+  // Show "not available" page if hotels are hidden
+  if (!visibilityLoading && !showHotels) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="text-center px-4 py-16">
+            <Building2 className="w-20 h-20 mx-auto text-gray-400 mb-6" />
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Hotels Coming Soon</h1>
+            <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
+              Our hotel booking service is currently under maintenance. Please check back later.
+            </p>
+            <Link 
+              to="/" 
+              className="inline-flex items-center justify-center px-6 py-3 bg-travel-orange text-white font-medium rounded-lg hover:bg-travel-orange/90 transition-colors"
+            >
+              Back to Home
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">

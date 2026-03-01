@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Calendar, MapPin, User, Phone, Mail, Train, Bus, Plane, Car, Check, ArrowLeftRight } from "lucide-react";
+import { Calendar, MapPin, User, Phone, Mail, Train, Bus, Plane, Check, ArrowLeftRight } from "lucide-react";
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -98,11 +98,7 @@ const Booking = () => {
       // Bus-specific fields
       bus_type: "ac_seater",
       boarding_point: "",
-      drop_point: "", // Add this new field
-      // Cab-specific fields
-      cab_type: "sedan",
-      cab_trip_type: "one_way",
-      pickup_address: ""
+      drop_point: "" // Add this new field
     }
   });
   
@@ -133,10 +129,7 @@ const Booking = () => {
       preferred_airlines: "",
       bus_type: "ac_seater",
       boarding_point: "",
-      drop_point: "", // Add this new field
-      cab_type: "sedan",
-      cab_trip_type: "one_way",
-      pickup_address: ""
+      drop_point: "" // Add this new field
     });
   };
 
@@ -514,19 +507,6 @@ const Booking = () => {
                 <Plane className={`w-8 h-8 ${bookingType === "flight" ? "text-travel-orange" : "text-travel-blue-dark"}`} />
                 <span className="font-medium">Flight Ticket</span>
               </button>
-              
-              <button
-                type="button"
-                onClick={() => handleBookingTypeChange("cab")}
-                className={`flex flex-col items-center gap-2 p-4 rounded-lg transition-colors ${
-                  bookingType === "cab"
-                    ? "bg-travel-blue-dark text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                <Car className={`w-8 h-8 ${bookingType === "cab" ? "text-travel-orange" : "text-travel-blue-dark"}`} />
-                <span className="font-medium">Cab Service</span>
-              </button>
             </div>
           </div>
         </section>
@@ -540,7 +520,6 @@ const Booking = () => {
                     {bookingType === "train" && "Train Ticket Booking"}
                     {bookingType === "bus" && "Bus Ticket Booking"}
                     {bookingType === "flight" && "Flight Ticket Booking"}
-                    {bookingType === "cab" && "Cab Service Booking"}
                   </h2>
                   
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -917,60 +896,6 @@ const Booking = () => {
                               placeholder="E.g., IndiGo, Air India"
                             />
                           </div>
-                        </div>
-                      </>
-                    )}
-                    
-                    {bookingType === "cab" && (
-                      <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <label className="block text-gray-700 font-medium mb-2">
-                              Cab Type <span className="text-rose-500">*</span>
-                            </label>
-                            <select
-                              {...register("cab_type", { required: "Cab type is required" })}
-                              defaultValue="sedan"
-                              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                            >
-                              <option value="hatchback">Hatchback</option>
-                              <option value="sedan">Sedan</option>
-                              <option value="suv">SUV</option>
-                              <option value="luxury">Luxury</option>
-                              <option value="tempo_traveller">Tempo Traveller</option>
-                            </select>
-                            {errors.cab_type && <p className="text-red-500 text-sm mt-1">{String(errors.cab_type.message)}</p>}
-                          </div>
-                          
-                          <div>
-                            <label className="block text-gray-700 font-medium mb-2">
-                              Trip Type <span className="text-rose-500">*</span>
-                            </label>
-                            <select
-                              {...register("cab_trip_type", { required: "Trip type is required" })}
-                              defaultValue="one_way"
-                              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                            >
-                              <option value="one_way">One Way</option>
-                              <option value="round_trip">Round Trip</option>
-                              <option value="local">Local Package</option>
-                              <option value="outstation">Outstation Package</option>
-                            </select>
-                            {errors.cab_trip_type && <p className="text-red-500 text-sm mt-1">{String(errors.cab_trip_type.message)}</p>}
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-gray-700 font-medium mb-2">
-                            Pickup Address <span className="text-rose-500">*</span>
-                          </label>
-                          <textarea
-                            {...register("pickup_address", { required: "Pickup address is required" })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
-                            placeholder="Enter complete pickup address with landmark"
-                            rows={2}
-                          ></textarea>
-                          {errors.pickup_address && <p className="text-red-500 text-sm mt-1">{String(errors.pickup_address.message)}</p>}
                         </div>
                       </>
                     )}
@@ -1396,46 +1321,6 @@ const Booking = () => {
                           <li>• Passport for international flights</li>
                           <li>• Visa (for international travel)</li>
                           <li>• Travel insurance (recommended)</li>
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {bookingType === "cab" && (
-                    <div className="space-y-6">
-                      <div>
-                        <h4 className="font-medium text-travel-blue-medium mb-2">About Cab Services</h4>
-                        <p className="text-gray-600 text-sm mb-3">
-                          We offer reliable and comfortable cab services for various travel needs with transparent pricing.
-                        </p>
-                        <ul className="text-sm text-gray-600 space-y-2">
-                          <li className="flex items-start gap-2">
-                            <span className="text-travel-orange font-bold">✓</span>
-                            <span>One-way and round trip options</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="text-travel-orange font-bold">✓</span>
-                            <span>Local and outstation packages</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="text-travel-orange font-bold">✓</span>
-                            <span>Airport transfers</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="text-travel-orange font-bold">✓</span>
-                            <span>Professional and experienced drivers</span>
-                          </li>
-                        </ul>
-                      </div>
-                      
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="font-medium text-travel-blue-dark mb-2">Cab Types Available</h4>
-                        <ul className="text-sm text-gray-600 space-y-1">
-                          <li>• Hatchback - Economy option for 2-3 passengers</li>
-                          <li>• Sedan - Comfort option for 3-4 passengers</li>
-                          <li>• SUV - Spacious option for 5-6 passengers</li>
-                          <li>• Luxury - Premium cars for a superior experience</li>
-                          <li>• Tempo Traveller - For groups of 10-12 passengers</li>
                         </ul>
                       </div>
                     </div>

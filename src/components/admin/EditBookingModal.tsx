@@ -183,7 +183,6 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
                             <option value="train">Train</option>
                             <option value="bus">Bus</option>
                             <option value="flight">Flight</option>
-                            <option value="cab">Cab</option>
                         </select>
                     </div>
                     <div className="md:col-span-2">

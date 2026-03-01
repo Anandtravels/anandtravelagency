@@ -12,6 +12,7 @@ const Navbar = () => {
   // Check if E-Services page is visible
   const showEServices = isPageVisible('eservices');
   const showCareers = isPageVisible('careers');
+  const showHotels = isPageVisible('hotels');
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -34,9 +35,11 @@ const Navbar = () => {
             <Link to="/services" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
               Services
             </Link>
-            <Link to="/hotels" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
-              Hotels
-            </Link>
+            {showHotels && (
+              <Link to="/hotels" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
+                Hotels
+              </Link>
+            )}
             {showEServices && (
               <Link to="/eservices" className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors">
                 E-Services
@@ -100,13 +103,15 @@ const Navbar = () => {
             >
               Services
             </Link>
-            <Link 
-              to="/hotels" 
-              className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors py-2 border-b border-gray-100"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Hotels
-            </Link>
+            {showHotels && (
+              <Link 
+                to="/hotels" 
+                className="font-medium text-travel-blue-dark hover:text-travel-orange transition-colors py-2 border-b border-gray-100"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Hotels
+              </Link>
+            )}
             {showEServices && (
               <Link 
                 to="/eservices" 

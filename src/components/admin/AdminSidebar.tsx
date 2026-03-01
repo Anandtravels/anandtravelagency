@@ -19,7 +19,9 @@ import {
   CreditCard,
   Receipt,
   ClipboardList,
-  Briefcase
+  Briefcase,
+  Handshake,
+  FolderOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -179,6 +181,18 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
       href: '/admin#careers',
       icon: Briefcase,
       description: 'Jobs & Applications'
+    },
+    {
+      title: 'Collaborations',
+      href: '/admin#collaborations',
+      icon: Handshake,
+      description: 'Partner Companies'
+    },
+    {
+      title: 'Documents',
+      href: '/admin#company-documents',
+      icon: FolderOpen,
+      description: 'Company Documents'
     },
     {
       title: 'Coupons',

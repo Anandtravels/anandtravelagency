@@ -24,7 +24,9 @@ export const useAdminNavigation = () => {
       'team-management',
       'upi-settings',
       'bills',
-      'careers'
+      'careers',
+      'collaborations',
+      'company-documents'
     ].includes(hash)) {
       setActiveTab(hash);
     } else {

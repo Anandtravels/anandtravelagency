@@ -12,7 +12,7 @@ const HeroSection = () => {
           <span className="text-3xl md:text-4xl lg:text-5xl">Your Gateway to Seamless Travel Across India</span>
         </h1>
         <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
-          Expert Tatkal Booking, Affordable Tour Packages, Flight & Hotel Reservations - Trusted by 1000+ Customers
+          Expert Train Tickets  Booking, Affordable Tour Packages, Flight Bookings - Trusted by 1000+ Customers
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link 

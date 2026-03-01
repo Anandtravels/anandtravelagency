@@ -99,7 +99,7 @@ const App = () => {
             <Sonner />
             <AuthAccountCreator />
             
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <ConditionalChatBot />
               
               <Routes>

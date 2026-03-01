@@ -8,7 +8,7 @@
   <!-- Homepage - Highest Priority -->
   <url>
     <loc>https://anandtravels.com/</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -16,42 +16,42 @@
   <!-- Main Services Pages - High Priority -->
   <url>
     <loc>https://anandtravels.com/services</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://anandtravels.com/packages</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://anandtravels.com/booking</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://anandtravels.com/hotels</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://anandtravels.com/visa-services</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://anandtravels.com/eservices</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -59,20 +59,20 @@
   <!-- About & Contact - Medium-High Priority with Founder Image -->
   <url>
     <loc>https://anandtravels.com/about</loc>
-    <lastmod>2025-10-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <lastmod>2026-03-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
     <image:image>
       <image:loc>https://anandtravels.com/anand-pinisetty-founder-anand-travel-agency.jpg</image:loc>
-      <image:title>Anand Pinisetty - Founder & CEO of Anand Travel Agency</image:title>
-      <image:caption>Anand Pinisetty – Founder & CEO of Anand Travel Agency, India's first AI-powered travel agency</image:caption>
+      <image:title>Anand Pinisetty CEO Anand Travel Agency Kakinada</image:title>
+      <image:caption>Anand Pinisetty – CEO and Managing Director of Anand Travel Agency, Kakinada, Andhra Pradesh</image:caption>
       <image:geo_location>Kakinada, Andhra Pradesh, India</image:geo_location>
     </image:image>
   </url>
 
   <url>
     <loc>https://anandtravels.com/contact</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -80,21 +80,21 @@
   <!-- Legal & Info Pages - Medium Priority -->
   <url>
     <loc>https://anandtravels.com/privacy</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
     <loc>https://anandtravels.com/terms</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
     <loc>https://anandtravels.com/faq</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -124,21 +124,21 @@
 
   <url>
     <loc>https://anandtravels.com/best-travel-agency-india</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://anandtravels.com/tour-packages-kakinada</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://anandtravels.com/tatkal-booking-kakinada</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -146,28 +146,28 @@
   <!-- Blog Section (to be created) -->
   <url>
     <loc>https://anandtravels.com/blog</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://anandtravels.com/blog/top-10-travel-destinations-from-kakinada</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
     <loc>https://anandtravels.com/blog/best-travel-agency-andhra-pradesh</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
     <loc>https://anandtravels.com/blog/affordable-india-travel-packages-families</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2025-06-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

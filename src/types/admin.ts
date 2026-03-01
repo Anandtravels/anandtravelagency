@@ -8,7 +8,7 @@ export interface Booking {
   journey_date: string;
   passengers: any; // Can be string or array of objects
   additional_requirements?: string;
-  booking_type: 'train' | 'bus' | 'flight' | 'cab' | '';
+  booking_type: 'train' | 'bus' | 'flight' | '';
   status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold';
   station_name?: string;
   travel_class?: string;

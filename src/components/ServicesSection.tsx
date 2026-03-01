@@ -1,4 +1,4 @@
-import { Train, Bus, Plane, Car, Package, FileCheck } from "lucide-react";
+import { Train, Bus, Plane, Package, FileCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { trackButtonClick } from "@/services/clickTracker";
 
@@ -18,11 +18,6 @@ const ServicesSection = () => {
       icon: <Plane className="w-12 h-12 text-travel-blue-dark" />,
       title: "Flight Tickets",
       description: "Domestic and international flight bookings with best available fares."
-    },
-    {
-      icon: <Car className="w-12 h-12 text-travel-blue-dark" />,
-      title: "Cab Services",
-      description: "Convenient city-to-city cab services for comfortable travel experience."
     },
     {
       icon: <Package className="w-12 h-12 text-travel-blue-dark" />,
@@ -104,7 +99,7 @@ const ServicesSection = () => {
             </ul>
             <blockquote className="italic text-gray-200 border-l-4 border-travel-orange pl-4">
               "Anand Travel Agency has been our go-to for all Tatkal bookings. They've never let us down!"
-              <footer className="text-right text-travel-orange mt-2">—  Suresh, kakinada</footer>
+              <footer className="text-right text-travel-orange mt-2">—  Anand Pinisetty, Kakinada</footer>
             </blockquote>
           </div>
         </div>

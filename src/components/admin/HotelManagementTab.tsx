@@ -14,7 +14,9 @@ import {
   Coffee,
   Car,
   Filter,
-  Upload
+  Upload,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +27,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { useHotelManagement, useRoomTypeManagement } from "@/hooks/useHotelManagement";
+import { usePageVisibility } from "@/hooks/usePageVisibility";
 import { Hotel, HotelFormData, RoomType, RoomTypeFormData } from "@/types/hotel";
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,6 +39,7 @@ interface HotelManagementTabProps {
 
 const HotelManagementTab = ({ user }: HotelManagementTabProps) => {
   const { toast } = useToast();
+  const { visibility, updatePageVisibility } = usePageVisibility();
   const {
     hotels,
     loading,
@@ -738,8 +743,49 @@ const HotelManagementTab = ({ user }: HotelManagementTabProps) => {
     .filter(hotel => statusFilter === 'all' || hotel.status === statusFilter)
     .filter(hotel => cityFilter === 'all' || hotel.city === cityFilter);
 
+  // Hotels page visibility
+  const hotelsVisible = visibility?.hotels ?? true;
+
+  const handleToggleHotelsPage = async () => {
+    try {
+      await updatePageVisibility('hotels', !hotelsVisible, user?.email || 'admin');
+    } catch (error) {
+      console.error('Error toggling hotels page:', error);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Page Visibility Control */}
+      <Card className="border-2 border-dashed">
+        <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4">
+          <div className="flex items-center gap-3">
+            {hotelsVisible ? (
+              <Eye className="h-5 w-5 text-green-600" />
+            ) : (
+              <EyeOff className="h-5 w-5 text-red-500" />
+            )}
+            <div>
+              <p className="font-medium text-gray-900">Hotels Page Visibility</p>
+              <p className="text-sm text-gray-500">
+                {hotelsVisible
+                  ? 'Hotels page is live and visible to visitors'
+                  : 'Hotels page is hidden from the website'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge className={hotelsVisible ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}>
+              {hotelsVisible ? 'ON' : 'OFF'}
+            </Badge>
+            <Switch
+              checked={hotelsVisible}
+              onCheckedChange={handleToggleHotelsPage}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Hotel Management</h2>

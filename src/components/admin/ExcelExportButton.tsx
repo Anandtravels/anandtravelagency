@@ -218,7 +218,6 @@ const ExcelExportButton = ({ bookings, filteredBookings, agents, className }: Ex
                   <SelectItem value="train">Train</SelectItem>
                   <SelectItem value="bus">Bus</SelectItem>
                   <SelectItem value="flight">Flight</SelectItem>
-                  <SelectItem value="cab">Cab</SelectItem>
                 </SelectContent>
               </Select>
             </div>

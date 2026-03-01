@@ -110,18 +110,6 @@ export const useAgentNotification = () => {
         }
       }
       
-      // Cab booking type information
-      else if (booking.booking_type === 'cab') {
-        if ((booking as any).cab_type) {
-          const cabType = (booking as any).cab_type.charAt(0).toUpperCase() + (booking as any).cab_type.slice(1);
-          classInfo += `Cab Type: ${cabType}\n`;
-        }
-        if ((booking as any).cab_trip_type) {
-          const tripType = (booking as any).cab_trip_type.replace('_', ' ');
-          classInfo += `Trip Type: ${tripType.charAt(0).toUpperCase() + tripType.slice(1)}\n`;
-        }
-      }
-      
       return classInfo;
     };
 

@@ -1,17 +1,126 @@
 import { Link } from "react-router-dom";
-import { Award, Star, Users, ThumbsUp, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Award, Star, Users, ThumbsUp, Calendar, Building2, Plane, FileText, ExternalLink, Eye } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import QuoteSection from "../components/QuoteSection";
 import { useTeamManagement } from "@/hooks/useTeamManagement";
+import { useCollaborations } from "@/hooks/useCollaborations";
+import { useCompanyDocuments } from "@/hooks/useCompanyDocuments";
 
 const About = () => {
   // SEO-optimized CEO image
   const founderImageUrl = "/anand-pinisetty-founder-anand-travel-agency.jpg";
-  const founderImageAlt = "Anand Pinisetty – Founder & CEO of Anand Travel Agency, India's first AI-powered travel agency";
+  const founderImageAlt = "Anand Pinisetty CEO Anand Travel Agency";
+
+  // SEO: Set page title, meta description, and inject Person JSON-LD for Anand Pinisetty
+  useEffect(() => {
+    // Page title optimized for "Anand Pinisetty" search
+    document.title = "Anand Pinisetty – CEO | Anand Travel Agency Kakinada";
+
+    // Meta description
+    let metaDescription = document.querySelector('meta[name="description"]') as HTMLMetaElement;
+    const originalDescription = metaDescription?.content || "";
+    if (metaDescription) {
+      metaDescription.content = "Anand Pinisetty is the CEO of Anand Travel Agency, Kakinada, providing trusted travel, visa, and tour services. Contact +91 8985816481.";
+    }
+
+    // Meta keywords - add Anand Pinisetty specific keywords
+    let metaKeywords = document.querySelector('meta[name="keywords"]') as HTMLMetaElement;
+    const originalKeywords = metaKeywords?.content || "";
+    if (metaKeywords) {
+      metaKeywords.content = "Anand Pinisetty, Anand Pinisetty CEO, Anand Pinisetty Kakinada, Anand Travel Agency CEO, Anand Pinisetty travel agency, Anand Travels founder, " + originalKeywords;
+    }
+
+    // Inject About page specific Person JSON-LD schema
+    const personSchema = document.createElement('script');
+    personSchema.type = 'application/ld+json';
+    personSchema.id = 'about-person-schema';
+    personSchema.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "ProfilePage",
+      "mainEntity": {
+        "@type": "Person",
+        "@id": "https://anandtravels.com/about#anand-pinisetty",
+        "name": "Anand Pinisetty",
+        "alternateName": ["Anand P", "Anand Pinisetty CEO"],
+        "url": "https://anandtravels.com/about",
+        "image": {
+          "@type": "ImageObject",
+          "url": "https://anandtravels.com/anand-pinisetty-founder-anand-travel-agency.jpg",
+          "caption": "Anand Pinisetty CEO Anand Travel Agency Kakinada",
+          "width": "800",
+          "height": "800"
+        },
+        "jobTitle": "CEO / Managing Director",
+        "telephone": "+91-8985816481",
+        "email": "anandtravelsguide@gmail.com",
+        "worksFor": {
+          "@type": "TravelAgency",
+          "name": "Anand Travel Agency",
+          "url": "https://anandtravels.com",
+          "telephone": "+91-8985816481",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Kakinada",
+            "addressRegion": "Andhra Pradesh",
+            "postalCode": "533001",
+            "addressCountry": "IN"
+          }
+        },
+        "description": "Anand Pinisetty is the CEO and Managing Director of Anand Travel Agency, Kakinada, Andhra Pradesh. He provides trusted travel services including Tatkal train ticket booking, visa consultancy, tour packages, and flight bookings.",
+        "knowsAbout": [
+          "Travel Industry",
+          "Tourism Management",
+          "Tatkal Train Ticket Booking",
+          "Visa Consultancy",
+          "Tour Packages",
+          "Travel Technology"
+        ],
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Kakinada",
+          "addressRegion": "Andhra Pradesh",
+          "postalCode": "533001",
+          "addressCountry": "IN"
+        },
+        "sameAs": [
+          "https://www.linkedin.com/in/anand-pinisetty-656583359",
+          "https://www.instagram.com/anandtravels.agency",
+          "https://www.facebook.com/share/17LoyEEbaf/",
+          "https://youtube.com/@anandtravelagency",
+          "https://x.com/anandtravelss"
+        ]
+      }
+    });
+    document.head.appendChild(personSchema);
+
+    // Cleanup on unmount - restore original meta and remove injected schema
+    return () => {
+      document.title = "Best Travel Agency in Kakinada | Anand Travels | Tatkal Train Tickets, Tour Packages, Visa Services";
+      if (metaDescription) metaDescription.content = originalDescription;
+      if (metaKeywords) metaKeywords.content = originalKeywords;
+      const injectedSchema = document.getElementById('about-person-schema');
+      if (injectedSchema) injectedSchema.remove();
+    };
+  }, []);
   
   // Fetch team members from Firebase
   const { teamMembers, loading } = useTeamManagement();
+  
+  // Fetch collaborations and documents from Firebase
+  const { collaborations, loading: collaborationsLoading } = useCollaborations();
+  const { documents, loading: documentsLoading } = useCompanyDocuments();
+  
+  // Filter active collaborations by type
+  const activeCollaborations = collaborations.filter(c => c.isActive);
+  const companyPartners = activeCollaborations.filter(c => c.type === 'company');
+  const travelAgencyPartners = activeCollaborations.filter(c => c.type === 'travel_agency');
+  
+  // Filter active documents
+  const activeDocuments = documents.filter(d => d.isActive);
+  
+  // Tab state for collaborations
+  const [collaborationTab, setCollaborationTab] = useState<'company' | 'travel_agency'>('company');
 
   const milestones = [
     {
@@ -71,11 +180,13 @@ const About = () => {
                     <div className="aspect-square w-full overflow-hidden">
                       <img 
                         src={member.image} 
-                        alt={`${member.name} - ${member.role}`}
-                        title={`${member.name} - ${member.role}`}
-                        loading="lazy"
+                        alt={member.name.toLowerCase().includes('anand pinisetty') ? 'Anand Pinisetty CEO Anand Travel Agency' : `${member.name} - ${member.role}`}
+                        title={member.name.toLowerCase().includes('anand pinisetty') ? 'Anand Pinisetty – CEO of Anand Travel Agency, Kakinada' : `${member.name} - ${member.role}`}
+                        loading={member.name.toLowerCase().includes('anand pinisetty') ? 'eager' : 'lazy'}
                         className="w-full h-full object-cover"
                         itemProp="image"
+                        width="400"
+                        height="400"
                       />
                     </div>
                     <div className="p-6" itemScope itemType="https://schema.org/Person">
@@ -83,6 +194,14 @@ const About = () => {
                       <meta itemProp="jobTitle" content={member.role} />
                       <meta itemProp="image" content={member.image} />
                       <meta itemProp="worksFor" content="Anand Travel Agency" />
+                      {member.name.toLowerCase().includes('anand pinisetty') && (
+                        <>
+                          <meta itemProp="telephone" content="+91-8985816481" />
+                          <meta itemProp="email" content="anandtravelsguide@gmail.com" />
+                          <meta itemProp="url" content="https://anandtravels.com/about" />
+                          <link itemProp="sameAs" href="https://www.linkedin.com/in/anand-pinisetty-656583359" />
+                        </>
+                      )}
                       <h3 className="text-xl font-semibold text-travel-blue-dark mb-2" itemProp="name">{member.name}</h3>
                       <p className="text-travel-orange font-medium mb-3" itemProp="jobTitle">{member.role}</p>
                       <p className="text-gray-600 mb-3" itemProp="description">{member.bio}</p>
@@ -156,7 +275,7 @@ const About = () => {
               <div>
                 <h2 className="section-title mb-6">Our Story</h2>
                 <p className="text-gray-700 mb-4">
-                  Founded in 2023 by Mr. Anand Pinisetty, Anand Travel Agency started as a small office in Kakinada providing train ticket booking services. With a vision to make travel accessible and hassle-free for everyone, Mr. Anand leveraged his extensive knowledge of the Indian Railways system to help customers secure seats even during peak seasons.
+                  Founded in 2023 by <strong>Anand Pinisetty</strong>, CEO of Anand Travel Agency, our company started as a small office in Kakinada providing train ticket booking services. With a vision to make travel accessible and hassle-free for everyone, <strong>Anand Pinisetty</strong> leveraged his extensive knowledge of the Indian Railways system to help customers secure seats even during peak seasons.
                 </p>
                 <p className="text-gray-700 mb-4">
                   What began as a modest ticket booking service quickly expanded into a comprehensive travel agency. As our reputation for reliability and customer service grew, so did our offerings. We ventured into domestic tour packages, bus bookings, and flight reservations, becoming a one-stop solution for all travel needs.
@@ -376,7 +495,158 @@ const About = () => {
           </div>
         </section>
         
-        <QuoteSection />
+        {/* Our Collaborations Section */}
+        {activeCollaborations.length > 0 && (
+          <section className="py-16">
+            <div className="container-custom">
+              <div className="text-center mb-12">
+                <h2 className="section-title">Our Collaborations</h2>
+                <p className="text-gray-600 max-w-3xl mx-auto">
+                  We partner with leading companies and travel agencies to bring you the best travel experiences
+                </p>
+              </div>
+              
+              {/* Tab Navigation */}
+              {(companyPartners.length > 0 && travelAgencyPartners.length > 0) && (
+                <div className="flex justify-center mb-8">
+                  <div className="inline-flex bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setCollaborationTab('company')}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                        collaborationTab === 'company'
+                          ? 'bg-travel-blue-dark text-white shadow-md'
+                          : 'text-gray-600 hover:text-travel-blue-dark'
+                      }`}
+                    >
+                      <Building2 className="w-5 h-5" />
+                      Companies ({companyPartners.length})
+                    </button>
+                    <button
+                      onClick={() => setCollaborationTab('travel_agency')}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                        collaborationTab === 'travel_agency'
+                          ? 'bg-travel-blue-dark text-white shadow-md'
+                          : 'text-gray-600 hover:text-travel-blue-dark'
+                      }`}
+                    >
+                      <Plane className="w-5 h-5" />
+                      Travel Agencies ({travelAgencyPartners.length})
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Company Partners Grid */}
+              {(collaborationTab === 'company' || travelAgencyPartners.length === 0) && companyPartners.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                  {companyPartners.map((partner) => (
+                    <a
+                      key={partner.id}
+                      href={partner.website || '#'}
+                      target={partner.website ? '_blank' : undefined}
+                      rel={partner.website ? 'noopener noreferrer' : undefined}
+                      className={`group bg-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 flex flex-col items-center text-center ${
+                        partner.website ? 'cursor-pointer' : ''
+                      }`}
+                    >
+                      <div className="w-20 h-20 mb-4 flex items-center justify-center">
+                        <img
+                          src={partner.logo}
+                          alt={partner.name}
+                          className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform"
+                        />
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-800 line-clamp-2">{partner.name}</h3>
+                      {partner.website && (
+                        <ExternalLink className="w-4 h-4 text-gray-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+                    </a>
+                  ))}
+                </div>
+              )}
+              
+              {/* Travel Agency Partners Grid */}
+              {(collaborationTab === 'travel_agency' || companyPartners.length === 0) && travelAgencyPartners.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                  {travelAgencyPartners.map((partner) => (
+                    <a
+                      key={partner.id}
+                      href={partner.website || '#'}
+                      target={partner.website ? '_blank' : undefined}
+                      rel={partner.website ? 'noopener noreferrer' : undefined}
+                      className={`group bg-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 flex flex-col items-center text-center ${
+                        partner.website ? 'cursor-pointer' : ''
+                      }`}
+                    >
+                      <div className="w-20 h-20 mb-4 flex items-center justify-center">
+                        <img
+                          src={partner.logo}
+                          alt={partner.name}
+                          className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform"
+                        />
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-800 line-clamp-2">{partner.name}</h3>
+                      {partner.website && (
+                        <ExternalLink className="w-4 h-4 text-gray-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+        
+        {/* Our Documents Section */}
+        {activeDocuments.length > 0 && (
+          <section className="py-16 bg-gray-50">
+            <div className="container-custom">
+              <div className="text-center mb-12">
+                <h2 className="section-title">Our Documents</h2>
+                <p className="text-gray-600 max-w-3xl mx-auto">
+                  View our company certificates, licenses, and official documents
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {activeDocuments.map((doc) => (
+                  <a
+                    key={doc.id}
+                    href={doc.documentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group bg-white rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden"
+                  >
+                    <div className="aspect-[4/3] relative overflow-hidden bg-gray-100">
+                      {doc.thumbnailUrl ? (
+                        <img
+                          src={doc.thumbnailUrl}
+                          alt={doc.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <FileText className="w-16 h-16 text-gray-300" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                        <Eye className="w-10 h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-gray-800 line-clamp-2 group-hover:text-travel-blue-dark transition-colors">
+                        {doc.title}
+                      </h3>
+                      {doc.description && (
+                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">{doc.description}</p>
+                      )}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
         
         {/* CTA Section */}
         <section className="py-16 bg-travel-blue-dark text-white">

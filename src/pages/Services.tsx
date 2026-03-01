@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plane, Train, Bus, Car, Package, MapPin } from "lucide-react";
+import { Plane, Train, Bus, Package, MapPin } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import QuoteSection from "../components/QuoteSection";
@@ -50,20 +50,6 @@ const Services = () => {
         "Emergency booking assistance"
       ],
       image: "https://res.cloudinary.com/dicfrzgfz/image/upload/v1747154008/flights_image_yi5jac.png"
-    },
-    {
-      id: "cab",
-      title: "Cab Services",
-      icon: <Car className="w-16 h-16 text-travel-orange" />,
-      description: "Travel comfortably with our reliable cab services available for intercity travel and local sightseeing across major destinations.",
-      features: [
-        "Airport transfers",
-        "City-to-city travel",
-        "Local sightseeing packages",
-        "Corporate travel solutions",
-        "24/7 customer support"
-      ],
-      image: "https://res.cloudinary.com/dicfrzgfz/image/upload/v1747154007/CABS_IMAGE_i8zzv9.png"
     },
     {
       id: "tour",

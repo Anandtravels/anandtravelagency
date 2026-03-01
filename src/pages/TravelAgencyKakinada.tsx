@@ -213,10 +213,6 @@ const TravelAgencyKakinada = () => {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-travel-orange font-bold">✓</span>
-                      <span>Cab services for local and outstation travel</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-travel-orange font-bold">✓</span>
                       <span>Travel insurance recommendations</span>
                     </li>
                   </ul>

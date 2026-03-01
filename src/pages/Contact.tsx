@@ -152,7 +152,6 @@ const Contact = () => {
                         <option value="Tour Package">Tour Package</option>
                         <option value="Flight Booking">Flight Booking</option>
                         <option value="Bus Booking">Bus Booking</option>
-                        <option value="Cab Service">Cab Service</option>
                         <option value="Feedback">Feedback</option>
                         <option value="Complaint">Complaint</option>
                       </select>
