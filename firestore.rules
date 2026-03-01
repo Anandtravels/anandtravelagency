@@ -1,11 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
-    }
-    
-    // Bookings
+    // Bookings - allow anyone to create
     match /bookings/{bookingId} {
       allow read: if request.auth != null;
       allow create: if true; // Allow anyone to create bookings
@@ -65,17 +61,19 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
     }
     
-    // Coupons
+    // Coupons - allow anyone to read and update usage (for tracking)
     match /coupons/{couponId} {
       allow read: if true; // Allow anyone to read coupons
-      allow write: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+      allow create: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+      allow update: if true; // Allow coupon usage updates from anyone
+      allow delete: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
     }
     
     // Visitor analytics
     match /visitor_sessions/{sessionId} {
       allow read: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
       allow create: if true;
-      allow update: if resource.data.sessionId == request.resource.data.sessionId;
+      allow update: if true; // Allow session updates
       allow delete: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
     }
     
@@ -91,6 +89,11 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create: if true; // Allow anyone to record button clicks
       allow update, delete: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Default: deny all other access
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { Calendar, MapPin, User, Phone, Mail, Train, Bus, Plane, Check, ArrowLeftRight } from "lucide-react";
-import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, Timestamp } from 'firebase/firestore';
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useToast } from "@/hooks/use-toast";
@@ -398,31 +398,69 @@ const Booking = () => {
     }
     
     setIsLoading(true);
+    
+    // Helper function to attempt submission with retry
+    const attemptSubmission = async (useServerTimestamp: boolean, retryCount = 0): Promise<any> => {
+      try {
+        // Calculate final booking charge
+        const baseCharge = calculateBookingCharge(data.train_booking_type || 'general');
+        const finalCharge = appliedCoupon ? appliedCoupon.finalAmount : baseCharge;
+        
+        // Use serverTimestamp on first try, fallback to client timestamp on retry
+        const timestampValue = useServerTimestamp ? serverTimestamp() : Timestamp.fromDate(new Date());
+
+        const bookingData = {
+          ...data,
+          phone: "+91" + data.phone,
+          booking_type: bookingType,
+          passengers: passengers.map(p => ({
+            name: p.name || '',
+            age: p.age || '',
+            gender: p.gender || 'male',
+            dob: p.dob || '',
+            aadhar: p.aadhar || ''
+          })),
+          status: "pending",
+          advance_booking: isAdvanceBooking,
+          created_at: timestampValue,
+          booking_charge: {
+            original: baseCharge,
+            final: finalCharge,
+            currency: 'INR'
+          },
+          coupon: appliedCoupon ? {
+            code: appliedCoupon.code,
+            discount: appliedCoupon.discount,
+            type: appliedCoupon.type,
+            originalAmount: appliedCoupon.originalAmount,
+            discountAmount: appliedCoupon.discountAmount,
+            finalAmount: appliedCoupon.finalAmount,
+            appliedAt: timestampValue
+          } : null,
+          // Add device info for debugging
+          _deviceInfo: {
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent.substring(0, 200) : 'unknown',
+            platform: typeof navigator !== 'undefined' ? navigator.platform : 'unknown',
+            submittedAt: new Date().toISOString()
+          }
+        };
+
+        const docRef = await addDoc(collection(db, 'bookings'), bookingData);
+        return { success: true, docRef, bookingData, baseCharge, finalCharge };
+        
+      } catch (error: any) {
+        // If serverTimestamp failed, retry with client timestamp
+        if (useServerTimestamp && retryCount < 2) {
+          console.warn(`Submission attempt ${retryCount + 1} failed, retrying with client timestamp...`);
+          return attemptSubmission(false, retryCount + 1);
+        }
+        throw error;
+      }
+    };
+    
     try {
-      // Calculate final booking charge
-      const baseCharge = calculateBookingCharge(data.train_booking_type || 'general');
-      const finalCharge = appliedCoupon ? appliedCoupon.finalAmount : baseCharge;
-
-      const bookingData = {
-        ...data,
-        phone: "+91" + data.phone,
-        booking_type: bookingType,
-        passengers,
-        status: "pending",
-        advance_booking: isAdvanceBooking, // Add advance booking flag
-        created_at: serverTimestamp(),
-        booking_charge: {
-          original: baseCharge,
-          final: finalCharge,
-          currency: 'INR'
-        },
-        coupon: appliedCoupon ? {
-          ...appliedCoupon,
-          appliedAt: serverTimestamp()
-        } : null
-      };
-
-      const docRef = await addDoc(collection(db, 'bookings'), bookingData);
+      const result = await attemptSubmission(true);
+      const { docRef, baseCharge, finalCharge } = result;
 
       // Try to update coupon usage, but don't fail the booking if it fails
       if (couponCode && appliedCoupon) {
@@ -499,24 +537,52 @@ const Booking = () => {
       
       // Provide more specific error messages based on the error type
       let errorMessage = "There was an error processing your booking. Please try again later.";
+      let showWhatsAppOption = false;
       
       if (error?.code === 'permission-denied') {
-        errorMessage = "Permission denied. Please check your internet connection and try again.";
-      } else if (error?.code === 'unavailable') {
-        errorMessage = "Service temporarily unavailable. Please try again in a moment.";
+        errorMessage = "Service temporarily unavailable. You can book via WhatsApp instead.";
+        showWhatsAppOption = true;
+      } else if (error?.code === 'unavailable' || error?.code === 'failed-precondition') {
+        errorMessage = "Service temporarily unavailable. Please try again or book via WhatsApp.";
+        showWhatsAppOption = true;
       } else if (error?.code === 'network-request-failed' || error?.message?.includes('network')) {
         errorMessage = "Network error. Please check your internet connection and try again.";
       } else if (error?.message?.includes('Failed to fetch') || error?.message?.includes('NetworkError')) {
         errorMessage = "Connection failed. Please check your internet and try again.";
+      } else if (error?.message?.includes('offline')) {
+        errorMessage = "You appear to be offline. Please connect to the internet and try again.";
       } else if (error?.message) {
         errorMessage = `Error: ${error.message.substring(0, 100)}`;
       }
       
-      toast({
-        title: "Submission Error",
-        description: errorMessage,
-        variant: "destructive"
-      });
+      // If permission denied, offer WhatsApp as fallback
+      if (showWhatsAppOption) {
+        const bookingInfo = `Train Booking Request:%0AFrom: ${data.from}%0ATo: ${data.to}%0ADate: ${data.journey_date}%0APassengers: ${passengerCount}%0AName: ${data.name}%0APhone: ${data.phone}`;
+        toast({
+          title: "Booking Issue",
+          description: (
+            <div className="space-y-2">
+              <p>{errorMessage}</p>
+              <a 
+                href={`https://wa.me/918985816481?text=${bookingInfo}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block bg-green-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600"
+              >
+                📱 Book via WhatsApp
+              </a>
+            </div>
+          ) as any,
+          variant: "destructive",
+          duration: 15000
+        });
+      } else {
+        toast({
+          title: "Submission Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsLoading(false);
     }
