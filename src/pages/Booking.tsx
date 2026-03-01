@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { Calendar, MapPin, User, Phone, Mail, Train, Bus, Plane, Check, ArrowLeftRight } from "lucide-react";
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
@@ -75,6 +75,59 @@ const Booking = () => {
     // This ensures data is ready before user interacts with the form
     preloadStationData();
   }, []);
+  
+  // Helper to format date for input (YYYY-MM-DD for Safari compatibility)
+  const formatDateForInput = useCallback((date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+  
+  // Get min date for date inputs
+  const getMinDate = useCallback((): string => {
+    return formatDateForInput(new Date());
+  }, [formatDateForInput]);
+  
+  // Toggle advance booking with touch support
+  const handleAdvanceBookingToggle = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsAdvanceBooking(prev => !prev);
+  }, []);
+  
+  // Validate passenger data before submission
+  const validatePassengers = useCallback((): boolean => {
+    for (let i = 0; i < passengers.length; i++) {
+      const p = passengers[i];
+      if (!p.name || p.name.trim() === '') {
+        toast({
+          title: "Validation Error",
+          description: `Please enter name for Passenger ${i + 1}`,
+          variant: "destructive"
+        });
+        return false;
+      }
+      if (!p.age || p.age.trim() === '') {
+        toast({
+          title: "Validation Error", 
+          description: `Please enter age for Passenger ${i + 1}`,
+          variant: "destructive"
+        });
+        return false;
+      }
+      const age = parseInt(p.age);
+      if (isNaN(age) || age < 0 || age > 120) {
+        toast({
+          title: "Validation Error",
+          description: `Please enter valid age (0-120) for Passenger ${i + 1}`,
+          variant: "destructive"
+        });
+        return false;
+      }
+    }
+    return true;
+  }, [passengers, toast]);
   
   const { register, handleSubmit, reset, formState: { errors }, setValue, getValues } = useForm({
     defaultValues: {
@@ -332,8 +385,17 @@ const Booking = () => {
   };
 
   const onSubmit = async (data) => {
+    // Validate passengers first (manual validation for Safari compatibility)
+    if (!validatePassengers()) {
+      return;
+    }
+    
     // Track the booking submission
-    trackButtonClick(`Submit Booking - ${bookingType.charAt(0).toUpperCase() + bookingType.slice(1)}`);
+    try {
+      trackButtonClick(`Submit Booking - ${bookingType.charAt(0).toUpperCase() + bookingType.slice(1)}`);
+    } catch (trackError) {
+      console.warn('Click tracking failed:', trackError);
+    }
     
     setIsLoading(true);
     try {
@@ -421,18 +483,33 @@ const Booking = () => {
       setIsAdvanceBooking(false); // Reset advance booking toggle
       clearAppliedCoupon();
 
-    } catch (error) {
-      console.error("Error submitting booking:", error);
+    } catch (error: any) {
+      // Enhanced error logging for mobile debugging
+      const errorDetails = {
+        message: error?.message || 'Unknown error',
+        code: error?.code || 'no-code',
+        name: error?.name || 'Error',
+        stack: error?.stack?.substring(0, 500) || 'no-stack',
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        timestamp: new Date().toISOString(),
+        bookingType,
+        formData: { from: data.from, to: data.to, journey_date: data.journey_date }
+      };
+      console.error("Booking submission error:", errorDetails);
       
       // Provide more specific error messages based on the error type
       let errorMessage = "There was an error processing your booking. Please try again later.";
       
-      if (error.code === 'permission-denied') {
+      if (error?.code === 'permission-denied') {
         errorMessage = "Permission denied. Please check your internet connection and try again.";
-      } else if (error.code === 'unavailable') {
+      } else if (error?.code === 'unavailable') {
         errorMessage = "Service temporarily unavailable. Please try again in a moment.";
-      } else if (error.code === 'network-request-failed') {
+      } else if (error?.code === 'network-request-failed' || error?.message?.includes('network')) {
         errorMessage = "Network error. Please check your internet connection and try again.";
+      } else if (error?.message?.includes('Failed to fetch') || error?.message?.includes('NetworkError')) {
+        errorMessage = "Connection failed. Please check your internet and try again.";
+      } else if (error?.message) {
+        errorMessage = `Error: ${error.message.substring(0, 100)}`;
       }
       
       toast({
@@ -637,12 +714,13 @@ const Booking = () => {
                           Journey Date <span className="text-rose-500">*</span>
                         </label>
                         <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
                           <input
                             type="date"
                             {...register("journey_date", { required: "Journey date is required" })}
-                            min={new Date().toISOString().split('T')[0]}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                            min={getMinDate()}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark appearance-none"
+                            style={{ WebkitAppearance: 'none' }}
                           />
                         </div>
                         {errors.journey_date && <p className="text-red-500 text-sm mt-1">{String(errors.journey_date.message)}</p>}
@@ -673,8 +751,8 @@ const Booking = () => {
                               <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto">
                                 <button
                                   type="button"
-                                  onClick={() => setIsAdvanceBooking(!isAdvanceBooking)}
-                                  className={`relative inline-flex h-8 w-16 sm:h-10 sm:w-20 md:h-12 md:w-24 items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 flex-shrink-0 ${
+                                  onClick={handleAdvanceBookingToggle}
+                                  className={`relative inline-flex h-8 w-16 sm:h-10 sm:w-20 md:h-12 md:w-24 items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 flex-shrink-0 touch-manipulation ${
                                     isAdvanceBooking 
                                       ? 'bg-gradient-to-r from-travel-orange to-orange-500 focus:ring-travel-orange shadow-lg' 
                                       : 'bg-gray-300 focus:ring-gray-400 shadow-md'
@@ -857,12 +935,13 @@ const Booking = () => {
                             <div>
                               <label className="block text-gray-700 font-medium mb-2">Return Date (for Round Trip)</label>
                               <div className="relative">
-                                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
                                 <input
                                   type="date"
                                   {...register("return_date")}
-                                  min={new Date().toISOString().split('T')[0]}
-                                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                                  min={getMinDate()}
+                                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark appearance-none"
+                                  style={{ WebkitAppearance: 'none' }}
                                 />
                               </div>
                             </div>
@@ -957,13 +1036,14 @@ const Booking = () => {
                             <h3 className="font-medium">Passenger {index + 1}</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div>
-                                <label className="block text-sm font-medium mb-1">Name</label>
+                                <label className="block text-sm font-medium mb-1">Name <span className="text-rose-500">*</span></label>
                                 <input
                                   type="text"
                                   value={passenger.name || ''}
                                   onChange={(e) => handlePassengerChange(index, 'name', e.target.value)}
-                                  className="w-full px-3 py-2 border rounded-md"
-                                  required
+                                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                                  placeholder="Enter name"
+                                  autoComplete="name"
                                 />
                               </div>
                               
@@ -988,8 +1068,9 @@ const Booking = () => {
                                       type="text"
                                       placeholder="DD/MM/YYYY or DD/MM/YY"
                                       onChange={(e) => handlePassengerChange(index, 'dobInput', e.target.value)}
-                                      className="w-full px-3 py-2 border rounded-md"
-                                      required
+                                      className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
+                                      inputMode="numeric"
+                                      autoComplete="bday"
                                     />
                                     {passenger.dob && passenger.age && (
                                       <p className="text-xs text-green-600 mt-1">
@@ -1001,14 +1082,17 @@ const Booking = () => {
                                 ) : (
                                   <>
                                     <input
-                                      type="number"
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
                                       value={passenger.age || ''}
-                                      onChange={(e) => handlePassengerChange(index, 'age', e.target.value)}
-                                      className="w-full px-3 py-2 border rounded-md"
-                                      min="0"
-                                      max="120"
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '').slice(0, 3);
+                                        handlePassengerChange(index, 'age', value);
+                                      }}
+                                      className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
                                       placeholder="Enter age"
-                                      required
+                                      autoComplete="off"
                                     />
                                     {passenger.age && passenger.dob && (
                                       <p className="text-xs text-green-600 mt-1">
@@ -1020,12 +1104,11 @@ const Booking = () => {
                               </div>
                               
                               <div>
-                                <label className="block text-sm font-medium mb-1">Gender</label>
+                                <label className="block text-sm font-medium mb-1">Gender <span className="text-rose-500">*</span></label>
                                 <select
                                   value={passenger.gender || 'male'}
                                   onChange={(e) => handlePassengerChange(index, 'gender', e.target.value)}
-                                  className="w-full px-3 py-2 border rounded-md"
-                                  required
+                                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark"
                                 >
                                   <option value="male">Male</option>
                                   <option value="female">Female</option>
@@ -1152,7 +1235,8 @@ const Booking = () => {
                       <button
                         type="submit"
                         disabled={isLoading}
-                        className="btn-primary py-3 px-8 flex items-center gap-2"
+                        className="btn-primary py-3 px-8 flex items-center gap-2 touch-manipulation select-none"
+                        style={{ WebkitTapHighlightColor: 'transparent' }}
                       >
                         {isLoading ? (
                           <>

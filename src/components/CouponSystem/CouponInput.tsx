@@ -124,9 +124,10 @@ export function CouponInput({ onApplyCoupon }: CouponInputProps) {
           />
         </motion.div>
         <Button 
+          type="button"
           onClick={validateCoupon}
           disabled={loading || status === 'success' || !couponCode.trim()}
-          className="transition-all duration-300 hover:scale-[1.03]"
+          className="transition-all duration-300 hover:scale-[1.03] touch-manipulation"
         >
           {loading ? (
             <motion.div 
