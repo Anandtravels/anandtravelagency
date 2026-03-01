@@ -614,6 +614,31 @@ const BookingsTab = ({
                     <p><span className="font-medium text-gray-500">From:</span> {booking.from}</p>
                     <p><span className="font-medium text-gray-500">To:</span> {booking.to}</p>
                     <p><span className="font-medium text-gray-500">Date:</span> {booking.journey_date}</p>
+                    {booking.advance_booking && booking.journey_date && (() => {
+                      try {
+                        const parts = booking.journey_date.includes('-') ? booking.journey_date.split('-') : booking.journey_date.split('/');
+                        let jDate: Date;
+                        if (parts.length === 3) {
+                          // Try DD-MM-YYYY or YYYY-MM-DD
+                          if (parts[0].length === 4) {
+                            jDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                          } else {
+                            jDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                          }
+                        } else {
+                          jDate = new Date(booking.journey_date);
+                        }
+                        if (isNaN(jDate.getTime())) return null;
+                        const bookingDate = new Date(jDate);
+                        bookingDate.setDate(bookingDate.getDate() - 60);
+                        const dd = String(bookingDate.getDate()).padStart(2, '0');
+                        const mm = String(bookingDate.getMonth() + 1).padStart(2, '0');
+                        const yyyy = bookingDate.getFullYear();
+                        return (
+                          <p><span className="font-medium text-gray-500">Booking Date:</span> <span className="text-orange-600 font-semibold">{`${dd}-${mm}-${yyyy}`}</span></p>
+                        );
+                      } catch { return null; }
+                    })()}
                     {booking.station_name && <p><span className="font-medium text-gray-500">Station:</span> {booking.station_name}</p>}
                   </div>
                 </details>
@@ -939,6 +964,33 @@ const BookingsTab = ({
                           <span className="font-medium min-w-[80px] inline-block">Date:</span>
                           <span>{booking.journey_date}</span>
                         </p>
+                        {booking.advance_booking && booking.journey_date && (() => {
+                          try {
+                            const parts = booking.journey_date.includes('-') ? booking.journey_date.split('-') : booking.journey_date.split('/');
+                            let jDate: Date;
+                            if (parts.length === 3) {
+                              if (parts[0].length === 4) {
+                                jDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                              } else {
+                                jDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                              }
+                            } else {
+                              jDate = new Date(booking.journey_date);
+                            }
+                            if (isNaN(jDate.getTime())) return null;
+                            const bookingDate = new Date(jDate);
+                            bookingDate.setDate(bookingDate.getDate() - 60);
+                            const dd = String(bookingDate.getDate()).padStart(2, '0');
+                            const mm = String(bookingDate.getMonth() + 1).padStart(2, '0');
+                            const yyyy = bookingDate.getFullYear();
+                            return (
+                              <p className="flex items-start">
+                                <span className="font-medium min-w-[80px] inline-block">Booking Date:</span>
+                                <span className="text-orange-600 font-semibold">{`${dd}-${mm}-${yyyy}`}</span>
+                              </p>
+                            );
+                          } catch { return null; }
+                        })()}
                         {booking.station_name && <p><span className="font-medium min-w-[80px] inline-block">Station:</span> <span className="break-all">{booking.station_name}</span></p>}
                       </div>
                     </div>
