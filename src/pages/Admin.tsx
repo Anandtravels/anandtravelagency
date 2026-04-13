@@ -286,7 +286,7 @@ const Admin = () => {
         onOpenChange={setEditModalOpen}
         booking={editBooking}
         formData={editFormData}
-        onFormChange={(e) => setEditFormData({ ...editFormData, [e.target.name]: e.target.value })}
+        onFormChange={(e) => setEditFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))}
         onSave={handleSaveEdit}
       />
 

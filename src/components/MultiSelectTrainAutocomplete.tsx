@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Train as TrainIcon, ChevronDown, Loader2, X } from 'lucide-react';
+import { Train as TrainIcon, ChevronDown, Loader2, X, Plus } from 'lucide-react';
 
 interface Train {
   number: string;
@@ -270,7 +270,8 @@ export const MultiSelectTrainAutocomplete = ({
       )}
       
       {/* Input Field */}
-      <div className="relative">
+      <div className="relative flex gap-2">
+        <div className="relative flex-1">
         <TrainIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none z-10" size={18} />
         
         <input
@@ -301,6 +302,25 @@ export const MultiSelectTrainAutocomplete = ({
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           )}
         </div>
+        </div>
+        
+        {/* Add Button for mobile users */}
+        {inputValue.trim() && (
+          <button
+            type="button"
+            onClick={() => {
+              if (highlightedIndex >= 0 && filteredTrains[highlightedIndex]) {
+                handleSelectTrain(filteredTrains[highlightedIndex]);
+              } else if (inputValue.trim()) {
+                addTrain(inputValue.trim());
+              }
+            }}
+            className="px-3 py-2 bg-travel-blue-dark text-white rounded-md hover:bg-travel-blue-medium transition-colors flex items-center gap-1 text-sm font-medium whitespace-nowrap flex-shrink-0"
+          >
+            <Plus size={16} />
+            Add
+          </button>
+        )}
       </div>
 
       {loadError && (
@@ -313,7 +333,7 @@ export const MultiSelectTrainAutocomplete = ({
 
       {/* Help text */}
       <p className="text-gray-500 text-xs mt-1">
-        💡 <strong>Tip:</strong> Type any train number/name and press <kbd className="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Enter</kbd> to add manually, or select from suggestions. Press <kbd className="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Backspace</kbd> to remove.
+        💡 <strong>Tip:</strong> Type any train number/name and tap <strong>Add</strong> or press <kbd className="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Enter</kbd> to add manually, or select from suggestions. Press <kbd className="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Backspace</kbd> to remove.
       </p>
 
       {/* Dropdown */}

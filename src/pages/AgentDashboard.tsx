@@ -237,7 +237,15 @@ const AgentDashboard = () => {
   const formatDate = (date: Date | string) => {
     if (!date) return "N/A";
     try {
-      return format(new Date(date), "dd MMM yyyy, HH:mm");
+      const d = new Date(date);
+      const istStr = d.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: true
+      });
+      const ms = String(d.getMilliseconds()).padStart(3, '0');
+      return `${istStr}.${ms} IST`;
     } catch (e) {
       return "Invalid Date";
     }

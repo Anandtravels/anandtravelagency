@@ -1,19 +1,28 @@
 export const formatFirebaseTimestamp = (timestamp: any) => {
     if (!timestamp) return "N/A";
     
+    let date: Date;
     if (timestamp.seconds) {
-      return new Date(timestamp.seconds * 1000).toLocaleDateString("en-GB", {
-        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-      });
+      date = new Date(timestamp.seconds * 1000 + (timestamp.nanoseconds ? Math.floor(timestamp.nanoseconds / 1000000) : 0));
+    } else {
+      try {
+        date = new Date(timestamp);
+      } catch (error) {
+        return "Invalid Date";
+      }
     }
     
-    try {
-      return new Date(timestamp).toLocaleDateString("en-GB", {
-        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-      });
-    } catch (error) {
-      return "Invalid Date";
-    }
+    if (isNaN(date.getTime())) return "Invalid Date";
+    
+    // Format in IST (Asia/Kolkata) with seconds and milliseconds
+    const istStr = date.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: true
+    });
+    const ms = String(date.getMilliseconds()).padStart(3, '0');
+    return `${istStr}.${ms} IST`;
 };
 
 export const calculateBookingCharge = (bookingType: string, classPreference?: string): number => {
