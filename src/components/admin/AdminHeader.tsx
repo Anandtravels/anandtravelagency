@@ -1,8 +1,30 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Users, Eye } from "lucide-react";
+import { Users, Eye, Clock } from "lucide-react";
 import { useVisitorAnalytics } from "@/hooks/useVisitorAnalytics";
+import { useState, useEffect } from "react";
+
+const useISTClock = () => {
+  const [time, setTime] = useState('');
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      const ist = now.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: true
+      });
+      const ms = String(now.getMilliseconds()).padStart(3, '0');
+      setTime(`${ist}.${ms} IST`);
+    };
+    tick();
+    const id = setInterval(tick, 50);
+    return () => clearInterval(id);
+  }, []);
+  return time;
+};
 
 interface AdminHeaderProps {
   userEmail: string | null | undefined;
@@ -12,6 +34,7 @@ interface AdminHeaderProps {
 const AdminHeader = ({ userEmail, onSignOut }: AdminHeaderProps) => {
   const navigate = useNavigate();
   const { stats, loading } = useVisitorAnalytics();
+  const istTime = useISTClock();
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -24,6 +47,11 @@ const AdminHeader = ({ userEmail, onSignOut }: AdminHeaderProps) => {
             </span>
           </div>
           <div className="flex items-center gap-3">
+            {/* Live IST Clock */}
+            <div className="hidden md:flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+              <Clock className="w-3.5 h-3.5 text-travel-blue-dark" />
+              <span className="text-xs font-mono text-travel-blue-dark font-medium">{istTime}</span>
+            </div>
             {/* Live visitor count */}
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="border-green-500 text-green-700 bg-green-50">

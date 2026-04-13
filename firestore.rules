@@ -105,6 +105,91 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
     }
     
+    // Bills / Invoices
+    match /bills/{billId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Agent booking credentials (booking platform IDs/passwords)
+    match /agent_booking_credentials/{credentialId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+    
+    // Agent tasks
+    match /agent_tasks/{taskId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Task completion history
+    match /task_completion_history/{historyId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Agent wallets
+    match /agent_wallets/{walletId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+      allow delete: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Team members (public-facing)
+    match /team_members/{memberId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Company documents (public-facing)
+    match /company_documents/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Collaborations (public-facing)
+    match /collaborations/{collabId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Hotels
+    match /hotels/{hotelId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Room types
+    match /room_types/{roomTypeId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Hotel agents
+    match /hotel_agents/{agentId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Career jobs (public-facing)
+    match /career_jobs/{jobId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // Career applications
+    match /career_applications/{applicationId} {
+      allow read: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+      allow create: if true;
+      allow update, delete: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
     // Default: deny all other access
     match /{document=**} {
       allow read, write: if false;

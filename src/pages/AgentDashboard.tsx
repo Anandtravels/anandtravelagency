@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Mail, MessageSquare, ClipboardList, Wallet, BookOpen, Calendar, Star, Sparkles, User, Key } from "lucide-react";
+import { Phone, Mail, MessageSquare, ClipboardList, Wallet, BookOpen, Calendar, Star, Sparkles, User, Key, Clock } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,7 @@ const AgentDashboard = () => {
   const [currentBooking, setCurrentBooking] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("tasks");
   const [agentName, setAgentName] = useState<string>("");
+  const [istTime, setIstTime] = useState('');
   const [messageDetails, setMessageDetails] = useState({
     ticketCost: '',
     bookingCharge: '',
@@ -72,6 +73,24 @@ const AgentDashboard = () => {
 
   // Web Push Notifications
   const { permission: notifPermission, requestPermission: requestNotifPermission } = useNotifications(user?.email, 'agent');
+
+  // Live IST clock
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      const ist = now.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: true
+      });
+      const ms = String(now.getMilliseconds()).padStart(3, '0');
+      setIstTime(`${ist}.${ms} IST`);
+    };
+    tick();
+    const id = setInterval(tick, 50);
+    return () => clearInterval(id);
+  }, []);
 
   // Request notification permission when agent loads
   useEffect(() => {
@@ -558,6 +577,10 @@ Thank you for choosing Anand Travels!`;
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={handleSignOut} className="text-xs sm:text-sm">Sign Out</Button>
+        </div>
+        <div className="container px-3 sm:px-4 pb-2 flex items-center gap-1.5">
+          <Clock className="w-3.5 h-3.5 text-travel-blue-dark flex-shrink-0" />
+          <span className="text-xs font-mono text-travel-blue-dark font-medium">{istTime}</span>
         </div>
       </header>
 

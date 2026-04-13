@@ -1,10 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import AdminSidebar from './AdminSidebar';
+
+const useISTClock = () => {
+  const [time, setTime] = useState('');
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      const ist = now.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: true
+      });
+      const ms = String(now.getMilliseconds()).padStart(3, '0');
+      setTime(`${ist}.${ms} IST`);
+    };
+    tick();
+    const id = setInterval(tick, 50);
+    return () => clearInterval(id);
+  }, []);
+  return time;
+};
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -15,6 +36,7 @@ interface AdminLayoutProps {
 const AdminLayout = ({ children, userEmail, onSignOut }: AdminLayoutProps) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const istTime = useISTClock();
 
   const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
@@ -84,6 +106,10 @@ const AdminLayout = ({ children, userEmail, onSignOut }: AdminLayoutProps) => {
                 <p className="text-xs text-gray-500 truncate max-w-32">{userEmail}</p>
               </div>
             </div>
+          </div>
+          <div className="flex items-center gap-1.5 mt-2 px-1">
+            <Clock className="w-3.5 h-3.5 text-travel-blue-dark flex-shrink-0" />
+            <span className="text-xs font-mono text-travel-blue-dark font-medium">{istTime}</span>
           </div>
         </div>
 
