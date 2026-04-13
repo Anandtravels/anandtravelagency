@@ -5,6 +5,7 @@ import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import AdminSidebar from './AdminSidebar';
+import NotificationBell from '@/components/NotificationBell';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -83,8 +84,7 @@ const AdminLayout = ({ children, userEmail, onSignOut }: AdminLayoutProps) => {
                 <h1 className="text-lg font-semibold text-gray-900">Admin Dashboard</h1>
                 <p className="text-xs text-gray-500 truncate max-w-32">{userEmail}</p>
               </div>
-            </div>
-          </div>
+            </div>            <NotificationBell userEmail={userEmail} userRole="admin" />          </div>
         </div>
 
         {/* Content Area */}

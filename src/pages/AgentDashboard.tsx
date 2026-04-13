@@ -20,6 +20,7 @@ import AgentTaskList from "@/components/agent/AgentTaskList";
 import AgentWalletCard from "@/components/agent/AgentWalletCard";
 import AgentRulesRegulations from "@/components/agent/AgentRulesRegulations";
 import AgentBookingCredentials from "@/components/agent/AgentBookingCredentials";
+import NotificationBell from "@/components/NotificationBell";
 
 const AgentDashboard = () => {
   const { user, isAgent, signOut, loading } = useAuth();
@@ -538,7 +539,10 @@ Thank you for choosing Anand Travels!`;
               <p className="text-xs text-gray-500 truncate max-w-[140px] sm:max-w-none">{user?.email}</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleSignOut} className="text-xs sm:text-sm">Sign Out</Button>
+          <div className="flex items-center gap-2">
+            <NotificationBell userEmail={user?.email} userRole="agent" />
+            <Button variant="outline" size="sm" onClick={handleSignOut} className="text-xs sm:text-sm">Sign Out</Button>
+          </div>
         </div>
       </header>
 
