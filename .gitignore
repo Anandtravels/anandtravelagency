@@ -1,6 +1,7 @@
 # Logs
 logs
 *.log
+nul
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -19,8 +20,8 @@ dist-ssr
 .env.test.local
 .env.production.local
 
-# Firebase Admin SDK credentials (DO NOT COMMIT)
-*-firebase-adminsdk-*.json
+# Firebase Admin SDK service account keys (NEVER COMMIT)
+*firebase-adminsdk*.json
 
 # Editor directories and files
 .vscode/*

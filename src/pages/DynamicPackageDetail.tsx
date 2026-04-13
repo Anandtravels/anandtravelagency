@@ -6,6 +6,7 @@ import Footer from "../components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { sendPushNotification } from "@/utils/sendPushNotification";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -58,6 +59,12 @@ const DynamicPackageDetail = () => {
 
       await addDoc(collection(db, 'package_bookings'), bookingDataWithPackage);
       
+      // Send push notification to admin
+      sendPushNotification('new_package_booking', {
+        name: bookingData.fullName,
+        packageName: packageData.title
+      });
+
       toast({
         title: "Booking Submitted!",
         description: "Your booking request has been submitted successfully. We'll contact you shortly.",

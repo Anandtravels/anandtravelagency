@@ -12,6 +12,7 @@ import { StationAutocomplete } from "@/components/StationAutocomplete";
 import { MultiSelectTrainAutocomplete } from "@/components/MultiSelectTrainAutocomplete";
 import { preloadStationData } from "@/utils/stationDataLoader";
 import { trackButtonClick } from "@/services/clickTracker";
+import { sendPushNotification } from "@/utils/sendPushNotification";
 
 const Booking = () => {
   const [bookingType, setBookingType] = useState("train");
@@ -446,6 +447,17 @@ const Booking = () => {
         };
 
         const docRef = await addDoc(collection(db, 'bookings'), bookingData);
+
+        // Send push notification to admin
+        sendPushNotification('new_booking', {
+          bookingId: docRef.id,
+          name: data.name,
+          from: data.from,
+          to: data.to,
+          journeyDate: data.journey_date,
+          bookingType: data.train_booking_type || 'General'
+        });
+
         return { success: true, docRef, bookingData, baseCharge, finalCharge };
         
       } catch (error: any) {

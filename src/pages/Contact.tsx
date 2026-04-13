@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { trackButtonClick } from "@/services/clickTracker";
+import { sendPushNotification } from "@/utils/sendPushNotification";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -46,6 +47,14 @@ const Contact = () => {
       // Add to Firebase
       const docRef = await addDoc(collection(db, 'contact_submissions'), messageData);
       console.log('Message sent with ID:', docRef.id);
+
+      // Send push notification to admin
+      sendPushNotification('new_contact_message', {
+        name: formData.name,
+        subject: formData.subject,
+        message: formData.message,
+        messageId: docRef.id
+      });
       
       toast({
         title: "Message Sent Successfully",

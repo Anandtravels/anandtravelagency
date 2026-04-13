@@ -8,6 +8,7 @@ import { useEditBookingModal } from "@/hooks/use-edit-booking-modal";
 import { useEnhancedWhatsAppModal } from "@/hooks/useEnhancedWhatsAppModal";
 import { useBookingInvoiceModal } from "@/hooks/useBookingInvoiceModal";
 import { useAdminNavigation } from "@/hooks/useAdminNavigation";
+import { useNotifications } from "@/hooks/useNotifications";
 import { formatFirebaseTimestamp } from "@/utils/adminHelpers";
 import AdminLayout from "@/components/admin/AdminLayout";
 import WhatsAppMessageModal from "@/components/admin/WhatsAppMessageModal";
@@ -72,6 +73,14 @@ const Admin = () => {
   const { editModalOpen, setEditModalOpen, editBooking, editFormData, setEditFormData, openEditModal, handleSaveEdit } = useEditBookingModal();
   const { whatsappModal, setWhatsappModal, currentBooking, messageDetails, setMessageDetails, handleWhatsapp, sendWhatsappMessage, sending } = useEnhancedWhatsAppModal(user?.email);
   const { activeTab, handleTabChange } = useAdminNavigation();
+  const { permission: notifPermission, requestPermission: requestNotifPermission } = useNotifications(user?.email, 'admin');
+
+  // Request notification permission when admin loads
+  useEffect(() => {
+    if (user?.email === 'admin@anandtravels.com' && notifPermission === 'default') {
+      requestNotifPermission();
+    }
+  }, [user?.email, notifPermission, requestNotifPermission]);
 
   useEffect(() => {
     if (!authLoading) {

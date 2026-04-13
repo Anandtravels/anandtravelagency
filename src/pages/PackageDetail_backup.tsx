@@ -6,6 +6,7 @@ import Footer from "../components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { sendPushNotification } from "@/utils/sendPushNotification";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -985,6 +986,12 @@ const PackageDetail = () => {
         special_requests: bookingForm.special_requests,
         status: 'pending',
         created_at: serverTimestamp()
+      });
+
+      // Send push notification to admin
+      sendPushNotification('new_package_booking', {
+        name: bookingForm.name,
+        packageName: packageData?.title || 'Package'
       });
       
       // Show success message

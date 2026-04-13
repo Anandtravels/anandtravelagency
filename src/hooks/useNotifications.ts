@@ -1,98 +1,108 @@
-import { useState, useEffect, useCallback } from 'react';
-import {
-  requestNotificationPermission,
-  onForegroundMessage,
-  isNotificationPermissionGranted,
-  isNotificationPermissionDenied,
-} from '@/lib/fcm';
+import { useEffect, useCallback, useState, useRef } from 'react';
+import { getToken, onMessage } from 'firebase/messaging';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db, getFirebaseMessaging } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
-interface UseNotificationsOptions {
-  userEmail: string | null | undefined;
-  userRole: 'admin' | 'agent';
-}
-
-export const useNotifications = ({ userEmail, userRole }: UseNotificationsOptions) => {
+export const useNotifications = (
+  userEmail?: string,
+  role: 'admin' | 'agent' = 'admin'
+) => {
+  const [permission, setPermission] = useState<NotificationPermission>(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  );
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
   const { toast } = useToast();
-  const [permissionStatus, setPermissionStatus] = useState<NotificationPermission | 'unsupported'>('default');
-  const [isEnabling, setIsEnabling] = useState(false);
+  const initializedRef = useRef(false);
 
-  // Check initial permission status
-  useEffect(() => {
-    if (!('Notification' in window)) {
-      setPermissionStatus('unsupported');
-      return;
-    }
-    setPermissionStatus(Notification.permission);
-  }, []);
-
-  // Set up foreground message listener
-  useEffect(() => {
-    if (!userEmail || permissionStatus !== 'granted') return;
-
-    onForegroundMessage((payload) => {
-      const title = payload.notification?.title || 'New Notification';
-      const body = payload.notification?.body || '';
-
-      // Show in-app toast
-      toast({
-        title: `🔔 ${title}`,
-        description: body,
-        duration: 8000,
-      });
-
-      // Also show a browser notification for foreground
-      if (document.hidden) {
-        new Notification(title, {
-          body,
-          icon: '/logo.png',
-          tag: payload.data?.type || 'general',
-        });
-      }
+  // Save FCM token to Firestore so Cloud Functions can send notifications
+  const saveFcmToken = useCallback(async (token: string, email: string) => {
+    const tokenDocId = `${role}_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    await setDoc(doc(db, 'fcm_tokens', tokenDocId), {
+      token,
+      email,
+      role,
+      updatedAt: serverTimestamp(),
+      userAgent: navigator.userAgent
     });
-  }, [userEmail, permissionStatus, toast]);
+  }, [role]);
 
-  // Enable notifications
-  const enableNotifications = useCallback(async () => {
-    if (!userEmail) return;
+  // Request notification permission and register FCM token
+  const requestPermission = useCallback(async () => {
+    if (typeof Notification === 'undefined' || !userEmail) return;
 
-    setIsEnabling(true);
     try {
-      const token = await requestNotificationPermission(userEmail, userRole);
-      if (token) {
-        setPermissionStatus('granted');
+      const result = await Notification.requestPermission();
+      setPermission(result);
+
+      if (result === 'granted') {
+        const messaging = await getFirebaseMessaging();
+        if (!messaging) return;
+
+        const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+        if (!vapidKey) {
+          console.error('VITE_FIREBASE_VAPID_KEY is not set');
+          return;
+        }
+
+        const token = await getToken(messaging, { vapidKey });
+        if (token) {
+          setFcmToken(token);
+          await saveFcmToken(token, userEmail);
+          console.log('FCM token registered for', role, userEmail);
+        }
+      } else if (result === 'denied') {
+        console.warn('Notification permission denied');
+      }
+    } catch (err) {
+      console.error('Failed to setup notifications:', err);
+    }
+  }, [userEmail, role, saveFcmToken]);
+
+  // Listen for foreground messages
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
+    const setupForegroundListener = async () => {
+      const messaging = await getFirebaseMessaging();
+      if (!messaging) return;
+
+      unsubscribe = onMessage(messaging, (payload) => {
+        console.log('Foreground notification received:', payload);
+
+        const title = payload.notification?.title || 'Anand Travel Agency';
+        const body = payload.notification?.body || 'You have a new notification';
+
+        // Show in-app toast
         toast({
-          title: 'Notifications Enabled',
-          description: 'You will now receive push notifications for new bookings.',
+          title,
+          description: body,
         });
-      } else {
-        setPermissionStatus(Notification.permission);
-        if (Notification.permission === 'denied') {
-          toast({
-            title: 'Notifications Blocked',
-            description: 'Please enable notifications in your browser settings.',
-            variant: 'destructive',
+
+        // Also show native notification for visibility
+        if (Notification.permission === 'granted') {
+          new Notification(title, {
+            body,
+            icon: '/logo.png',
+            tag: payload.data?.type || 'default'
           });
         }
-      }
-    } catch (error) {
-      console.error('Error enabling notifications:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to enable notifications. Please try again.',
-        variant: 'destructive',
       });
-    } finally {
-      setIsEnabling(false);
-    }
-  }, [userEmail, userRole, toast]);
+    };
 
-  return {
-    permissionStatus,
-    isEnabling,
-    enableNotifications,
-    isSupported: permissionStatus !== 'unsupported',
-    isEnabled: permissionStatus === 'granted',
-    isDenied: permissionStatus === 'denied',
-  };
+    setupForegroundListener();
+    return () => unsubscribe?.();
+  }, [toast]);
+
+  // Auto-register token if permission already granted
+  useEffect(() => {
+    if (!userEmail || initializedRef.current) return;
+    initializedRef.current = true;
+
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      requestPermission();
+    }
+  }, [userEmail, requestPermission]);
+
+  return { permission, requestPermission, fcmToken };
 };

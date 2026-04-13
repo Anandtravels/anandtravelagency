@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getMessaging, isSupported } from 'firebase/messaging';
 
 const firebaseConfig = {
   apiKey: "AIzaSyB4P5ZA4znNllXccDWrNgA3B2UTjABf9Xc",
@@ -51,3 +52,16 @@ try {
 }
 
 export { db };
+
+// Initialize Firebase Cloud Messaging (lazy, only in supported browsers)
+export const getFirebaseMessaging = async () => {
+  try {
+    const supported = await isSupported();
+    if (supported) {
+      return getMessaging(app);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};

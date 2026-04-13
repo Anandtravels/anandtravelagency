@@ -16,6 +16,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { sendPushNotification } from '../utils/sendPushNotification';
 import { 
   Hotel, 
   RoomType, 
@@ -278,6 +279,14 @@ export class HotelService {
       const docRef = await addDoc(collection(db, 'hotel_bookings'), {
         ...bookingData,
         created_at: serverTimestamp()
+      });
+
+      // Send push notification to admin
+      sendPushNotification('new_hotel_booking', {
+        guestName: bookingData.guestName,
+        hotelName: bookingData.hotelName,
+        checkInDate: bookingData.checkInDate,
+        bookingId: docRef.id
       });
       
       // Update room availability only if roomTypeId is provided (not for direct inquiries)

@@ -20,7 +20,7 @@ import AgentTaskList from "@/components/agent/AgentTaskList";
 import AgentWalletCard from "@/components/agent/AgentWalletCard";
 import AgentRulesRegulations from "@/components/agent/AgentRulesRegulations";
 import AgentBookingCredentials from "@/components/agent/AgentBookingCredentials";
-import NotificationBell from "@/components/NotificationBell";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const AgentDashboard = () => {
   const { user, isAgent, signOut, loading } = useAuth();
@@ -69,6 +69,16 @@ const AgentDashboard = () => {
 
   // Task status filter for agent view
   const [taskStatusFilter, setTaskStatusFilter] = useState<string>('all');
+
+  // Web Push Notifications
+  const { permission: notifPermission, requestPermission: requestNotifPermission } = useNotifications(user?.email, 'agent');
+
+  // Request notification permission when agent loads
+  useEffect(() => {
+    if (user?.email && isAgent && notifPermission === 'default') {
+      requestNotifPermission();
+    }
+  }, [user?.email, isAgent, notifPermission, requestNotifPermission]);
 
   // Fetch agent name from agents collection
   useEffect(() => {
@@ -539,10 +549,7 @@ Thank you for choosing Anand Travels!`;
               <p className="text-xs text-gray-500 truncate max-w-[140px] sm:max-w-none">{user?.email}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <NotificationBell userEmail={user?.email} userRole="agent" />
-            <Button variant="outline" size="sm" onClick={handleSignOut} className="text-xs sm:text-sm">Sign Out</Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={handleSignOut} className="text-xs sm:text-sm">Sign Out</Button>
         </div>
       </header>
 

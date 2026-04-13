@@ -6,6 +6,7 @@ import { ArrowLeft, Upload, FileText, CheckCircle } from "lucide-react";
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
+import { sendPushNotification } from "@/utils/sendPushNotification";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { EServiceFormData } from "@/types/eservices";
@@ -93,6 +94,12 @@ const EServiceApplication = () => {
       };
 
       await addDoc(collection(db, 'eservice_requests'), requestData);
+
+      // Send push notification to admin
+      sendPushNotification('new_eservice_request', {
+        name: data.name || data.fullName || 'Customer',
+        serviceType
+      });
 
       toast({
         title: "Application Submitted Successfully!",

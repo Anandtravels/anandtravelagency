@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { sendPushNotification } from '@/utils/sendPushNotification';
 import { 
   collection, 
   query, 
@@ -166,6 +167,13 @@ export const useAgentTasks = (agentEmail?: string, isAdmin: boolean = false) => 
         createdAt: serverTimestamp(),
         createdBy,
         updatedAt: serverTimestamp()
+      });
+
+      // Send push notification to assigned agent
+      sendPushNotification('new_agent_task', {
+        agentEmail: taskData.assignedTo,
+        title: taskData.title || 'New Task',
+        agentName: agent?.name || 'Agent'
       });
 
       toast({

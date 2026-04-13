@@ -1,260 +1,262 @@
-const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
-const { initializeApp } = require("firebase-admin/app");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { initializeApp, cert } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const logger = require("firebase-functions/logger");
 
-// Initialize Firebase Admin
-initializeApp();
+// Initialize Firebase Admin with service account from env var
+// The FIREBASE_ADMIN_SDK env var contains the entire service account JSON as a string
+const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SDK);
+initializeApp({
+  credential: cert(serviceAccount),
+});
 
-const db = getFirestore();
+const firestore = getFirestore();
 const messaging = getMessaging();
 
-// Helper: Get FCM tokens by role
-async function getTokensByRole(role) {
-  const snapshot = await db.collection("fcm_tokens").where("role", "==", role).get();
-  const tokens = [];
-  snapshot.forEach((doc) => {
-    const data = doc.data();
-    if (data.token) tokens.push(data.token);
-  });
-  return tokens;
-}
+// ─── Helper: Send notification to all admin FCM tokens ───
+async function sendToAdmins(title, body, data = {}) {
+  try {
+    const tokensSnap = await firestore
+      .collection("fcm_tokens")
+      .where("role", "==", "admin")
+      .get();
 
-// Helper: Get FCM token by email
-async function getTokenByEmail(email) {
-  const doc = await db.collection("fcm_tokens").doc(email).get();
-  if (doc.exists && doc.data()?.token) {
-    return doc.data().token;
-  }
-  return null;
-}
+    if (tokensSnap.empty) {
+      logger.info("No admin FCM tokens found");
+      return;
+    }
 
-// Helper: Send notification to multiple tokens
-async function sendToTokens(tokens, title, body, data = {}) {
-  if (!tokens.length) {
-    logger.info("No tokens to send to");
-    return;
-  }
+    const tokens = tokensSnap.docs.map((doc) => doc.data().token);
+    const invalidTokenIds = [];
 
-  const message = {
-    notification: { title, body },
-    data: { ...data, timestamp: Date.now().toString() },
-    webpush: {
-      notification: {
-        icon: "/logo.png",
-        badge: "/logo.png",
-        vibrate: [200, 100, 200],
-        requireInteraction: true,
-      },
-      fcmOptions: {
-        link: data.link || "/",
-      },
-    },
-  };
-
-  // Send to each token individually to handle invalid tokens
-  const results = await Promise.allSettled(
-    tokens.map((token) =>
-      messaging.send({ ...message, token }).catch(async (error) => {
-        // Remove invalid tokens
-        if (
-          error.code === "messaging/registration-token-not-registered" ||
-          error.code === "messaging/invalid-registration-token"
-        ) {
-          logger.info("Removing invalid token:", token.substring(0, 20));
-          const snapshot = await db
-            .collection("fcm_tokens")
-            .where("token", "==", token)
-            .get();
-          snapshot.forEach((doc) => doc.ref.delete());
+    // Send to each token individually to handle failures per-token
+    const results = await Promise.allSettled(
+      tokensSnap.docs.map(async (tokenDoc) => {
+        const token = tokenDoc.data().token;
+        try {
+          await messaging.send({
+            token,
+            notification: { title, body },
+            data: { ...data, type: data.type || "default" },
+            webpush: {
+              headers: { Urgency: "high" },
+              notification: {
+                title,
+                body,
+                icon: "/logo.png",
+                badge: "/logo.png",
+                requireInteraction: true,
+              },
+            },
+          });
+        } catch (err) {
+          // Remove invalid/expired tokens
+          if (
+            err.code === "messaging/registration-token-not-registered" ||
+            err.code === "messaging/invalid-registration-token"
+          ) {
+            invalidTokenIds.push(tokenDoc.id);
+          }
+          throw err;
         }
-        throw error;
       })
-    )
-  );
+    );
 
-  const success = results.filter((r) => r.status === "fulfilled").length;
-  const failed = results.filter((r) => r.status === "rejected").length;
-  logger.info(`Notifications sent: ${success} success, ${failed} failed`);
+    // Cleanup invalid tokens
+    for (const id of invalidTokenIds) {
+      await firestore.collection("fcm_tokens").doc(id).delete();
+      logger.info(`Removed invalid FCM token: ${id}`);
+    }
+
+    const sent = results.filter((r) => r.status === "fulfilled").length;
+    logger.info(`Admin notification sent to ${sent}/${tokens.length} devices: ${title}`);
+  } catch (err) {
+    logger.error("Failed to send admin notification:", err);
+  }
 }
 
-// =============================================
-// 1. NEW BOOKING → Notify Admin
-// =============================================
+// ─── Helper: Send notification to a specific agent by email ───
+async function sendToAgent(agentEmail, title, body, data = {}) {
+  try {
+    const tokensSnap = await firestore
+      .collection("fcm_tokens")
+      .where("role", "==", "agent")
+      .where("email", "==", agentEmail.toLowerCase())
+      .get();
+
+    if (tokensSnap.empty) {
+      logger.info(`No FCM token found for agent: ${agentEmail}`);
+      return;
+    }
+
+    const invalidTokenIds = [];
+
+    const results = await Promise.allSettled(
+      tokensSnap.docs.map(async (tokenDoc) => {
+        const token = tokenDoc.data().token;
+        try {
+          await messaging.send({
+            token,
+            notification: { title, body },
+            data: { ...data, type: data.type || "new_agent_task" },
+            webpush: {
+              headers: { Urgency: "high" },
+              notification: {
+                title,
+                body,
+                icon: "/logo.png",
+                badge: "/logo.png",
+                requireInteraction: true,
+              },
+            },
+          });
+        } catch (err) {
+          if (
+            err.code === "messaging/registration-token-not-registered" ||
+            err.code === "messaging/invalid-registration-token"
+          ) {
+            invalidTokenIds.push(tokenDoc.id);
+          }
+          throw err;
+        }
+      })
+    );
+
+    for (const id of invalidTokenIds) {
+      await firestore.collection("fcm_tokens").doc(id).delete();
+    }
+
+    const sent = results.filter((r) => r.status === "fulfilled").length;
+    logger.info(`Agent notification sent to ${sent} devices for ${agentEmail}: ${title}`);
+  } catch (err) {
+    logger.error(`Failed to send agent notification to ${agentEmail}:`, err);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN NOTIFICATIONS - Triggered when new documents are created
+// ═══════════════════════════════════════════════════════════
+
+// 1. New Train/Flight/Bus Booking
 exports.onNewBooking = onDocumentCreated("bookings/{bookingId}", async (event) => {
-  const booking = event.data?.data();
-  if (!booking) return;
+  const data = event.data?.data();
+  if (!data) return;
 
-  logger.info("New booking created:", event.params.bookingId);
+  const name = data.name || data.passengerName || "Customer";
+  const from = data.from || "";
+  const to = data.to || "";
+  const journeyDate = data.journeyDate || "";
+  const bookingType = data.bookingType || "General";
 
-  const adminTokens = await getTokensByRole("admin");
-  const bookingType = booking.booking_type
-    ? booking.booking_type.charAt(0).toUpperCase() + booking.booking_type.slice(1)
-    : "General";
-
-  await sendToTokens(
-    adminTokens,
-    `New ${bookingType} Booking Request`,
-    `${booking.name} - ${booking.from || ""} to ${booking.to || ""} on ${booking.journey_date || "N/A"}`,
-    { type: "new_booking", bookingId: event.params.bookingId, link: "/admin" }
+  await sendToAdmins(
+    "🚆 New Booking Request",
+    `${name} booked ${bookingType} from ${from} to ${to} on ${journeyDate}`,
+    { type: "new_booking", bookingId: event.params.bookingId }
   );
 });
 
-// =============================================
-// 2. NEW PACKAGE BOOKING → Notify Admin
-// =============================================
+// 2. New Package Booking
 exports.onNewPackageBooking = onDocumentCreated("package_bookings/{bookingId}", async (event) => {
-  const booking = event.data?.data();
-  if (!booking) return;
+  const data = event.data?.data();
+  if (!data) return;
 
-  logger.info("New package booking:", event.params.bookingId);
+  const name = data.name || data.customerName || "Customer";
+  const packageName = data.packageName || data.packageTitle || "Package";
 
-  const adminTokens = await getTokensByRole("admin");
-
-  await sendToTokens(
-    adminTokens,
-    "New Package Booking",
-    `${booking.name || "Customer"} - ${booking.package_name || booking.destination || "Package"}`,
-    { type: "new_package_booking", bookingId: event.params.bookingId, link: "/admin" }
+  await sendToAdmins(
+    "📦 New Package Booking",
+    `${name} booked ${packageName}`,
+    { type: "new_package_booking", bookingId: event.params.bookingId }
   );
 });
 
-// =============================================
-// 3. NEW HOTEL BOOKING → Notify Admin
-// =============================================
+// 3. New Hotel Booking
 exports.onNewHotelBooking = onDocumentCreated("hotel_bookings/{bookingId}", async (event) => {
-  const booking = event.data?.data();
-  if (!booking) return;
+  const data = event.data?.data();
+  if (!data) return;
 
-  logger.info("New hotel booking:", event.params.bookingId);
+  const name = data.guestName || data.name || "Guest";
+  const hotel = data.hotelName || "Hotel";
+  const checkIn = data.checkInDate || "";
 
-  const adminTokens = await getTokensByRole("admin");
-
-  await sendToTokens(
-    adminTokens,
-    "New Hotel Booking",
-    `${booking.guestName || booking.name || "Guest"} - ${booking.hotelName || "Hotel"}`,
-    { type: "new_hotel_booking", bookingId: event.params.bookingId, link: "/admin" }
+  await sendToAdmins(
+    "🏨 New Hotel Booking",
+    `${name} booked ${hotel} (Check-in: ${checkIn})`,
+    { type: "new_hotel_booking", bookingId: event.params.bookingId }
   );
 });
 
-// =============================================
-// 4. NEW VISA APPLICATION → Notify Admin
-// =============================================
-exports.onNewVisaApplication = onDocumentCreated("visa_applications/{appId}", async (event) => {
-  const application = event.data?.data();
-  if (!application) return;
+// 4. New Contact Message
+exports.onNewContactMessage = onDocumentCreated("contact_messages/{messageId}", async (event) => {
+  const data = event.data?.data();
+  if (!data) return;
 
-  logger.info("New visa application:", event.params.appId);
+  const name = data.name || "Someone";
+  const subject = data.subject || data.message?.substring(0, 50) || "New message";
 
-  const adminTokens = await getTokensByRole("admin");
-
-  await sendToTokens(
-    adminTokens,
-    "New Visa Application",
-    `${application.name || "Applicant"} - ${application.destination_country || "Visa"}`,
-    { type: "new_visa_application", appId: event.params.appId, link: "/admin" }
+  await sendToAdmins(
+    "💬 New Contact Message",
+    `${name}: ${subject}`,
+    { type: "new_contact_message", messageId: event.params.messageId }
   );
 });
 
-// =============================================
-// 5. NEW E-SERVICE APPLICATION → Notify Admin
-// =============================================
-exports.onNewEService = onDocumentCreated("eservice_applications/{appId}", async (event) => {
-  const application = event.data?.data();
-  if (!application) return;
+// 5. New E-Service Request
+exports.onNewEServiceRequest = onDocumentCreated("eservice_requests/{requestId}", async (event) => {
+  const data = event.data?.data();
+  if (!data) return;
 
-  logger.info("New e-service application:", event.params.appId);
+  const name = data.name || data.customerName || "Customer";
+  const service = data.serviceType || data.service || "E-Service";
 
-  const adminTokens = await getTokensByRole("admin");
-
-  await sendToTokens(
-    adminTokens,
-    "New E-Service Application",
-    `${application.name || "Applicant"} - ${application.service_type || "E-Service"}`,
-    { type: "new_eservice", appId: event.params.appId, link: "/admin" }
+  await sendToAdmins(
+    "📋 New E-Service Request",
+    `${name} requested ${service}`,
+    { type: "new_eservice_request", requestId: event.params.requestId }
   );
 });
 
-// =============================================
-// 6. NEW CONTACT MESSAGE → Notify Admin
-// =============================================
-exports.onNewMessage = onDocumentCreated("messages/{messageId}", async (event) => {
-  const message = event.data?.data();
-  if (!message) return;
+// 6. New Visa Application
+exports.onNewVisaApplication = onDocumentCreated("visa-services/{applicationId}", async (event) => {
+  const data = event.data?.data();
+  if (!data) return;
 
-  logger.info("New message:", event.params.messageId);
+  const name = data.name || data.applicantName || "Applicant";
+  const country = data.country || data.destination || "Visa";
 
-  const adminTokens = await getTokensByRole("admin");
-
-  await sendToTokens(
-    adminTokens,
-    "New Contact Message",
-    `${message.name || "Someone"}: ${(message.message || "").substring(0, 80)}`,
-    { type: "new_message", messageId: event.params.messageId, link: "/admin" }
+  await sendToAdmins(
+    "🌍 New Visa Application",
+    `${name} applied for ${country} visa`,
+    { type: "new_visa_application", applicationId: event.params.applicationId }
   );
 });
 
-// =============================================
-// 7. BOOKING ASSIGNED TO AGENT → Notify Agent
-// =============================================
-exports.onBookingAssigned = onDocumentUpdated("bookings/{bookingId}", async (event) => {
-  const before = event.data?.before?.data();
-  const after = event.data?.after?.data();
-  if (!before || !after) return;
+// ═══════════════════════════════════════════════════════════
+// AGENT NOTIFICATIONS - Triggered when admin assigns tasks
+// ═══════════════════════════════════════════════════════════
 
-  // Check if assignedAgent was just set or changed
-  const previousAgent = before.assignedAgent || null;
-  const newAgent = after.assignedAgent || null;
+// 7. New Agent Task Assignment
+exports.onNewAgentTask = onDocumentCreated("agent_tasks/{taskId}", async (event) => {
+  const data = event.data?.data();
+  if (!data) return;
 
-  if (!newAgent || newAgent === previousAgent) return;
-
-  logger.info(`Booking ${event.params.bookingId} assigned to agent: ${newAgent}`);
-
-  const agentToken = await getTokenByEmail(newAgent);
-  if (!agentToken) {
-    logger.info(`No FCM token for agent: ${newAgent}`);
+  const agentEmail = data.assignedTo;
+  if (!agentEmail) {
+    logger.warn("Agent task created without assignedTo email");
     return;
   }
 
-  const bookingType = after.booking_type
-    ? after.booking_type.charAt(0).toUpperCase() + after.booking_type.slice(1)
-    : "General";
+  const taskTitle = data.title || data.taskType || "New Task";
+  const agentName = data.assignedAgentName || "Agent";
 
-  await sendToTokens(
-    [agentToken],
-    `New ${bookingType} Booking Assigned`,
-    `${after.name} - ${after.from || ""} to ${after.to || ""} on ${after.journey_date || "N/A"}`,
-    { type: "booking_assigned", bookingId: event.params.bookingId, link: "/agent-dashboard" }
+  // Notify the assigned agent
+  await sendToAgent(
+    agentEmail,
+    "📌 New Task Assigned",
+    `You have a new task: ${taskTitle}`,
+    { type: "new_agent_task", taskId: event.params.taskId }
   );
-});
 
-// =============================================
-// 8. PACKAGE BOOKING ASSIGNED TO AGENT → Notify Agent
-// =============================================
-exports.onPackageBookingAssigned = onDocumentUpdated("package_bookings/{bookingId}", async (event) => {
-  const before = event.data?.before?.data();
-  const after = event.data?.after?.data();
-  if (!before || !after) return;
-
-  const previousAgent = before.assignedAgent || null;
-  const newAgent = after.assignedAgent || null;
-
-  if (!newAgent || newAgent === previousAgent) return;
-
-  logger.info(`Package booking ${event.params.bookingId} assigned to agent: ${newAgent}`);
-
-  const agentToken = await getTokenByEmail(newAgent);
-  if (!agentToken) {
-    logger.info(`No FCM token for agent: ${newAgent}`);
-    return;
-  }
-
-  await sendToTokens(
-    [agentToken],
-    "New Package Booking Assigned",
-    `${after.name || "Customer"} - ${after.package_name || after.destination || "Package"}`,
-    { type: "booking_assigned", bookingId: event.params.bookingId, link: "/agent-dashboard" }
-  );
+  logger.info(`Task notification sent to agent ${agentName} (${agentEmail})`);
 });

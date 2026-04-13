@@ -1,5 +1,6 @@
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { sendPushNotification } from '@/utils/sendPushNotification';
 
 export interface VisaFormData {
   visaType?: string;
@@ -27,6 +28,13 @@ export const submitVisaApplication = async (data: VisaFormData) => {
       submittedAt: serverTimestamp(),
       status: 'pending',
       createdAt: new Date().toISOString()
+    });
+
+    // Send push notification to admin
+    sendPushNotification('new_visa_application', {
+      name: data.name || 'Applicant',
+      country: data.countryName || 'Visa',
+      applicationId: docRef.id
     });
 
     return {
