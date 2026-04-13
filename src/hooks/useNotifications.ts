@@ -70,23 +70,14 @@ export const useNotifications = (
       unsubscribe = onMessage(messaging, (payload) => {
         console.log('Foreground notification received:', payload);
 
-        const title = payload.notification?.title || 'Anand Travel Agency';
-        const body = payload.notification?.body || 'You have a new notification';
+        const title = payload.data?.title || payload.notification?.title || 'Anand Travel Agency';
+        const body = payload.data?.body || payload.notification?.body || 'You have a new notification';
 
-        // Show in-app toast
+        // Show in-app toast only (no native notification to avoid duplicates)
         toast({
           title,
           description: body,
         });
-
-        // Also show native notification for visibility
-        if (Notification.permission === 'granted') {
-          new Notification(title, {
-            body,
-            icon: '/logo.png',
-            tag: payload.data?.type || 'default'
-          });
-        }
       });
     };
 

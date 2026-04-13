@@ -20,13 +20,14 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[FCM SW] Background message received:', payload);
 
-  const notificationTitle = payload.notification?.title || 'Anand Travel Agency';
+  const data = payload.data || {};
+  const notificationTitle = data.title || payload.notification?.title || 'Anand Travel Agency';
   const notificationOptions = {
-    body: payload.notification?.body || 'You have a new notification',
+    body: data.body || payload.notification?.body || 'You have a new notification',
     icon: '/logo.png',
     badge: '/logo.png',
-    data: payload.data || {},
-    tag: payload.data?.type || 'default',
+    data: data,
+    tag: data.type || 'default',
     requireInteraction: true,
     vibrate: [200, 100, 200]
   };

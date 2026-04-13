@@ -28,17 +28,9 @@ async function sendNotification(role, title, body, data = {}, email = null) {
       try {
         await messaging.send({
           token,
-          notification: { title, body },
-          data: { ...data, type: data.type || "default" },
+          data: { ...data, type: data.type || "default", title, body },
           webpush: {
             headers: { Urgency: "high" },
-            notification: {
-              title,
-              body,
-              icon: "/logo.png",
-              badge: "/logo.png",
-              requireInteraction: true,
-            },
           },
         });
       } catch (err) {
