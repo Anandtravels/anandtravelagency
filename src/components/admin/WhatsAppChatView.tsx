@@ -19,8 +19,9 @@ interface WhatsAppChatViewProps {
 }
 
 function formatMessageTime(timestamp: any): string {
-  if (!timestamp) return '';
+  if (!timestamp) return 'just now';
   const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
+  if (isNaN(date.getTime())) return 'just now';
   return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
@@ -178,11 +179,11 @@ const WhatsAppChatView: React.FC<WhatsAppChatViewProps> = ({
                       </p>
                       <div
                         className={cn(
-                          'flex items-center gap-1 justify-end mt-0.5',
+                          'flex items-center gap-1 justify-end mt-1',
                           msg.direction === 'outbound' ? '-mr-1' : ''
                         )}
                       >
-                        <span className="text-[10px] text-gray-400">
+                        <span className="text-[11px] text-gray-500 leading-none">
                           {formatMessageTime(msg.timestamp)}
                         </span>
                         {msg.direction === 'outbound' && <StatusTicks status={msg.status} />}
