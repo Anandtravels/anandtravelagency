@@ -13,7 +13,7 @@ interface WhatsAppChatViewProps {
   loading: boolean;
   sendingMessage: boolean;
   onSendMessage: (phone: string, text: string, customerName?: string) => Promise<void>;
-  onSendTemplate: (phone: string, templateName: string, params: string[], customerName?: string) => Promise<void>;
+  onSendTemplate: (phone: string, templateName: string, params: string[], languageCode: string, customerName?: string) => Promise<void>;
   onBack?: () => void;
   showBackButton?: boolean;
 }
@@ -202,8 +202,14 @@ const WhatsAppChatView: React.FC<WhatsAppChatViewProps> = ({
         onSend={(text) =>
           onSendMessage(conversation.customerPhone, text, conversation.customerName)
         }
-        onSendTemplate={(templateName, params) =>
-          onSendTemplate(conversation.customerPhone, templateName, params, conversation.customerName)
+        onSendTemplate={(templateName, languageCode, hasNameParam) =>
+          onSendTemplate(
+            conversation.customerPhone,
+            templateName,
+            hasNameParam ? [conversation.customerName || 'Customer'] : [],
+            languageCode,
+            conversation.customerName
+          )
         }
         sending={sendingMessage}
         disabled={false}

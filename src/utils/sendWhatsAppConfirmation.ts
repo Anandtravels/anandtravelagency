@@ -94,6 +94,31 @@ Thank you for choosing *Anand Travels*! 🙏`;
 
     if (!message) return;
 
+    // Determine the appropriate template name for the booking type
+    let templateName = 'booking_confirmation';
+    if (bookingType === 'booking') {
+      const bType = bookingData.booking_type;
+      if (bType === 'flight') templateName = 'flight_booking_received';
+      else if (bType === 'bus') templateName = 'bus_booking_received';
+    }
+
+    // Send template message first (required to initiate conversation with new customers)
+    await fetch('/api/whatsapp-send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: phone,
+        type: 'template',
+        templateName,
+        templateParams: [customerName],
+        languageCode: 'en',
+        customerName,
+        bookingId,
+        bookingType,
+      }),
+    });
+
+    // Follow up with detailed text message (will be delivered within the 24h window opened by template)
     await fetch('/api/whatsapp-send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 
 interface WhatsAppMessageInputProps {
   onSend: (text: string) => Promise<void>;
-  onSendTemplate: (templateName: string, params: string[]) => Promise<void>;
+  onSendTemplate: (templateName: string, languageCode: string, hasNameParam: boolean) => Promise<void>;
   sending: boolean;
   disabled: boolean;
   templateOnly: boolean;
@@ -27,9 +27,18 @@ const quickReplies = [
 ];
 
 const templates = [
-  { name: 'hello_world', label: 'Hello World (Test)', params: [] },
-  { name: 'booking_confirmation', label: 'Booking Confirmation', params: ['customer_name', 'booking_id'] },
-  { name: 'payment_reminder', label: 'Payment Reminder', params: ['customer_name', 'amount'] },
+  { name: 'booking_confirmation', label: '✅ Booking Confirmation', languageCode: 'en', hasNameParam: true },
+  { name: 'booking_payment_pending', label: '💰 Payment Pending', languageCode: 'en', hasNameParam: true },
+  { name: 'payment_received', label: '✅ Payment Received', languageCode: 'en', hasNameParam: true },
+  { name: 'booking_cancelled', label: '❌ Booking Cancelled', languageCode: 'en', hasNameParam: true },
+  { name: 'ticket_booking_failed', label: '⚠️ Ticket Booking Failed', languageCode: 'en', hasNameParam: true },
+  { name: 'flight_booking_received', label: '✈️ Flight Booking Received', languageCode: 'en', hasNameParam: true },
+  { name: 'bus_booking_received', label: '🚌 Bus Booking Received', languageCode: 'en', hasNameParam: true },
+  { name: 'review_request', label: '⭐ Review Request', languageCode: 'en', hasNameParam: true },
+  { name: 'app_download_process', label: '📱 App Download', languageCode: 'en', hasNameParam: true },
+  { name: 'visa_application_received', label: '🛂 Visa Application Received', languageCode: 'en', hasNameParam: true },
+  { name: 'career_application_received', label: '💼 Career Application Received', languageCode: 'en', hasNameParam: true },
+  { name: 'hello_world', label: '👋 Hello World (Test)', languageCode: 'en_US', hasNameParam: false },
 ];
 
 const WhatsAppMessageInput: React.FC<WhatsAppMessageInputProps> = ({
@@ -135,11 +144,11 @@ const WhatsAppMessageInput: React.FC<WhatsAppMessageInputProps> = ({
                   Send a template message...
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuContent align="start" className="w-64 max-h-80 overflow-y-auto">
                 {templates.map((tmpl) => (
                   <DropdownMenuItem
                     key={tmpl.name}
-                    onClick={() => onSendTemplate(tmpl.name, tmpl.params)}
+                    onClick={() => onSendTemplate(tmpl.name, tmpl.languageCode, tmpl.hasNameParam)}
                   >
                     <FileText className="w-4 h-4 mr-2 text-[#25D366]" />
                     {tmpl.label}
@@ -162,12 +171,12 @@ const WhatsAppMessageInput: React.FC<WhatsAppMessageInputProps> = ({
                 <FileText className="w-5 h-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuContent align="end" className="w-64 max-h-80 overflow-y-auto">
               <div className="px-2 py-1.5 text-xs text-gray-500 font-medium">Template Messages</div>
               {templates.map((tmpl) => (
                 <DropdownMenuItem
                   key={tmpl.name}
-                  onClick={() => onSendTemplate(tmpl.name, tmpl.params)}
+                  onClick={() => onSendTemplate(tmpl.name, tmpl.languageCode, tmpl.hasNameParam)}
                 >
                   <FileText className="w-4 h-4 mr-2 text-[#25D366]" />
                   {tmpl.label}

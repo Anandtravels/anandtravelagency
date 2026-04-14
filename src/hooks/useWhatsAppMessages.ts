@@ -45,6 +45,7 @@ export const useWhatsAppMessages = (conversationId: string | null) => {
       phone: string,
       templateName: string,
       params: string[],
+      languageCode: string = 'en',
       customerName?: string
     ) => {
       setSendingMessage(true);
@@ -53,7 +54,7 @@ export const useWhatsAppMessages = (conversationId: string | null) => {
           phone,
           templateName,
           params,
-          'en',
+          languageCode,
           customerName
         );
       } finally {
