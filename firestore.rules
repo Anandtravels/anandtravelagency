@@ -196,6 +196,16 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
     }
     
+    // WhatsApp conversations (admin only)
+    match /whatsapp_conversations/{convoId} {
+      allow read, write: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
+    // WhatsApp messages (admin only)
+    match /whatsapp_messages/{msgId} {
+      allow read, write: if request.auth != null && request.auth.token.email == 'admin@anandtravels.com';
+    }
+    
     // Default: deny all other access
     match /{document=**} {
       allow read, write: if false;
