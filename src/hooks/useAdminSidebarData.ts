@@ -13,6 +13,7 @@ interface SidebarCounts {
   pendingBookings: number;
   todayBookings: number;
   advanceBookings: number;
+  whatsappUnread: number;
 }
 
 export const useAdminSidebarData = () => {
@@ -27,7 +28,8 @@ export const useAdminSidebarData = () => {
     visaApplications: 0,
     pendingBookings: 0,
     todayBookings: 0,
-    advanceBookings: 0
+    advanceBookings: 0,
+    whatsappUnread: 0
   });
   const [loading, setLoading] = useState(true);
 

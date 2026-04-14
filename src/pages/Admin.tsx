@@ -34,6 +34,7 @@ import AgentTaskManagementTab from "@/components/admin/AgentTaskManagementTab";
 import CareersManagementTab from "@/components/admin/CareersManagementTab";
 import CollaborationsManagementTab from "@/components/admin/CollaborationsManagementTab";
 import DocumentsManagementTab from "@/components/admin/DocumentsManagementTab";
+import WhatsAppTab from "@/components/admin/WhatsAppTab";
 import { BarChart3 } from "lucide-react";
 
 const Admin = () => {
@@ -178,6 +179,10 @@ const Admin = () => {
               user={user} 
               formatFirebaseTimestamp={formatFirebaseTimestamp}
             />
+          </TabsContent>
+
+          <TabsContent value="whatsapp" className="space-y-0">
+            <WhatsAppTab user={user} />
           </TabsContent>
 
           <TabsContent value="agents" className="space-y-6">

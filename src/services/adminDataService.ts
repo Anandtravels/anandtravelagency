@@ -13,6 +13,7 @@ interface SidebarCounts {
   pendingBookings: number;
   todayBookings: number;
   advanceBookings: number;
+  whatsappUnread: number;
 }
 
 interface AdminDataSubscription {
@@ -32,7 +33,8 @@ export class AdminDataService {
     visaApplications: 0,
     pendingBookings: 0,
     todayBookings: 0,
-    advanceBookings: 0
+    advanceBookings: 0,
+    whatsappUnread: 0
   };
   private subscribers: Set<(counts: SidebarCounts) => void> = new Set();
   private unsubscribeFunctions: (() => void)[] = [];
@@ -183,6 +185,23 @@ export class AdminDataService {
       );
       this.unsubscribeFunctions.push(unsubAgents);
 
+      // WhatsApp conversations unread listener
+      const whatsappConvosQuery = query(collection(db, 'whatsapp_conversations'));
+      const unsubWhatsApp = onSnapshot(whatsappConvosQuery,
+        (snapshot) => {
+          let totalUnread = 0;
+          snapshot.docs.forEach(doc => {
+            totalUnread += doc.data().unreadCount || 0;
+          });
+          this.updateCounts({ whatsappUnread: totalUnread });
+        },
+        (error) => {
+          console.error('Error fetching whatsapp conversations:', error);
+          this.handleFirestoreError('whatsapp_conversations', error);
+        }
+      );
+      this.unsubscribeFunctions.push(unsubWhatsApp);
+
     } catch (error) {
       console.error('Error setting up admin data listeners:', error);
     }
@@ -243,7 +262,8 @@ export class AdminDataService {
       visaApplications: 0,
       pendingBookings: 0,
       todayBookings: 0,
-      advanceBookings: 0
+      advanceBookings: 0,
+      whatsappUnread: 0
     };
   }
 }

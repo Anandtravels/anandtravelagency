@@ -286,6 +286,24 @@ Thank you! 🙏`;
 
       // 8. Open WhatsApp with text message
       window.open(`https://wa.me/${currentBooking.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+
+      // 8.1 Also send via WhatsApp Business API (non-blocking)
+      try {
+        await fetch('/api/whatsapp-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: currentBooking.phone,
+            type: 'text',
+            message,
+            customerName: currentBooking.name,
+            bookingId: currentBooking.id,
+            bookingType: 'booking',
+          }),
+        });
+      } catch (apiErr) {
+        console.warn('WhatsApp Business API send failed (fallback to wa.me):', apiErr);
+      }
       
       // 8.5. If Cloudinary URL exists, prepare a simple message for QR sharing
       if (qrCodeCloudinaryUrl) {

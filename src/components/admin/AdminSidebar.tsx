@@ -7,6 +7,7 @@ import {
   Users, 
   Package, 
   MessageSquare, 
+  MessageCircle,
   UserCheck, 
   Ticket, 
   Settings,
@@ -130,6 +131,13 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
       icon: MessageSquare,
       description: 'Customer Messages',
       badge: counts.messages > 0 ? counts.messages : undefined
+    },
+    {
+      title: 'WhatsApp',
+      href: '/admin#whatsapp',
+      icon: MessageCircle,
+      description: 'WhatsApp Business',
+      badge: counts.whatsappUnread > 0 ? counts.whatsappUnread : undefined
     },
     {
       title: 'E-Services',

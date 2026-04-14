@@ -56,6 +56,7 @@ import { Calendar as CalendarComponent } from "../components/ui/calendar";
 import { format } from "date-fns";
 import { useForm } from "react-hook-form";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { sendWhatsAppConfirmation } from "@/utils/sendWhatsAppConfirmation";
 import { db } from "../lib/firebase";
 import { usePageVisibility } from "../hooks/usePageVisibility";
 
@@ -341,6 +342,9 @@ const HotelDetail = () => {
       };
 
       const bookingId = await HotelService.createHotelBooking(bookingData);
+
+      // Send WhatsApp booking confirmation to customer
+      sendWhatsAppConfirmation(bookingData, 'hotel', bookingId);
       
       toast({
         title: "Booking Successful",

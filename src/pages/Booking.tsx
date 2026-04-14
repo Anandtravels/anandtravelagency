@@ -13,6 +13,7 @@ import { MultiSelectTrainAutocomplete } from "@/components/MultiSelectTrainAutoc
 import { preloadStationData } from "@/utils/stationDataLoader";
 import { trackButtonClick } from "@/services/clickTracker";
 import { sendPushNotification } from "@/utils/sendPushNotification";
+import { sendWhatsAppConfirmation } from "@/utils/sendWhatsAppConfirmation";
 
 const Booking = () => {
   const [bookingType, setBookingType] = useState("train");
@@ -457,6 +458,9 @@ const Booking = () => {
           journeyDate: data.journey_date,
           bookingType: data.train_booking_type || 'General'
         });
+
+        // Send WhatsApp booking confirmation to customer
+        sendWhatsAppConfirmation(bookingData, 'booking', docRef.id);
 
         return { success: true, docRef, bookingData, baseCharge, finalCharge };
         

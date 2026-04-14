@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { sendPushNotification } from "@/utils/sendPushNotification";
+import { sendWhatsAppConfirmation } from "@/utils/sendWhatsAppConfirmation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -64,6 +65,13 @@ const DynamicPackageDetail = () => {
         name: bookingData.fullName,
         packageName: packageData.title
       });
+
+      // Send WhatsApp booking confirmation to customer
+      sendWhatsAppConfirmation(
+        { ...bookingDataWithPackage, phone: bookingData.phone, fullName: bookingData.fullName },
+        'package',
+        packageData.id || ''
+      );
 
       toast({
         title: "Booking Submitted!",
