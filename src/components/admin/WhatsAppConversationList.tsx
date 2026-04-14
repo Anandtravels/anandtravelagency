@@ -16,9 +16,8 @@ interface WhatsAppConversationListProps {
 }
 
 function formatRelativeTime(timestamp: any): string {
-  if (!timestamp) return 'now';
+  if (!timestamp) return '';
   const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
-  if (isNaN(date.getTime())) return 'now';
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const mins = Math.floor(diff / 60000);
