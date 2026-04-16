@@ -38,13 +38,17 @@ const RETRY_DELAY_MS = 1500;
 // Approved templates — keep in sync with Meta Business Manager
 const APPROVED_TEMPLATES = [
   "payment_received",
-  "payment_pending",
+  "booking_payment_pending",
   "review_request",
   "booking_cancelled",
   "booking_confirmation",
   "bus_booking_received",
   "flight_booking_received",
   "career_application_received",
+  "app_download_process",
+  "visa_application_received",
+  "ticket_booking_failed",
+  "hello_world",
 ];
 
 function sleep(ms) {

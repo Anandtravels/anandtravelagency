@@ -54,6 +54,7 @@ export async function sendWhatsAppConfirmation(
     let templateName = '';
     let templateParams: string[] = [];
 
+    // All Meta-approved templates accept exactly 1 parameter: {{1}} = customer name
     if (bookingType === 'booking') {
       const subType = bookingData.booking_type;
 
@@ -66,27 +67,13 @@ export async function sendWhatsAppConfirmation(
         templateName = 'booking_confirmation';
       }
 
-      const route = `${bookingData.from || 'N/A'} to ${bookingData.to || 'N/A'}`;
-      const date = bookingData.journey_date || 'N/A';
-      const passengerCount = String(
-        Array.isArray(bookingData.passengers) ? bookingData.passengers.length : bookingData.passengers || 1
-      );
-
-      templateParams = [customerName, shortId, route, date, passengerCount];
+      templateParams = [customerName];
     } else if (bookingType === 'hotel') {
       templateName = 'booking_confirmation';
-      const hotelName = bookingData.hotelName || 'N/A';
-      const dates = `${bookingData.checkInDate || 'N/A'} to ${bookingData.checkOutDate || 'N/A'}`;
-      const guests = String(bookingData.numberOfGuests || 1);
-
-      templateParams = [customerName, shortId, hotelName, dates, guests];
+      templateParams = [customerName];
     } else if (bookingType === 'package') {
       templateName = 'booking_confirmation';
-      const packageTitle = bookingData.packageTitle || 'N/A';
-      const date = bookingData.departureDate || 'N/A';
-      const people = String(bookingData.numberOfPeople || 1);
-
-      templateParams = [customerName, shortId, packageTitle, date, people];
+      templateParams = [customerName];
     }
 
     if (!templateName) return;

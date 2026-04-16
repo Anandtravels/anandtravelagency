@@ -49,9 +49,9 @@ export async function sendCareerApplicationWhatsApp(
     }
 
     const customerName = applicationData.fullName || 'Applicant';
-    const shortId = applicationId.slice(-6).toUpperCase();
 
     // Send template message with retry
+    // Meta-approved template accepts exactly 1 parameter: {{1}} = customer name
     let lastError: unknown = null;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -63,7 +63,7 @@ export async function sendCareerApplicationWhatsApp(
             to: phone,
             type: 'template',
             templateName: 'career_application_received',
-            templateParams: [customerName, shortId],
+            templateParams: [customerName],
             languageCode: 'en',
             customerName,
             bookingId: applicationId,

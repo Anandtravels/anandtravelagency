@@ -47,8 +47,10 @@ export const whatsappService = {
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-          lastError = new Error(data.error || `API returned ${res.status}`);
-          console.warn(`[WhatsApp Service] sendMessage attempt ${attempt + 1} failed:`, lastError.message);
+          const errorDetail = data.details ? `${data.error} — ${data.details}` : (data.error || `API returned ${res.status}`);
+          lastError = new Error(errorDetail);
+          console.warn(`[WhatsApp Service] sendMessage attempt ${attempt + 1} failed (${res.status}):`, errorDetail);
+          // Only retry on server errors (500+), NOT on 4xx (validation/auth errors)
           if (res.status >= 500 && attempt < MAX_RETRIES) {
             await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
             continue;
@@ -58,8 +60,9 @@ export const whatsappService = {
 
         // Verify the backend confirmed actual delivery
         if (data.success === false) {
-          lastError = new Error(data.error || 'API returned success=false');
-          console.warn(`[WhatsApp Service] sendMessage attempt ${attempt + 1}: API success=false`, data);
+          const errorDetail = data.details ? `${data.error} — ${data.details}` : (data.error || 'API returned success=false');
+          lastError = new Error(errorDetail);
+          console.warn(`[WhatsApp Service] sendMessage attempt ${attempt + 1}: success=false`, errorDetail);
           if (attempt < MAX_RETRIES) {
             await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
             continue;
@@ -70,7 +73,9 @@ export const whatsappService = {
         return data;
       } catch (err: any) {
         lastError = err;
-        if (attempt < MAX_RETRIES && !err.message?.includes('API returned')) {
+        // Only retry on genuine network errors, not on API rejections (4xx)
+        const isApiRejection = err.message?.includes('API returned') || err.message?.includes('WhatsApp API');
+        if (attempt < MAX_RETRIES && !isApiRejection) {
           console.warn(`[WhatsApp Service] sendMessage attempt ${attempt + 1} network error:`, err.message);
           await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
           continue;
@@ -114,8 +119,10 @@ export const whatsappService = {
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-          lastError = new Error(data.error || `API returned ${res.status}`);
-          console.warn(`[WhatsApp Service] sendTemplate attempt ${attempt + 1} failed:`, lastError.message);
+          const errorDetail = data.details ? `${data.error} — ${data.details}` : (data.error || `API returned ${res.status}`);
+          lastError = new Error(errorDetail);
+          console.warn(`[WhatsApp Service] sendTemplate attempt ${attempt + 1} failed (${res.status}):`, errorDetail);
+          // Only retry on server errors (500+), NOT on 4xx (validation/auth errors)
           if (res.status >= 500 && attempt < MAX_RETRIES) {
             await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
             continue;
@@ -124,8 +131,9 @@ export const whatsappService = {
         }
 
         if (data.success === false) {
-          lastError = new Error(data.error || 'API returned success=false');
-          console.warn(`[WhatsApp Service] sendTemplate attempt ${attempt + 1}: API success=false`, data);
+          const errorDetail = data.details ? `${data.error} — ${data.details}` : (data.error || 'API returned success=false');
+          lastError = new Error(errorDetail);
+          console.warn(`[WhatsApp Service] sendTemplate attempt ${attempt + 1}: success=false`, errorDetail);
           if (attempt < MAX_RETRIES) {
             await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
             continue;
@@ -136,7 +144,9 @@ export const whatsappService = {
         return data;
       } catch (err: any) {
         lastError = err;
-        if (attempt < MAX_RETRIES && !err.message?.includes('API returned')) {
+        // Only retry on genuine network errors, not on API rejections (4xx)
+        const isApiRejection = err.message?.includes('API returned') || err.message?.includes('WhatsApp API');
+        if (attempt < MAX_RETRIES && !isApiRejection) {
           console.warn(`[WhatsApp Service] sendTemplate attempt ${attempt + 1} network error:`, err.message);
           await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
           continue;
@@ -223,10 +233,10 @@ export const whatsappService = {
    * Map a booking status to an approved WhatsApp template name and its parameters.
    *
    * Template mapping:
-   *   in_process → payment_pending   (params: name, bookingId, route, date)
-   *   completed  → payment_received  (params: name, bookingId, route, date)
-   *   booked     → review_request    (params: name, bookingId, route, date)
-   *   hold       → booking_cancelled (params: name, bookingId, route, date)
+   *   in_process → booking_payment_pending  (params: name)
+   *   completed  → payment_received         (params: name)
+   *   booked     → review_request           (params: name)
+   *   hold       → booking_cancelled        (params: name)
    */
   buildStatusChangeTemplate(
     status: string,
@@ -241,19 +251,17 @@ export const whatsappService = {
     }
   ): { templateName: string; templateParams: string[] } | null {
     const name = booking.name || 'Customer';
-    const bookingId = booking.id ? booking.id.slice(-6).toUpperCase() : 'N/A';
-    const route = booking.from && booking.to ? `${booking.from} to ${booking.to}` : 'N/A';
-    const date = booking.journey_date || 'N/A';
 
+    // All Meta-approved templates accept exactly 1 parameter: {{1}} = customer name
     switch (status) {
       case 'completed':
-        return { templateName: 'payment_received', templateParams: [name, bookingId, route, date] };
+        return { templateName: 'payment_received', templateParams: [name] };
       case 'in_process':
-        return { templateName: 'payment_pending', templateParams: [name, bookingId, route, date] };
+        return { templateName: 'booking_payment_pending', templateParams: [name] };
       case 'booked':
-        return { templateName: 'review_request', templateParams: [name, bookingId, route, date] };
+        return { templateName: 'review_request', templateParams: [name] };
       case 'hold':
-        return { templateName: 'booking_cancelled', templateParams: [name, bookingId, route, date] };
+        return { templateName: 'booking_cancelled', templateParams: [name] };
       default:
         return null;
     }
