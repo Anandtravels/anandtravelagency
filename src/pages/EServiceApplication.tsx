@@ -7,6 +7,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from "@/hooks/use-toast";
 import { sendPushNotification } from "@/utils/sendPushNotification";
+import { whatsappService } from "@/services/whatsappService";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { EServiceFormData } from "@/types/eservices";
@@ -100,6 +101,24 @@ const EServiceApplication = () => {
         name: data.name || data.fullName || 'Customer',
         serviceType
       });
+
+      // Send WhatsApp confirmation to the user (fire-and-forget)
+      const customerPhone = data.phone;
+      const customerName = data.name || data.fullName || 'Customer';
+      const serviceName = service?.label || serviceType || 'E-Service';
+      if (customerPhone) {
+        whatsappService.sendTemplateMessage(
+          customerPhone,
+          'eservice_application_received',
+          [customerName, serviceName],
+          'en',
+          customerName,
+          undefined,
+          'eservice'
+        ).catch((err) => {
+          console.warn('[EService WhatsApp] Failed to send template confirmation:', err);
+        });
+      }
 
       toast({
         title: "Application Submitted Successfully!",

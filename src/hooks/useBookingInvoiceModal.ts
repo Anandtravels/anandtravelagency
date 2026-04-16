@@ -121,13 +121,8 @@ export const useBookingInvoiceModal = (userEmail?: string) => {
         updated_by: userEmail,
       };
 
-      // Mark WhatsApp auto-sent atomically to prevent duplicates
-      const shouldSendWhatsApp = currentBooking.phone &&
-        !(currentBooking.whatsapp_auto_sent && (currentBooking as any).whatsapp_auto_sent?.booked);
-
-      if (shouldSendWhatsApp) {
-        bookingUpdateData['whatsapp_auto_sent.booked'] = true;
-      }
+      // Do NOT mark WhatsApp flag yet — only after confirmed send
+      const shouldSendWhatsApp = !!currentBooking.phone;
 
       await updateDoc(doc(db, 'bookings', currentBooking.id), bookingUpdateData);
 
@@ -136,14 +131,29 @@ export const useBookingInvoiceModal = (userEmail?: string) => {
         description: `Invoice #${billNumber} has been created successfully`,
       });
 
-      // Fire-and-forget WhatsApp "booked" notification (non-blocking)
+      console.log(`[InvoiceModal] ── Booking: ${currentBooking.id}, Status: booked, Phone: ${currentBooking.phone || 'N/A'}, WillSendWhatsApp: ${shouldSendWhatsApp}`);
+
+      // Send WhatsApp and mark flag only after confirmed success
       if (shouldSendWhatsApp) {
-        whatsappService.sendStatusChangeMessage('booked', currentBooking).then((sent) => {
+        whatsappService.sendStatusChangeMessage('booked', currentBooking).then(async (sent) => {
           if (sent) {
-            toast({ title: "WhatsApp Sent", description: `Booking confirmation sent to ${currentBooking.name || 'customer'}.` });
+            // Mark flag after confirmed send
+            try {
+              await updateDoc(doc(db, 'bookings', currentBooking.id), {
+                'whatsapp_auto_sent.booked': true,
+              });
+            } catch (flagErr) {
+              console.warn('[InvoiceModal] Failed to set whatsapp_auto_sent flag:', flagErr);
+            }
+            toast({ title: "WhatsApp Sent ✅", description: `Booking confirmation sent to ${currentBooking.name || 'customer'}.` });
           }
-        }).catch(() => {
-          console.warn('[WhatsApp Auto] Booked message send failed for booking', currentBooking.id);
+        }).catch((err: any) => {
+          console.error(`[InvoiceModal] ❌ WhatsApp FAILED for booking ${currentBooking.id}:`, err.message || err);
+          toast({
+            title: "WhatsApp Failed",
+            description: `Could not send booking confirmation to ${currentBooking.name || 'customer'}. Check console.`,
+            variant: "destructive"
+          });
         });
       }
 

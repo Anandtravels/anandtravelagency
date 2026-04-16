@@ -36,33 +36,41 @@ export const useBookingManagement = (
     }
 
     try {
-      // Check if WhatsApp was already sent for this status (duplicate prevention)
+      // Determine if WhatsApp should be sent for this status
       const shouldSendWhatsApp = (WHATSAPP_AUTO_STATUSES as readonly string[]).includes(status) &&
-        booking && booking.phone &&
-        !(booking.whatsapp_auto_sent && booking.whatsapp_auto_sent[status]);
+        booking && booking.phone;
 
-      const updateData: any = {
+      console.log(`[StatusChange] ── Booking: ${bookingId}, Status: ${status}, Phone: ${booking?.phone || 'N/A'}, WillSendWhatsApp: ${shouldSendWhatsApp}`);
+
+      // Update status in Firestore first (do NOT set whatsapp flag yet)
+      await updateDoc(doc(db, 'bookings', bookingId), {
         status,
         updated_at: serverTimestamp(),
         updated_by: user.email,
-      };
-
-      // Mark WhatsApp as queued atomically with status change to prevent duplicates
-      if (shouldSendWhatsApp) {
-        updateData[`whatsapp_auto_sent.${status}`] = true;
-      }
-
-      await updateDoc(doc(db, 'bookings', bookingId), updateData);
+      });
       toast({ title: "Status Updated", description: "Booking status updated successfully." });
 
-      // Fire-and-forget WhatsApp message (non-blocking)
+      // Now attempt WhatsApp message — only mark flag after confirmed success
       if (shouldSendWhatsApp) {
-        whatsappService.sendStatusChangeMessage(status, booking).then((sent) => {
+        whatsappService.sendStatusChangeMessage(status, booking).then(async (sent) => {
           if (sent) {
-            toast({ title: "WhatsApp Sent", description: `Status notification sent to ${booking.name || 'customer'}.` });
+            // Mark as sent ONLY after confirmed success
+            try {
+              await updateDoc(doc(db, 'bookings', bookingId), {
+                [`whatsapp_auto_sent.${status}`]: true,
+              });
+            } catch (flagErr) {
+              console.warn('[StatusChange] Failed to set whatsapp_auto_sent flag:', flagErr);
+            }
+            toast({ title: "WhatsApp Sent ✅", description: `Status notification sent to ${booking.name || 'customer'}.` });
           }
-        }).catch(() => {
-          console.warn('[WhatsApp Auto] Message send failed for booking', bookingId);
+        }).catch((err: any) => {
+          console.error(`[StatusChange] ❌ WhatsApp FAILED for booking ${bookingId}:`, err.message || err);
+          toast({
+            title: "WhatsApp Failed",
+            description: `Could not send status message to ${booking.name || 'customer'}. Check console for details.`,
+            variant: "destructive"
+          });
         });
       }
     } catch (error) {
@@ -81,32 +89,39 @@ export const useBookingManagement = (
       return;
     }
     try {
-      // Check if WhatsApp was already sent for this status (duplicate prevention)
       const shouldSendWhatsApp = (WHATSAPP_AUTO_STATUSES as readonly string[]).includes(status) &&
-        booking && booking.phone &&
-        !(booking.whatsapp_auto_sent && booking.whatsapp_auto_sent[status]);
+        booking && booking.phone;
 
-      const updateData: any = {
+      console.log(`[StatusChangeDirect] ── Booking: ${bookingId}, Status: ${status}, Phone: ${booking?.phone || 'N/A'}, WillSendWhatsApp: ${shouldSendWhatsApp}`);
+
+      // Update status first (do NOT set whatsapp flag yet)
+      await updateDoc(doc(db, 'bookings', bookingId), {
         status,
         updated_at: serverTimestamp(),
         updated_by: user.email,
-      };
-
-      if (shouldSendWhatsApp) {
-        updateData[`whatsapp_auto_sent.${status}`] = true;
-      }
-
-      await updateDoc(doc(db, 'bookings', bookingId), updateData);
+      });
       toast({ title: "Status Updated", description: "Booking status updated successfully." });
 
-      // Fire-and-forget WhatsApp message (non-blocking)
+      // Send WhatsApp and mark flag only on confirmed success
       if (shouldSendWhatsApp) {
-        whatsappService.sendStatusChangeMessage(status, booking).then((sent) => {
+        whatsappService.sendStatusChangeMessage(status, booking).then(async (sent) => {
           if (sent) {
-            toast({ title: "WhatsApp Sent", description: `Status notification sent to ${booking.name || 'customer'}.` });
+            try {
+              await updateDoc(doc(db, 'bookings', bookingId), {
+                [`whatsapp_auto_sent.${status}`]: true,
+              });
+            } catch (flagErr) {
+              console.warn('[StatusChangeDirect] Failed to set whatsapp_auto_sent flag:', flagErr);
+            }
+            toast({ title: "WhatsApp Sent ✅", description: `Status notification sent to ${booking.name || 'customer'}.` });
           }
-        }).catch(() => {
-          console.warn('[WhatsApp Auto] Message send failed for booking', bookingId);
+        }).catch((err: any) => {
+          console.error(`[StatusChangeDirect] ❌ WhatsApp FAILED for booking ${bookingId}:`, err.message || err);
+          toast({
+            title: "WhatsApp Failed",
+            description: `Could not send status message to ${booking.name || 'customer'}. Check console for details.`,
+            variant: "destructive"
+          });
         });
       }
     } catch (error) {

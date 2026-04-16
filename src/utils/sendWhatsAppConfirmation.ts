@@ -1,6 +1,13 @@
 /**
- * Sends a WhatsApp booking confirmation to the customer.
+ * Sends a WhatsApp booking confirmation to the customer using approved TEMPLATE messages.
  * Non-blocking — fire-and-forget with retry. Failures are logged but don't interrupt the booking flow.
+ *
+ * Template mapping:
+ *   Train booking  → booking_confirmation   (params: name, bookingId, route, date, passengers)
+ *   Bus booking    → bus_booking_received    (params: name, bookingId, route, date, passengers)
+ *   Flight booking → flight_booking_received (params: name, bookingId, route, date, passengers)
+ *   Hotel booking  → booking_confirmation    (params: name, bookingId, hotel, dates, guests)
+ *   Package booking→ booking_confirmation    (params: name, bookingId, package, date, people)
  */
 
 const MAX_RETRIES = 2;
@@ -42,85 +49,49 @@ export async function sendWhatsAppConfirmation(
 
     const customerName =
       bookingData.name || bookingData.guestName || bookingData.fullName || 'Customer';
+    const shortId = bookingId.slice(-6).toUpperCase();
 
-    let message = '';
+    let templateName = '';
+    let templateParams: string[] = [];
 
     if (bookingType === 'booking') {
-      const type =
-        bookingData.booking_type === 'train'
-          ? '🚆 Train'
-          : bookingData.booking_type === 'flight'
-          ? '✈️ Flight'
-          : bookingData.booking_type === 'bus'
-          ? '🚌 Bus'
-          : '🎫 Travel';
+      const subType = bookingData.booking_type;
 
-      const passengerCount = Array.isArray(bookingData.passengers)
-        ? bookingData.passengers.length
-        : bookingData.passengers || 1;
+      if (subType === 'bus') {
+        templateName = 'bus_booking_received';
+      } else if (subType === 'flight') {
+        templateName = 'flight_booking_received';
+      } else {
+        // train or default
+        templateName = 'booking_confirmation';
+      }
 
-      message = `🎫 *ANAND TRAVELS - SLOT  CONFIRMED*
+      const route = `${bookingData.from || 'N/A'} to ${bookingData.to || 'N/A'}`;
+      const date = bookingData.journey_date || 'N/A';
+      const passengerCount = String(
+        Array.isArray(bookingData.passengers) ? bookingData.passengers.length : bookingData.passengers || 1
+      );
 
-Hello *${customerName}*,
-
-Your booking has been received successfully!
-
-━━━━━━━━━━━━━━━
-📋 *Booking ID:* ${bookingId}
-${type} Booking
-🚏 *Route:* ${bookingData.from} → ${bookingData.to}
-📅 *Date:* ${bookingData.journey_date}
-👥 *Passengers:* ${passengerCount}
-━━━━━━━━━━━━━━━
-
-Our team will process your booking shortly. You\'ll receive updates on this chat.
-
-📞 For queries, reply here or call us.
-Thank you for choosing *Anand Travels*! 🙏`;
+      templateParams = [customerName, shortId, route, date, passengerCount];
     } else if (bookingType === 'hotel') {
-      message = `🏨 *ANAND TRAVELS - HOTEL BOOKING CONFIRMED*
+      templateName = 'booking_confirmation';
+      const hotelName = bookingData.hotelName || 'N/A';
+      const dates = `${bookingData.checkInDate || 'N/A'} to ${bookingData.checkOutDate || 'N/A'}`;
+      const guests = String(bookingData.numberOfGuests || 1);
 
-Hello *${customerName}*,
-
-Your hotel booking has been received!
-
-━━━━━━━━━━━━━━━
-📋 *Booking ID:* ${bookingId}
-🏨 *Hotel:* ${bookingData.hotelName || 'N/A'}
-🛏️ *Room:* ${bookingData.roomTypeName || 'N/A'}
-📅 *Check-in:* ${bookingData.checkInDate || 'N/A'}
-📅 *Check-out:* ${bookingData.checkOutDate || 'N/A'}
-👥 *Guests:* ${bookingData.numberOfGuests || 1}
-━━━━━━━━━━━━━━━
-
-We\'ll confirm your reservation shortly.
-
-📞 For queries, reply here or call us.
-Thank you for choosing *Anand Travels*! 🙏`;
+      templateParams = [customerName, shortId, hotelName, dates, guests];
     } else if (bookingType === 'package') {
-      message = `📦 *ANAND TRAVELS - PACKAGE BOOKING CONFIRMED*
+      templateName = 'booking_confirmation';
+      const packageTitle = bookingData.packageTitle || 'N/A';
+      const date = bookingData.departureDate || 'N/A';
+      const people = String(bookingData.numberOfPeople || 1);
 
-Hello *${customerName}*,
-
-Your package booking has been received!
-
-━━━━━━━━━━━━━━━
-📋 *Booking ID:* ${bookingId}
-🎯 *Package:* ${bookingData.packageTitle || 'N/A'}
-📅 *Departure:* ${bookingData.departureDate || 'N/A'}
-👥 *People:* ${bookingData.numberOfPeople || 1}
-💰 *Amount:* ₹${bookingData.totalAmount || 'N/A'}
-━━━━━━━━━━━━━━━
-
-Our team will get in touch shortly.
-
-📞 For queries, reply here or call us.
-Thank you for choosing *Anand Travels*! 🙏`;
+      templateParams = [customerName, shortId, packageTitle, date, people];
     }
 
-    if (!message) return;
+    if (!templateName) return;
 
-    // Send with retry
+    // Send template message with retry
     let lastError: unknown = null;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -130,8 +101,10 @@ Thank you for choosing *Anand Travels*! 🙏`;
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: phone,
-            type: 'text',
-            message,
+            type: 'template',
+            templateName,
+            templateParams,
+            languageCode: 'en',
             customerName,
             bookingId,
             bookingType,
@@ -142,7 +115,7 @@ Thank you for choosing *Anand Travels*! 🙏`;
           const data = await res.json();
           if (data.success) {
             console.log(
-              `[BookingWhatsApp] Confirmation sent (attempt ${attempt + 1}):`,
+              `[BookingWhatsApp] Template "${templateName}" sent (attempt ${attempt + 1}):`,
               data.whatsappMessageId
             );
             return; // Success

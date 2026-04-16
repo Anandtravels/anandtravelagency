@@ -18,7 +18,7 @@ import { WhatsAppMessage, WhatsAppConversation } from '@/types/whatsapp';
 const API_BASE = '/api';
 
 export const whatsappService = {
-  /** Send a free-text message via Business API */
+  /** Send a free-text message via Business API (with retry) */
   async sendMessage(
     to: string,
     message: string,
@@ -26,26 +26,62 @@ export const whatsappService = {
     bookingId?: string,
     bookingType?: string
   ) {
-    const res = await fetch(`${API_BASE}/whatsapp-send`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to,
-        type: 'text',
-        message,
-        customerName,
-        bookingId,
-        bookingType,
-      }),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to send message');
+    const MAX_RETRIES = 2;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE}/whatsapp-send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to,
+            type: 'text',
+            message,
+            customerName,
+            bookingId,
+            bookingType,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          lastError = new Error(data.error || `API returned ${res.status}`);
+          console.warn(`[WhatsApp Service] sendMessage attempt ${attempt + 1} failed:`, lastError.message);
+          if (res.status >= 500 && attempt < MAX_RETRIES) {
+            await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
+            continue;
+          }
+          throw lastError;
+        }
+
+        // Verify the backend confirmed actual delivery
+        if (data.success === false) {
+          lastError = new Error(data.error || 'API returned success=false');
+          console.warn(`[WhatsApp Service] sendMessage attempt ${attempt + 1}: API success=false`, data);
+          if (attempt < MAX_RETRIES) {
+            await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
+            continue;
+          }
+          throw lastError;
+        }
+
+        return data;
+      } catch (err: any) {
+        lastError = err;
+        if (attempt < MAX_RETRIES && !err.message?.includes('API returned')) {
+          console.warn(`[WhatsApp Service] sendMessage attempt ${attempt + 1} network error:`, err.message);
+          await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
+          continue;
+        }
+        throw err;
+      }
     }
-    return res.json();
+    throw lastError;
   },
 
-  /** Send a template message via Business API */
+  /** Send a template message via Business API (with retry) */
   async sendTemplateMessage(
     to: string,
     templateName: string,
@@ -55,25 +91,60 @@ export const whatsappService = {
     bookingId?: string,
     bookingType?: string
   ) {
-    const res = await fetch(`${API_BASE}/whatsapp-send`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to,
-        type: 'template',
-        templateName,
-        templateParams,
-        languageCode,
-        customerName,
-        bookingId,
-        bookingType,
-      }),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to send template');
+    const MAX_RETRIES = 2;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE}/whatsapp-send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to,
+            type: 'template',
+            templateName,
+            templateParams,
+            languageCode,
+            customerName,
+            bookingId,
+            bookingType,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          lastError = new Error(data.error || `API returned ${res.status}`);
+          console.warn(`[WhatsApp Service] sendTemplate attempt ${attempt + 1} failed:`, lastError.message);
+          if (res.status >= 500 && attempt < MAX_RETRIES) {
+            await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
+            continue;
+          }
+          throw lastError;
+        }
+
+        if (data.success === false) {
+          lastError = new Error(data.error || 'API returned success=false');
+          console.warn(`[WhatsApp Service] sendTemplate attempt ${attempt + 1}: API success=false`, data);
+          if (attempt < MAX_RETRIES) {
+            await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
+            continue;
+          }
+          throw lastError;
+        }
+
+        return data;
+      } catch (err: any) {
+        lastError = err;
+        if (attempt < MAX_RETRIES && !err.message?.includes('API returned')) {
+          console.warn(`[WhatsApp Service] sendTemplate attempt ${attempt + 1} network error:`, err.message);
+          await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
+          continue;
+        }
+        throw err;
+      }
     }
-    return res.json();
+    throw lastError;
   },
 
   /** Subscribe to conversations list (real-time) */
@@ -148,8 +219,16 @@ export const whatsappService = {
     return diff < 24 * 60 * 60 * 1000;
   },
 
-  /** Build a status-change WhatsApp message for a booking */
-  buildStatusChangeMessage(
+  /**
+   * Map a booking status to an approved WhatsApp template name and its parameters.
+   *
+   * Template mapping:
+   *   in_process → payment_pending   (params: name, bookingId, route, date)
+   *   completed  → payment_received  (params: name, bookingId, route, date)
+   *   booked     → review_request    (params: name, bookingId, route, date)
+   *   hold       → booking_cancelled (params: name, bookingId, route, date)
+   */
+  buildStatusChangeTemplate(
     status: string,
     booking: {
       name?: string;
@@ -160,97 +239,27 @@ export const whatsappService = {
       passengers?: any;
       booking_type?: string;
     }
-  ): string | null {
+  ): { templateName: string; templateParams: string[] } | null {
     const name = booking.name || 'Customer';
     const bookingId = booking.id ? booking.id.slice(-6).toUpperCase() : 'N/A';
-    const route = booking.from && booking.to ? `${booking.from} → ${booking.to}` : 'N/A';
+    const route = booking.from && booking.to ? `${booking.from} to ${booking.to}` : 'N/A';
     const date = booking.journey_date || 'N/A';
-    const passengerCount = Array.isArray(booking.passengers)
-      ? booking.passengers.length
-      : booking.passengers || 1;
 
     switch (status) {
-      case 'completed': // Payment Done
-        return `Dear *${name}*,
-
-✅ *Payment Received!*
-
-Your payment for the booking has been received successfully. Thank you!
-
-📋 *Booking Details:*
-• Booking ID: #${bookingId}
-• Route: ${route}
-• Date: ${date}
-• Passengers: ${passengerCount}
-
-Your ticket will be processed shortly.
-
-Thank you for choosing *Anand Travels!*
-For any queries, feel free to contact us.`;
-
-      case 'in_process': // In Process — Payment Pending
-        return `Dear *${name}*,
-
-🔄 *Your Booking is Being Processed*
-
-Your booking request is now being processed.
-
-📋 *Booking Details:*
-• Booking ID: #${bookingId}
-• Route: ${route}
-• Date: ${date}
-• Passengers: ${passengerCount}
-
-⚠️ *Payment Status: Pending*
-Please complete the payment to confirm your booking.
-
-💳 *Payment Information:*
-PhonePe/UPI: 8985816481 or 9676138010
-Account Holder: Pinisetty Naga Satya Surya Shiva Anand
-
-Thank you for choosing *Anand Travels!*`;
-
-      case 'booked': // Booked — Review Request
-        return `Dear *${name}*,
-
-🎫 *Booking Confirmed!*
-
-Great news! Your booking has been successfully confirmed.
-
-📋 *Booking Details:*
-• Booking ID: #${bookingId}
-• Route: ${route}
-• Date: ${date}
-• Passengers: ${passengerCount}
-
-We hope you have a wonderful journey! ⭐ We'd love to hear your feedback — please share your experience with us.
-
-Thank you for choosing *Anand Travels!*`;
-
-      case 'hold': // Hold — Booking On Hold / Cancelled
-        return `Dear *${name}*,
-
-⏸️ *Booking On Hold*
-
-Your booking has been put on hold.
-
-📋 *Booking Details:*
-• Booking ID: #${bookingId}
-• Route: ${route}
-• Date: ${date}
-• Passengers: ${passengerCount}
-
-Please contact us for more information or to reschedule.
-📞 Contact: +919490033809
-
-Thank you for choosing *Anand Travels!*`;
-
+      case 'completed':
+        return { templateName: 'payment_received', templateParams: [name, bookingId, route, date] };
+      case 'in_process':
+        return { templateName: 'payment_pending', templateParams: [name, bookingId, route, date] };
+      case 'booked':
+        return { templateName: 'review_request', templateParams: [name, bookingId, route, date] };
+      case 'hold':
+        return { templateName: 'booking_cancelled', templateParams: [name, bookingId, route, date] };
       default:
         return null;
     }
   },
 
-  /** Send an automatic status-change WhatsApp message (fire-and-forget) */
+  /** Send an automatic status-change WhatsApp template message with debug logging */
   async sendStatusChangeMessage(
     status: string,
     booking: {
@@ -264,29 +273,42 @@ Thank you for choosing *Anand Travels!*`;
       booking_type?: string;
     }
   ): Promise<boolean> {
+    console.log(`[WhatsApp Auto] ──── STATUS CHANGE EVENT ────`);
+    console.log(`[WhatsApp Auto] Booking ID: ${booking.id}`);
+    console.log(`[WhatsApp Auto] New Status: ${status}`);
+    console.log(`[WhatsApp Auto] Phone: ${booking.phone || 'MISSING'}`);
+    console.log(`[WhatsApp Auto] Customer: ${booking.name || 'N/A'}`);
+
     try {
       if (!booking.phone) {
-        console.warn('[WhatsApp Auto] No phone number for booking', booking.id);
+        console.error('[WhatsApp Auto] ❌ SKIPPED: No phone number for booking', booking.id);
         return false;
       }
 
-      const message = this.buildStatusChangeMessage(status, booking);
-      if (!message) {
-        return false; // Status not mapped to a message
+      const template = this.buildStatusChangeTemplate(status, booking);
+      if (!template) {
+        console.warn(`[WhatsApp Auto] ⚠️ SKIPPED: Status "${status}" has no template mapping`);
+        return false;
       }
 
-      await this.sendMessage(
+      console.log(`[WhatsApp Auto] 📤 Sending template "${template.templateName}" to ${booking.phone}...`);
+
+      const result = await this.sendTemplateMessage(
         booking.phone,
-        message,
+        template.templateName,
+        template.templateParams,
+        'en',
         booking.name,
         booking.id,
         booking.booking_type
       );
-      console.log(`[WhatsApp Auto] Sent ${status} message for booking ${booking.id}`);
+
+      console.log(`[WhatsApp Auto] ✅ Template "${template.templateName}" SENT successfully`);
+      console.log(`[WhatsApp Auto] API Response:`, JSON.stringify(result));
       return true;
-    } catch (error) {
-      console.error(`[WhatsApp Auto] Failed to send ${status} message for booking ${booking.id}:`, error);
-      return false;
+    } catch (error: any) {
+      console.error(`[WhatsApp Auto] ❌ FAILED to send ${status} template for booking ${booking.id}:`, error.message || error);
+      throw error; // Re-throw so caller can handle (show error toast, unset flag)
     }
   },
 };

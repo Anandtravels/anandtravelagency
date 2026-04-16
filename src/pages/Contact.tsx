@@ -7,6 +7,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { trackButtonClick } from "@/services/clickTracker";
 import { sendPushNotification } from "@/utils/sendPushNotification";
+import { whatsappService } from "@/services/whatsappService";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -55,6 +56,21 @@ const Contact = () => {
         message: formData.message,
         messageId: docRef.id
       });
+
+      // Send WhatsApp confirmation to the user (fire-and-forget)
+      if (formData.phone) {
+        whatsappService.sendTemplateMessage(
+          formData.phone,
+          'contact_received',
+          [formData.name, formData.subject],
+          'en',
+          formData.name,
+          docRef.id,
+          'contact'
+        ).catch((err) => {
+          console.warn('[Contact WhatsApp] Failed to send template confirmation:', err);
+        });
+      }
       
       toast({
         title: "Message Sent Successfully",
