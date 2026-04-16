@@ -147,4 +147,146 @@ export const whatsappService = {
     const diff = Date.now() - lastMsg.getTime();
     return diff < 24 * 60 * 60 * 1000;
   },
+
+  /** Build a status-change WhatsApp message for a booking */
+  buildStatusChangeMessage(
+    status: string,
+    booking: {
+      name?: string;
+      id?: string;
+      from?: string;
+      to?: string;
+      journey_date?: string;
+      passengers?: any;
+      booking_type?: string;
+    }
+  ): string | null {
+    const name = booking.name || 'Customer';
+    const bookingId = booking.id ? booking.id.slice(-6).toUpperCase() : 'N/A';
+    const route = booking.from && booking.to ? `${booking.from} → ${booking.to}` : 'N/A';
+    const date = booking.journey_date || 'N/A';
+    const passengerCount = Array.isArray(booking.passengers)
+      ? booking.passengers.length
+      : booking.passengers || 1;
+
+    switch (status) {
+      case 'completed': // Payment Done
+        return `Dear *${name}*,
+
+✅ *Payment Received!*
+
+Your payment for the booking has been received successfully. Thank you!
+
+📋 *Booking Details:*
+• Booking ID: #${bookingId}
+• Route: ${route}
+• Date: ${date}
+• Passengers: ${passengerCount}
+
+Your ticket will be processed shortly.
+
+Thank you for choosing *Anand Travels!*
+For any queries, feel free to contact us.`;
+
+      case 'in_process': // In Process — Payment Pending
+        return `Dear *${name}*,
+
+🔄 *Your Booking is Being Processed*
+
+Your booking request is now being processed.
+
+📋 *Booking Details:*
+• Booking ID: #${bookingId}
+• Route: ${route}
+• Date: ${date}
+• Passengers: ${passengerCount}
+
+⚠️ *Payment Status: Pending*
+Please complete the payment to confirm your booking.
+
+💳 *Payment Information:*
+PhonePe/UPI: 8985816481 or 9676138010
+Account Holder: Pinisetty Naga Satya Surya Shiva Anand
+
+Thank you for choosing *Anand Travels!*`;
+
+      case 'booked': // Booked — Review Request
+        return `Dear *${name}*,
+
+🎫 *Booking Confirmed!*
+
+Great news! Your booking has been successfully confirmed.
+
+📋 *Booking Details:*
+• Booking ID: #${bookingId}
+• Route: ${route}
+• Date: ${date}
+• Passengers: ${passengerCount}
+
+We hope you have a wonderful journey! ⭐ We'd love to hear your feedback — please share your experience with us.
+
+Thank you for choosing *Anand Travels!*`;
+
+      case 'hold': // Hold — Booking On Hold / Cancelled
+        return `Dear *${name}*,
+
+⏸️ *Booking On Hold*
+
+Your booking has been put on hold.
+
+📋 *Booking Details:*
+• Booking ID: #${bookingId}
+• Route: ${route}
+• Date: ${date}
+• Passengers: ${passengerCount}
+
+Please contact us for more information or to reschedule.
+📞 Contact: +919490033809
+
+Thank you for choosing *Anand Travels!*`;
+
+      default:
+        return null;
+    }
+  },
+
+  /** Send an automatic status-change WhatsApp message (fire-and-forget) */
+  async sendStatusChangeMessage(
+    status: string,
+    booking: {
+      id?: string;
+      name?: string;
+      phone?: string;
+      from?: string;
+      to?: string;
+      journey_date?: string;
+      passengers?: any;
+      booking_type?: string;
+    }
+  ): Promise<boolean> {
+    try {
+      if (!booking.phone) {
+        console.warn('[WhatsApp Auto] No phone number for booking', booking.id);
+        return false;
+      }
+
+      const message = this.buildStatusChangeMessage(status, booking);
+      if (!message) {
+        return false; // Status not mapped to a message
+      }
+
+      await this.sendMessage(
+        booking.phone,
+        message,
+        booking.name,
+        booking.id,
+        booking.booking_type
+      );
+      console.log(`[WhatsApp Auto] Sent ${status} message for booking ${booking.id}`);
+      return true;
+    } catch (error) {
+      console.error(`[WhatsApp Auto] Failed to send ${status} message for booking ${booking.id}:`, error);
+      return false;
+    }
+  },
 };

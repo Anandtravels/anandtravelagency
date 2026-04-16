@@ -42,6 +42,7 @@ export interface Booking {
   profit_amount?: number;
   train_number?: string;
   tatkal_booking_date?: string;
+  whatsapp_auto_sent?: { [status: string]: boolean };
 }
 
 export interface Agent {

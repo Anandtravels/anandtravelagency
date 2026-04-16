@@ -4,6 +4,10 @@ import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import debounce from 'lodash/debounce';
 import { useAuth } from '@/lib/auth';
+import { whatsappService } from '@/services/whatsappService';
+
+// Statuses that trigger automatic WhatsApp messages
+const WHATSAPP_AUTO_STATUSES = ['completed', 'in_process', 'booked', 'hold'] as const;
 
 export const useBookingManagement = (
   setAdminNotes: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>,
@@ -32,30 +36,79 @@ export const useBookingManagement = (
     }
 
     try {
-      await updateDoc(doc(db, 'bookings', bookingId), {
+      // Check if WhatsApp was already sent for this status (duplicate prevention)
+      const shouldSendWhatsApp = (WHATSAPP_AUTO_STATUSES as readonly string[]).includes(status) &&
+        booking && booking.phone &&
+        !(booking.whatsapp_auto_sent && booking.whatsapp_auto_sent[status]);
+
+      const updateData: any = {
         status,
         updated_at: serverTimestamp(),
         updated_by: user.email,
-      });
+      };
+
+      // Mark WhatsApp as queued atomically with status change to prevent duplicates
+      if (shouldSendWhatsApp) {
+        updateData[`whatsapp_auto_sent.${status}`] = true;
+      }
+
+      await updateDoc(doc(db, 'bookings', bookingId), updateData);
       toast({ title: "Status Updated", description: "Booking status updated successfully." });
+
+      // Fire-and-forget WhatsApp message (non-blocking)
+      if (shouldSendWhatsApp) {
+        whatsappService.sendStatusChangeMessage(status, booking).then((sent) => {
+          if (sent) {
+            toast({ title: "WhatsApp Sent", description: `Status notification sent to ${booking.name || 'customer'}.` });
+          }
+        }).catch(() => {
+          console.warn('[WhatsApp Auto] Message send failed for booking', bookingId);
+        });
+      }
     } catch (error) {
       console.error("Error updating status:", error);
       toast({ title: "Update Failed", description: "Failed to update booking status.", variant: "destructive" });
     }
   };
 
-  const updateBookingStatusDirect = async (bookingId: string, status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done' | 'failed' | 'refund') => {
+  const updateBookingStatusDirect = async (
+    bookingId: string,
+    status: 'pending' | 'completed' | 'in_process' | 'booked' | 'hold' | 'agent_done' | 'failed' | 'refund',
+    booking?: any
+  ) => {
     if (!user || user.email !== 'admin@anandtravels.com') {
       toast({ title: "Unauthorized", description: "You don't have permission to do this.", variant: "destructive" });
       return;
     }
     try {
-      await updateDoc(doc(db, 'bookings', bookingId), {
+      // Check if WhatsApp was already sent for this status (duplicate prevention)
+      const shouldSendWhatsApp = (WHATSAPP_AUTO_STATUSES as readonly string[]).includes(status) &&
+        booking && booking.phone &&
+        !(booking.whatsapp_auto_sent && booking.whatsapp_auto_sent[status]);
+
+      const updateData: any = {
         status,
         updated_at: serverTimestamp(),
         updated_by: user.email,
-      });
+      };
+
+      if (shouldSendWhatsApp) {
+        updateData[`whatsapp_auto_sent.${status}`] = true;
+      }
+
+      await updateDoc(doc(db, 'bookings', bookingId), updateData);
       toast({ title: "Status Updated", description: "Booking status updated successfully." });
+
+      // Fire-and-forget WhatsApp message (non-blocking)
+      if (shouldSendWhatsApp) {
+        whatsappService.sendStatusChangeMessage(status, booking).then((sent) => {
+          if (sent) {
+            toast({ title: "WhatsApp Sent", description: `Status notification sent to ${booking.name || 'customer'}.` });
+          }
+        }).catch(() => {
+          console.warn('[WhatsApp Auto] Message send failed for booking', bookingId);
+        });
+      }
     } catch (error) {
       console.error("Error updating status:", error);
       toast({ title: "Update Failed", description: "Failed to update booking status.", variant: "destructive" });

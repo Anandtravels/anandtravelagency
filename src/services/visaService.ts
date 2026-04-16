@@ -1,6 +1,7 @@
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { sendPushNotification } from '@/utils/sendPushNotification';
+import { whatsappService } from '@/services/whatsappService';
 
 export interface VisaFormData {
   visaType?: string;
@@ -9,6 +10,35 @@ export interface VisaFormData {
   email?: string;
   travelDate?: string;
   countryName?: string;
+}
+
+/** Build WhatsApp message for a new visa application */
+function buildVisaApplicationMessage(data: VisaFormData, applicationId: string): string {
+  const name = data.name || 'Customer';
+  const appId = applicationId.slice(-6).toUpperCase();
+  const visaType = data.visaType || 'N/A';
+  const country = data.countryName || 'N/A';
+  const travelDate = data.travelDate || 'N/A';
+  const email = data.email || 'N/A';
+
+  return `Dear *${name}*,
+
+✅ *Visa Application Received!*
+
+Thank you for submitting your visa application with Anand Travel Agency.
+
+📋 *Application Details:*
+• Application ID: #${appId}
+• Visa Type: ${visaType}
+• Destination: ${country}
+• Travel Date: ${travelDate}
+• Email: ${email}
+
+Our visa expert team will review your application and contact you within 24 hours with the next steps.
+
+📞 For urgent queries, contact us anytime.
+
+Thank you for choosing *Anand Travel Agency!*`;
 }
 
 export const submitVisaApplication = async (data: VisaFormData) => {
@@ -36,6 +66,22 @@ export const submitVisaApplication = async (data: VisaFormData) => {
       country: data.countryName || 'Visa',
       applicationId: docRef.id
     });
+
+    // Send WhatsApp confirmation to applicant (fire-and-forget, non-blocking)
+    if (data.contactNumber) {
+      const message = buildVisaApplicationMessage(data, docRef.id);
+      whatsappService.sendMessage(
+        data.contactNumber,
+        message,
+        data.name,
+        docRef.id,
+        'visa'
+      ).then(() => {
+        console.log('[Visa WhatsApp] Confirmation sent for application', docRef.id);
+      }).catch((err) => {
+        console.warn('[Visa WhatsApp] Failed to send confirmation:', err);
+      });
+    }
 
     return {
       success: true,

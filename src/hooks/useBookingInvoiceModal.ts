@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Booking } from '@/types/admin';
 import { PriceDetails } from '@/components/admin/BookingPriceModal';
 import { generateBillNumber } from '@/utils/billUtils';
+import { whatsappService } from '@/services/whatsappService';
 
 export const useBookingInvoiceModal = (userEmail?: string) => {
   const [priceModalOpen, setPriceModalOpen] = useState(false);
@@ -110,7 +111,7 @@ export const useBookingInvoiceModal = (userEmail?: string) => {
       const billRef = await addDoc(collection(db, 'bills'), billData);
 
       // Update booking with bill reference AND set status to 'booked'
-      await updateDoc(doc(db, 'bookings', currentBooking.id), {
+      const bookingUpdateData: any = {
         billId: billRef.id,
         billNumber: billNumber,
         invoiceGenerated: true,
@@ -118,12 +119,33 @@ export const useBookingInvoiceModal = (userEmail?: string) => {
         status: 'booked',
         updated_at: serverTimestamp(),
         updated_by: userEmail,
-      });
+      };
+
+      // Mark WhatsApp auto-sent atomically to prevent duplicates
+      const shouldSendWhatsApp = currentBooking.phone &&
+        !(currentBooking.whatsapp_auto_sent && (currentBooking as any).whatsapp_auto_sent?.booked);
+
+      if (shouldSendWhatsApp) {
+        bookingUpdateData['whatsapp_auto_sent.booked'] = true;
+      }
+
+      await updateDoc(doc(db, 'bookings', currentBooking.id), bookingUpdateData);
 
       toast({
         title: 'Invoice Generated',
         description: `Invoice #${billNumber} has been created successfully`,
       });
+
+      // Fire-and-forget WhatsApp "booked" notification (non-blocking)
+      if (shouldSendWhatsApp) {
+        whatsappService.sendStatusChangeMessage('booked', currentBooking).then((sent) => {
+          if (sent) {
+            toast({ title: "WhatsApp Sent", description: `Booking confirmation sent to ${currentBooking.name || 'customer'}.` });
+          }
+        }).catch(() => {
+          console.warn('[WhatsApp Auto] Booked message send failed for booking', currentBooking.id);
+        });
+      }
 
       // Open invoice in new window
       setTimeout(() => {

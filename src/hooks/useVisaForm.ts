@@ -19,6 +19,8 @@ export const useVisaForm = () => {
           title: "Application Submitted Successfully!",
           description: "Our Visa Services team will contact you shortly.",
         });
+        // Scroll to top smoothly after successful submission
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         toast({
           title: "Submission Failed",
