@@ -1,24 +1,62 @@
 import admin from "firebase-admin";
 
-// Initialize Firebase Admin once (reused across invocations)
-if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SDK);
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+// ─── Firebase Admin Initialization (safe) ────────────────────────────────────
+let firestore = null;
+let firebaseReady = false;
+
+try {
+  if (!admin.apps.length) {
+    const rawSdk = process.env.FIREBASE_ADMIN_SDK;
+    if (!rawSdk) {
+      console.error("[WhatsApp Send] FIREBASE_ADMIN_SDK env var is missing — Firestore storage disabled");
+    } else {
+      const serviceAccount = JSON.parse(rawSdk);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+      firestore = admin.firestore();
+      firebaseReady = true;
+    }
+  } else {
+    firestore = admin.firestore();
+    firebaseReady = true;
+  }
+} catch (initErr) {
+  console.error("[WhatsApp Send] Firebase Admin init failed:", initErr.message);
 }
 
-const firestore = admin.firestore();
-
+// ─── WhatsApp Config ─────────────────────────────────────────────────────────
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
-const GRAPH_API_URL = `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`;
+const GRAPH_API_URL = PHONE_NUMBER_ID
+  ? `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`
+  : null;
 
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1500;
 
+// Approved templates — keep in sync with Meta Business Manager
+const APPROVED_TEMPLATES = [
+  "payment_received",
+  "payment_pending",
+  "review_request",
+  "booking_cancelled",
+  "booking_confirmation",
+  "bus_booking_received",
+  "flight_booking_received",
+  "career_application_received",
+];
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Mask phone for safe logging — show only last 4 digits.
+ */
+function maskPhone(phone) {
+  if (!phone || phone.length < 5) return "****";
+  return "****" + phone.slice(-4);
 }
 
 /**
@@ -26,6 +64,7 @@ function sleep(ms) {
  * Returns null if the number doesn't look valid.
  */
 function normalisePhone(raw) {
+  if (!raw) return null;
   // Strip everything except digits
   let digits = String(raw).replace(/\D/g, "");
   // Remove leading zeros
@@ -45,6 +84,13 @@ function normalisePhone(raw) {
  * Call the Meta WhatsApp Cloud API with automatic retry on transient failures.
  */
 async function callWhatsAppAPI(payload) {
+  if (!GRAPH_API_URL) {
+    throw new Error("PHONE_NUMBER_ID env var is not configured — cannot call WhatsApp API");
+  }
+  if (!WHATSAPP_TOKEN) {
+    throw new Error("WHATSAPP_TOKEN env var is not configured — cannot call WhatsApp API");
+  }
+
   let lastError = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -58,18 +104,23 @@ async function callWhatsAppAPI(payload) {
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseErr) {
+        throw new Error(`WhatsApp API returned non-JSON response (${response.status})`);
+      }
 
       if (!response.ok) {
         const errCode = data?.error?.code;
+        const errMsg = data?.error?.message || JSON.stringify(data);
         // Retry on rate-limit (80007) or transient server errors (500+)
         const isRetryable = response.status >= 500 || errCode === 80007;
         lastError = new Error(
-          `WhatsApp API error (${response.status}): ${JSON.stringify(data)}`
+          `WhatsApp API error (${response.status}): ${errMsg}`
         );
         console.error(
-          `[WhatsApp API] Attempt ${attempt + 1} failed:`,
-          lastError.message
+          `[WhatsApp API] Attempt ${attempt + 1} failed — status=${response.status}, code=${errCode}, msg=${errMsg}`
         );
 
         if (isRetryable && attempt < MAX_RETRIES) {
@@ -124,7 +175,10 @@ async function sendTemplateMessage(to, templateName, languageCode, parameters) {
   if (parameters && parameters.length > 0) {
     components.push({
       type: "body",
-      parameters: parameters.map((p) => ({ type: "text", text: String(p) })),
+      parameters: parameters.map((p) => ({
+        type: "text",
+        text: String(p ?? ""),
+      })),
     });
   }
 
@@ -140,136 +194,209 @@ async function sendTemplateMessage(to, templateName, languageCode, parameters) {
   });
 }
 
+/**
+ * Store message in Firestore. Non-critical — failures are logged but don't crash the request.
+ */
 async function storeMessage(conversationId, messageData) {
-  const msgRef = await firestore.collection("whatsapp_messages").add({
-    conversationId,
-    ...messageData,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  if (!firebaseReady || !firestore) {
+    console.warn("[WhatsApp Send] Firestore not available — skipping message storage");
+    return null;
+  }
 
-  // Update conversation
-  await firestore
-    .collection("whatsapp_conversations")
-    .doc(conversationId)
-    .update({
-      lastMessage: messageData.body || `[${messageData.type}]`,
+  try {
+    const msgRef = await firestore.collection("whatsapp_messages").add({
+      conversationId,
+      ...messageData,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Update conversation
+    await firestore
+      .collection("whatsapp_conversations")
+      .doc(conversationId)
+      .update({
+        lastMessage: messageData.body || `[${messageData.type}]`,
+        lastMessageTime: admin.firestore.FieldValue.serverTimestamp(),
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    return msgRef.id;
+  } catch (storeErr) {
+    console.error("[WhatsApp Send] Firestore storeMessage failed (non-critical):", storeErr.message);
+    return null;
+  }
+}
+
+/**
+ * Get or create a conversation in Firestore. Non-critical — failures are logged but don't crash the request.
+ */
+async function getOrCreateConversation(phone, customerName, bookingId, bookingType) {
+  if (!firebaseReady || !firestore) {
+    console.warn("[WhatsApp Send] Firestore not available — skipping conversation tracking");
+    return null;
+  }
+
+  try {
+    // Look up existing conversation by phone
+    const existing = await firestore
+      .collection("whatsapp_conversations")
+      .where("customerPhone", "==", phone)
+      .limit(1)
+      .get();
+
+    if (!existing.empty) {
+      const doc = existing.docs[0];
+      // Update name/booking if provided
+      const updates = { updated_at: admin.firestore.FieldValue.serverTimestamp() };
+      if (customerName) updates.customerName = customerName;
+      if (bookingId) updates.bookingId = bookingId;
+      if (bookingType) updates.bookingType = bookingType;
+      await doc.ref.update(updates);
+      return doc.id;
+    }
+
+    // Create new conversation
+    const newConvo = await firestore.collection("whatsapp_conversations").add({
+      customerPhone: phone,
+      customerName: customerName || phone,
+      lastMessage: "",
       lastMessageTime: admin.firestore.FieldValue.serverTimestamp(),
+      unreadCount: 0,
+      bookingId: bookingId || null,
+      bookingType: bookingType || null,
+      status: "active",
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
       updated_at: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-  return msgRef.id;
-}
-
-async function getOrCreateConversation(phone, customerName, bookingId, bookingType) {
-  // Look up existing conversation by phone
-  const existing = await firestore
-    .collection("whatsapp_conversations")
-    .where("customerPhone", "==", phone)
-    .limit(1)
-    .get();
-
-  if (!existing.empty) {
-    const doc = existing.docs[0];
-    // Update name/booking if provided
-    const updates = { updated_at: admin.firestore.FieldValue.serverTimestamp() };
-    if (customerName) updates.customerName = customerName;
-    if (bookingId) updates.bookingId = bookingId;
-    if (bookingType) updates.bookingType = bookingType;
-    await doc.ref.update(updates);
-    return doc.id;
+    return newConvo.id;
+  } catch (convoErr) {
+    console.error("[WhatsApp Send] Firestore getOrCreateConversation failed (non-critical):", convoErr.message);
+    return null;
   }
-
-  // Create new conversation
-  const newConvo = await firestore.collection("whatsapp_conversations").add({
-    customerPhone: phone,
-    customerName: customerName || phone,
-    lastMessage: "",
-    lastMessageTime: admin.firestore.FieldValue.serverTimestamp(),
-    unreadCount: 0,
-    bookingId: bookingId || null,
-    bookingType: bookingType || null,
-    status: "active",
-    created_at: admin.firestore.FieldValue.serverTimestamp(),
-    updated_at: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  return newConvo.id;
 }
 
 export default async function handler(req, res) {
+  // ─── CORS ────────────────────────────────────────────────────────────────────
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const { to, type, message, templateName, templateParams, languageCode, customerName, bookingId, bookingType } = req.body;
+    // ─── Safe body parsing ───────────────────────────────────────────────────
+    const body = req.body || {};
+    const { to, type, message, templateName, templateParams, languageCode, customerName, bookingId, bookingType } = body;
 
+    // ─── Log incoming request (phone masked for privacy) ─────────────────────
+    console.log("[WhatsApp Send] ──── INCOMING REQUEST ────");
+    console.log(`[WhatsApp Send] Phone: ${maskPhone(to)}, Type: ${type}, Template: ${templateName || "N/A"}`);
+    console.log(`[WhatsApp Send] Params: ${JSON.stringify(templateParams || [])}`);
+    console.log(`[WhatsApp Send] CustomerName: ${customerName || "N/A"}, BookingId: ${bookingId || "N/A"}, BookingType: ${bookingType || "N/A"}`);
+
+    // ─── Validate required fields ────────────────────────────────────────────
     if (!to) {
-      return res.status(400).json({ error: "Missing 'to' phone number" });
+      console.error("[WhatsApp Send] 400: Missing 'to' phone number");
+      return res.status(400).json({ error: "Missing 'to' phone number", success: false });
     }
 
     if (!type || !["text", "template"].includes(type)) {
-      return res.status(400).json({ error: "Invalid 'type'. Must be 'text' or 'template'" });
+      console.error(`[WhatsApp Send] 400: Invalid type="${type}"`);
+      return res.status(400).json({ error: "Invalid 'type'. Must be 'text' or 'template'", success: false });
     }
 
-    // Normalise & validate phone number
+    // ─── Normalise & validate phone number ───────────────────────────────────
     const fullPhone = normalisePhone(to);
     if (!fullPhone) {
-      console.error("[WhatsApp Send] Invalid phone number:", to);
+      console.error("[WhatsApp Send] 400: Invalid phone number:", to);
       return res.status(400).json({
-        error: "Invalid phone number. Must be a valid 10-digit Indian mobile number.",
+        error: "Invalid phone number. Must be a valid 10-digit Indian mobile number (starting with 6-9).",
         received: to,
+        success: false,
       });
     }
 
+    // ─── Validate template name if template type ─────────────────────────────
+    if (type === "template") {
+      if (!templateName) {
+        console.error("[WhatsApp Send] 400: Missing templateName");
+        return res.status(400).json({ error: "Missing 'templateName' for template type", success: false });
+      }
+      if (!APPROVED_TEMPLATES.includes(templateName)) {
+        console.error(`[WhatsApp Send] 400: Unapproved template "${templateName}". Approved: ${APPROVED_TEMPLATES.join(", ")}`);
+        return res.status(400).json({
+          error: `Template "${templateName}" is not in the approved list. Approved templates: ${APPROVED_TEMPLATES.join(", ")}`,
+          success: false,
+        });
+      }
+    }
+
+    if (type === "text" && !message) {
+      console.error("[WhatsApp Send] 400: Missing message for text type");
+      return res.status(400).json({ error: "Missing 'message' for text type", success: false });
+    }
+
+    // ─── Check env vars before calling API ───────────────────────────────────
+    if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID || !GRAPH_API_URL) {
+      console.error("[WhatsApp Send] 500: WhatsApp env vars not configured");
+      return res.status(500).json({
+        error: "WhatsApp API is not configured. Check WHATSAPP_TOKEN and PHONE_NUMBER_ID env vars.",
+        success: false,
+      });
+    }
+
+    // ─── Send message via WhatsApp Cloud API ─────────────────────────────────
     let apiResponse;
     let messageBody;
-    let sendStatus = "failed"; // default to failed, only set to sent on confirmed success
 
     if (type === "text") {
-      if (!message) {
-        return res.status(400).json({ error: "Missing 'message' for text type" });
-      }
       apiResponse = await sendTextMessage(fullPhone, message);
       messageBody = message;
     } else {
-      if (!templateName) {
-        return res.status(400).json({ error: "Missing 'templateName' for template type" });
-      }
-      apiResponse = await sendTemplateMessage(fullPhone, templateName, languageCode, templateParams || []);
+      // Sanitize params — replace undefined/null with empty string
+      const sanitizedParams = (templateParams || []).map((p) => String(p ?? ""));
+      apiResponse = await sendTemplateMessage(fullPhone, templateName, languageCode, sanitizedParams);
       messageBody = `[Template: ${templateName}]`;
     }
 
-    // Only mark as "sent" if we got a confirmed message ID from the API
+    // ─── Determine send status ───────────────────────────────────────────────
     const whatsappMessageId = apiResponse?.messages?.[0]?.id || null;
     const messageStatus = apiResponse?.messages?.[0]?.message_status || null;
-
-    if (whatsappMessageId) {
-      sendStatus = "sent";
-    }
+    let sendStatus = whatsappMessageId ? "sent" : "failed";
 
     // If Meta explicitly says failed, respect that
     if (messageStatus === "failed") {
       sendStatus = "failed";
-      console.error("[WhatsApp Send] Meta reported message failed:", apiResponse);
+      console.error("[WhatsApp Send] Meta reported message failed:", JSON.stringify(apiResponse));
     }
 
-    console.log(`[WhatsApp Send] Phone: ${fullPhone}, Status: ${sendStatus}, MessageId: ${whatsappMessageId}`);
+    console.log(`[WhatsApp Send] Result: Phone=${maskPhone(fullPhone)}, Status=${sendStatus}, WhatsAppMsgId=${whatsappMessageId}`);
 
-    // Store in Firestore
-    const conversationId = await getOrCreateConversation(fullPhone, customerName, bookingId, bookingType);
+    // ─── Store in Firestore (non-critical) ───────────────────────────────────
+    let conversationId = null;
+    let storedMsgId = null;
 
-    const storedMsgId = await storeMessage(conversationId, {
-      from: PHONE_NUMBER_ID,
-      to: fullPhone,
-      type,
-      body: messageBody,
-      templateName: type === "template" ? templateName : null,
-      templateParams: type === "template" ? templateParams : null,
-      status: sendStatus,
-      direction: "outbound",
-      whatsappMessageId,
-    });
+    conversationId = await getOrCreateConversation(fullPhone, customerName, bookingId, bookingType);
+
+    if (conversationId) {
+      storedMsgId = await storeMessage(conversationId, {
+        from: PHONE_NUMBER_ID,
+        to: fullPhone,
+        type,
+        body: messageBody,
+        templateName: type === "template" ? templateName : null,
+        templateParams: type === "template" ? (templateParams || []) : null,
+        status: sendStatus,
+        direction: "outbound",
+        whatsappMessageId,
+      });
+    }
 
     return res.status(200).json({
       success: sendStatus === "sent",
@@ -279,10 +406,24 @@ export default async function handler(req, res) {
       status: sendStatus,
     });
   } catch (err) {
-    console.error("[WhatsApp Send] Error:", err.message, err.stack);
+    // ─── Categorize error for proper HTTP status ─────────────────────────────
+    const errMsg = err.message || "Unknown error";
+    console.error("[WhatsApp Send] ──── ERROR ────");
+    console.error("[WhatsApp Send] Message:", errMsg);
+    console.error("[WhatsApp Send] Stack:", err.stack);
+
+    // Meta API validation errors (bad template, bad number, etc.) → 422
+    if (errMsg.includes("WhatsApp API error (400)") || errMsg.includes("WhatsApp API error (401)")) {
+      return res.status(422).json({
+        error: "WhatsApp API rejected the request",
+        details: errMsg,
+        success: false,
+      });
+    }
+
     return res.status(500).json({
       error: "Failed to send WhatsApp message",
-      details: err.message,
+      details: errMsg,
       success: false,
     });
   }
