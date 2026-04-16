@@ -1,16 +1,42 @@
 /**
  * Sends a WhatsApp booking confirmation to the customer.
- * Non-blocking — fire-and-forget. Failures are logged but don't interrupt the booking flow.
+ * Non-blocking — fire-and-forget with retry. Failures are logged but don't interrupt the booking flow.
  */
+
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1500;
+
+function normalisePhone(raw: string): string | null {
+  let digits = raw.replace(/\D/g, '');
+  digits = digits.replace(/^0+/, '');
+  if (digits.length > 10 && digits.startsWith('91')) {
+    digits = digits.slice(2);
+  }
+  if (digits.length !== 10 || !/^[6-9]/.test(digits)) {
+    return null;
+  }
+  return `91${digits}`;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function sendWhatsAppConfirmation(
   bookingData: Record<string, any>,
   bookingType: 'booking' | 'hotel' | 'package',
   bookingId: string
 ) {
   try {
-    const phone = bookingData.phone || bookingData.guestPhone || '';
+    const rawPhone = bookingData.phone || bookingData.guestPhone || '';
+    if (!rawPhone) {
+      console.warn('[BookingWhatsApp] No phone number for confirmation');
+      return;
+    }
+
+    const phone = normalisePhone(rawPhone);
     if (!phone) {
-      console.warn('No phone number for WhatsApp confirmation');
+      console.warn('[BookingWhatsApp] Invalid phone number, skipping:', rawPhone);
       return;
     }
 
@@ -94,20 +120,53 @@ Thank you for choosing *Anand Travels*! 🙏`;
 
     if (!message) return;
 
-    // Send detailed booking confirmation message
-    await fetch('/api/whatsapp-send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to: phone,
-        type: 'text',
-        message,
-        customerName,
-        bookingId,
-        bookingType,
-      }),
-    });
+    // Send with retry
+    let lastError: unknown = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const res = await fetch('/api/whatsapp-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: phone,
+            type: 'text',
+            message,
+            customerName,
+            bookingId,
+            bookingType,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            console.log(
+              `[BookingWhatsApp] Confirmation sent (attempt ${attempt + 1}):`,
+              data.whatsappMessageId
+            );
+            return; // Success
+          }
+          // API returned 200 but success=false
+          lastError = new Error(`API returned success=false: ${JSON.stringify(data)}`);
+        } else {
+          const errBody = await res.json().catch(() => ({}));
+          lastError = new Error(`API ${res.status}: ${JSON.stringify(errBody)}`);
+        }
+
+        console.warn(`[BookingWhatsApp] Attempt ${attempt + 1} failed:`, lastError);
+      } catch (fetchErr) {
+        lastError = fetchErr;
+        console.warn(`[BookingWhatsApp] Attempt ${attempt + 1} network error:`, fetchErr);
+      }
+
+      if (attempt < MAX_RETRIES) {
+        await sleep(RETRY_DELAY_MS * Math.pow(2, attempt));
+      }
+    }
+
+    console.error('[BookingWhatsApp] All retry attempts failed:', lastError);
   } catch (err) {
-    console.error('WhatsApp confirmation failed (non-blocking):', err);
+    console.error('[BookingWhatsApp] Unexpected error (non-blocking):', err);
   }
 }

@@ -287,22 +287,41 @@ Thank you! 🙏`;
       // 8. Open WhatsApp with text message
       window.open(`https://wa.me/${currentBooking.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
 
-      // 8.1 Also send via WhatsApp Business API (non-blocking)
-      try {
-        await fetch('/api/whatsapp-send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: currentBooking.phone,
-            type: 'text',
-            message,
-            customerName: currentBooking.name,
-            bookingId: currentBooking.id,
-            bookingType: 'booking',
-          }),
-        });
-      } catch (apiErr) {
-        console.warn('WhatsApp Business API send failed (fallback to wa.me):', apiErr);
+      // 8.1 Also send via WhatsApp Business API (with retry)
+      let apiSendSuccess = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const apiRes = await fetch('/api/whatsapp-send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: currentBooking.phone,
+              type: 'text',
+              message,
+              customerName: currentBooking.name,
+              bookingId: currentBooking.id,
+              bookingType: 'booking',
+            }),
+          });
+          if (apiRes.ok) {
+            const data = await apiRes.json();
+            if (data.success) {
+              console.log(`[WhatsApp API] Business API sent (attempt ${attempt + 1}):`, data.whatsappMessageId);
+              apiSendSuccess = true;
+              break;
+            }
+          }
+          const errBody = await apiRes.json().catch(() => ({}));
+          console.warn(`[WhatsApp API] Attempt ${attempt + 1} failed:`, errBody);
+        } catch (apiErr) {
+          console.warn(`[WhatsApp API] Attempt ${attempt + 1} network error:`, apiErr);
+        }
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
+        }
+      }
+      if (!apiSendSuccess) {
+        console.error('[WhatsApp API] All Business API attempts failed, wa.me fallback was used');
       }
       
       // 8.5. If Cloudinary URL exists, prepare a simple message for QR sharing

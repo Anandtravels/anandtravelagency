@@ -14,28 +14,109 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const GRAPH_API_URL = `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`;
 
-async function sendTextMessage(to, text) {
-  const response = await fetch(GRAPH_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to,
-      type: "text",
-      text: { preview_url: false, body: text },
-    }),
-  });
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1500;
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`WhatsApp API error: ${JSON.stringify(error)}`);
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Normalise an Indian phone number to 91XXXXXXXXXX format.
+ * Returns null if the number doesn't look valid.
+ */
+function normalisePhone(raw) {
+  // Strip everything except digits
+  let digits = String(raw).replace(/\D/g, "");
+  // Remove leading zeros
+  digits = digits.replace(/^0+/, "");
+  // If the number has country code prefix, strip it first
+  if (digits.length > 10 && digits.startsWith("91")) {
+    digits = digits.slice(2);
   }
+  // Indian mobile numbers: exactly 10 digits starting with 6-9
+  if (digits.length !== 10 || !/^[6-9]/.test(digits)) {
+    return null;
+  }
+  return `91${digits}`;
+}
 
-  return response.json();
+/**
+ * Call the Meta WhatsApp Cloud API with automatic retry on transient failures.
+ */
+async function callWhatsAppAPI(payload) {
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(GRAPH_API_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errCode = data?.error?.code;
+        // Retry on rate-limit (80007) or transient server errors (500+)
+        const isRetryable = response.status >= 500 || errCode === 80007;
+        lastError = new Error(
+          `WhatsApp API error (${response.status}): ${JSON.stringify(data)}`
+        );
+        console.error(
+          `[WhatsApp API] Attempt ${attempt + 1} failed:`,
+          lastError.message
+        );
+
+        if (isRetryable && attempt < MAX_RETRIES) {
+          await sleep(RETRY_DELAY_MS * Math.pow(2, attempt));
+          continue;
+        }
+        throw lastError;
+      }
+
+      // Verify the response actually contains a message ID
+      const messageId = data?.messages?.[0]?.id;
+      if (!messageId) {
+        throw new Error(
+          `WhatsApp API returned success but no message ID: ${JSON.stringify(data)}`
+        );
+      }
+
+      console.log(
+        `[WhatsApp API] Message sent successfully (attempt ${attempt + 1}):`,
+        messageId
+      );
+      return data;
+    } catch (err) {
+      lastError = err;
+      if (attempt < MAX_RETRIES && !err.message?.includes("WhatsApp API error")) {
+        // Network / fetch error — retryable
+        console.warn(
+          `[WhatsApp API] Attempt ${attempt + 1} network error, retrying:`,
+          err.message
+        );
+        await sleep(RETRY_DELAY_MS * Math.pow(2, attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError;
+}
+
+async function sendTextMessage(to, text) {
+  return callWhatsAppAPI({
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to,
+    type: "text",
+    text: { preview_url: false, body: text },
+  });
 }
 
 async function sendTemplateMessage(to, templateName, languageCode, parameters) {
@@ -47,30 +128,16 @@ async function sendTemplateMessage(to, templateName, languageCode, parameters) {
     });
   }
 
-  const response = await fetch(GRAPH_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-      "Content-Type": "application/json",
+  return callWhatsAppAPI({
+    messaging_product: "whatsapp",
+    to,
+    type: "template",
+    template: {
+      name: templateName,
+      language: { code: languageCode || "en" },
+      components,
     },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      to,
-      type: "template",
-      template: {
-        name: templateName,
-        language: { code: languageCode || "en" },
-        components,
-      },
-    }),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`WhatsApp API error: ${JSON.stringify(error)}`);
-  }
-
-  return response.json();
 }
 
 async function storeMessage(conversationId, messageData) {
@@ -145,12 +212,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Invalid 'type'. Must be 'text' or 'template'" });
     }
 
-    // Normalize phone: ensure it starts with country code
-    const phone = to.replace(/\D/g, "").replace(/^0+/, "");
-    const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
+    // Normalise & validate phone number
+    const fullPhone = normalisePhone(to);
+    if (!fullPhone) {
+      console.error("[WhatsApp Send] Invalid phone number:", to);
+      return res.status(400).json({
+        error: "Invalid phone number. Must be a valid 10-digit Indian mobile number.",
+        received: to,
+      });
+    }
 
     let apiResponse;
     let messageBody;
+    let sendStatus = "failed"; // default to failed, only set to sent on confirmed success
 
     if (type === "text") {
       if (!message) {
@@ -166,7 +240,21 @@ export default async function handler(req, res) {
       messageBody = `[Template: ${templateName}]`;
     }
 
+    // Only mark as "sent" if we got a confirmed message ID from the API
     const whatsappMessageId = apiResponse?.messages?.[0]?.id || null;
+    const messageStatus = apiResponse?.messages?.[0]?.message_status || null;
+
+    if (whatsappMessageId) {
+      sendStatus = "sent";
+    }
+
+    // If Meta explicitly says failed, respect that
+    if (messageStatus === "failed") {
+      sendStatus = "failed";
+      console.error("[WhatsApp Send] Meta reported message failed:", apiResponse);
+    }
+
+    console.log(`[WhatsApp Send] Phone: ${fullPhone}, Status: ${sendStatus}, MessageId: ${whatsappMessageId}`);
 
     // Store in Firestore
     const conversationId = await getOrCreateConversation(fullPhone, customerName, bookingId, bookingType);
@@ -178,19 +266,24 @@ export default async function handler(req, res) {
       body: messageBody,
       templateName: type === "template" ? templateName : null,
       templateParams: type === "template" ? templateParams : null,
-      status: whatsappMessageId ? "sent" : "failed",
+      status: sendStatus,
       direction: "outbound",
       whatsappMessageId,
     });
 
     return res.status(200).json({
-      success: true,
+      success: sendStatus === "sent",
       messageId: storedMsgId,
       whatsappMessageId,
       conversationId,
+      status: sendStatus,
     });
   } catch (err) {
-    console.error("WhatsApp send error:", err);
-    return res.status(500).json({ error: "Failed to send WhatsApp message", details: err.message });
+    console.error("[WhatsApp Send] Error:", err.message, err.stack);
+    return res.status(500).json({
+      error: "Failed to send WhatsApp message",
+      details: err.message,
+      success: false,
+    });
   }
 }
