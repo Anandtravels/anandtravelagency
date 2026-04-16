@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Clock, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -37,7 +36,6 @@ const AdminLayout = ({ children, userEmail, onSignOut }: AdminLayoutProps) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const istTime = useISTClock();
-  const navigate = useNavigate();
 
   const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
@@ -108,14 +106,16 @@ const AdminLayout = ({ children, userEmail, onSignOut }: AdminLayoutProps) => {
               </div>
             </div>
 
-            <button
-              onClick={() => navigate('/booking')}
+            <a
+              href="/booking"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-travel-blue-dark to-travel-blue-medium text-white text-xs font-bold rounded-lg shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200"
               aria-label="Go to booking page"
             >
               ATA
               <ExternalLink className="w-3 h-3" />
-            </button>
+            </a>
           </div>
           <div className="flex items-center gap-1.5 mt-2 px-1">
             <Clock className="w-3.5 h-3.5 text-travel-blue-dark flex-shrink-0" />
@@ -125,14 +125,16 @@ const AdminLayout = ({ children, userEmail, onSignOut }: AdminLayoutProps) => {
 
         {/* Desktop Top Bar with IST Clock */}
         <div className="hidden lg:flex items-center justify-end bg-white border-b border-gray-200 px-6 py-2 flex-shrink-0 gap-3">
-          <button
-            onClick={() => navigate('/booking')}
+          <a
+            href="/booking"
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-travel-blue-dark to-travel-blue-medium text-white text-xs font-bold rounded-lg shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200"
             aria-label="Go to booking page"
           >
             ATA
             <ExternalLink className="w-3.5 h-3.5" />
-          </button>
+          </a>
           <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
             <Clock className="w-3.5 h-3.5 text-travel-blue-dark" />
             <span className="text-xs font-mono text-travel-blue-dark font-medium">{istTime}</span>

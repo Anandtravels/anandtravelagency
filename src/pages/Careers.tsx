@@ -30,6 +30,7 @@ import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } f
 import { db } from '@/lib/firebase';
 import { trackButtonClick } from "@/services/clickTracker";
 import { usePageVisibility } from "@/hooks/usePageVisibility";
+import { sendCareerApplicationWhatsApp } from "@/utils/sendCareerApplicationWhatsApp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -167,7 +168,21 @@ const Careers = () => {
         createdAt: serverTimestamp(),
       };
 
-      await addDoc(collection(db, 'career_applications'), applicationData);
+      const docRef = await addDoc(collection(db, 'career_applications'), applicationData);
+
+      // Fire-and-forget WhatsApp confirmation — does not block UI
+      sendCareerApplicationWhatsApp(
+        {
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          knowsHindi: formData.knowsHindi,
+          hasLaptop: formData.hasLaptop,
+          message: formData.message,
+          resumeFileName: resumeFile?.name || null,
+        },
+        docRef.id
+      );
 
       setSubmitted(true);
       setFormData({
