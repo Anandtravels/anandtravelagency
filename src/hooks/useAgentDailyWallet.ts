@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, query, where, onSnapshot, doc, setDoc, addDoc, deleteDoc, updateDoc, serverTimestamp, orderBy, limit, writeBatch } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, setDoc, addDoc, deleteDoc, updateDoc, serverTimestamp, orderBy, limit, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export type BookingType = 'AC' | 'Sleeper';
@@ -112,7 +112,19 @@ export const useAgentDailyWallet = (agentEmail?: string) => {
   const deleteDailyEntry = useCallback(async (entryId: string) => {
     if (!email) throw new Error('No agent email');
 
-    const entryIndex = entries.findIndex(e => e.id === entryId);
+    // Fetch fresh entries from Firestore to avoid stale closure issues
+    const freshQuery = query(
+      collection(db, 'agent_daily_wallet'),
+      where('agentEmail', '==', email),
+      orderBy('createdAt', 'asc')
+    );
+    const freshSnapshot = await getDocs(freshQuery);
+    const freshEntries = freshSnapshot.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    })) as DailyWalletEntry[];
+
+    const entryIndex = freshEntries.findIndex(e => e.id === entryId);
     if (entryIndex === -1) throw new Error('Entry not found');
 
     const batch = writeBatch(db);
@@ -121,17 +133,17 @@ export const useAgentDailyWallet = (agentEmail?: string) => {
     batch.delete(doc(db, 'agent_daily_wallet', entryId));
 
     // Recalculate balances for all entries after the deleted one
-    const prevBalance = entryIndex > 0 ? (entries[entryIndex - 1].balance || 0) : 0;
+    const prevBalance = entryIndex > 0 ? (freshEntries[entryIndex - 1].balance || 0) : 0;
     let runningBalance = prevBalance;
 
-    for (let i = entryIndex + 1; i < entries.length; i++) {
-      const e = entries[i];
+    for (let i = entryIndex + 1; i < freshEntries.length; i++) {
+      const e = freshEntries[i];
       runningBalance = runningBalance + (e.receivedAmount || 0) - (e.ticketFare || 0) - (e.charges || 0);
       batch.update(doc(db, 'agent_daily_wallet', e.id), { balance: runningBalance });
     }
 
     await batch.commit();
-  }, [email, entries]);
+  }, [email]);
 
   /** Update aggregate summary in Firestore (called when entries change) */
   useEffect(() => {

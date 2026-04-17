@@ -532,12 +532,15 @@ const AgentTaskManagementTab: React.FC<AgentTaskManagementTabProps> = ({ user })
           <div className="space-y-4 py-4">
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
               <p className="text-xs sm:text-sm text-red-700">
-                <strong>Warning:</strong> This action will permanently delete:
+                <strong>Warning:</strong> This action will permanently reset the agent's complete account:
               </p>
               <ul className="text-xs sm:text-sm text-red-600 mt-2 space-y-1 ml-4 list-disc">
                 <li>All completed task history</li>
                 <li>All earned points (wallet balance reset to 0)</li>
                 <li>All verified/completed tasks</li>
+                <li>All daily payment entries & wallet history</li>
+                <li>Total earnings, charges & referral bonuses</li>
+                <li>Booking rotation state</li>
               </ul>
               <p className="text-xs sm:text-sm text-red-700 mt-2 font-medium">
                 This action cannot be undone!

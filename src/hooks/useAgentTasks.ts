@@ -327,7 +327,7 @@ export const useAgentTasks = (agentEmail?: string, isAdmin: boolean = false) => 
       );
       await Promise.all(deleteTasksPromises);
 
-      // 3. Reset wallet balance and totalEarned
+      // 3. Reset wallet balance, totalEarned, and totalSpent
       const walletRef = doc(db, 'agent_wallets', agentEmail);
       const walletSnap = await getDoc(walletRef);
       
@@ -335,13 +335,68 @@ export const useAgentTasks = (agentEmail?: string, isAdmin: boolean = false) => 
         await updateDoc(walletRef, {
           balance: 0,
           totalEarned: 0,
+          totalSpent: 0,
+          lastUpdated: serverTimestamp()
+        });
+      }
+
+      // 4. Delete all daily wallet entries for this agent
+      const dailyWalletRef = collection(db, 'agent_daily_wallet');
+      const dailyWalletQuery = query(dailyWalletRef, where('agentEmail', '==', agentEmail));
+      const dailyWalletSnapshot = await getDocs(dailyWalletQuery);
+      
+      const deleteDailyPromises = dailyWalletSnapshot.docs.map(docSnap => 
+        deleteDoc(doc(db, 'agent_daily_wallet', docSnap.id))
+      );
+      await Promise.all(deleteDailyPromises);
+
+      // 5. Reset wallet summary for this agent
+      const summaryRef = doc(db, 'agent_wallet_summary', agentEmail);
+      const summarySnap = await getDoc(summaryRef);
+      if (summarySnap.exists()) {
+        await setDoc(summaryRef, {
+          agentEmail: agentEmail,
+          totalReceived: 0,
+          totalTicketFare: 0,
+          totalCharges: 0,
+          currentBalance: 0,
+          entryCount: 0,
+          lastUpdated: serverTimestamp()
+        });
+      }
+
+      // 6. Reset agent earnings
+      const earningsRef = doc(db, 'agent_earnings', agentEmail);
+      const earningsSnap = await getDoc(earningsRef);
+      if (earningsSnap.exists()) {
+        await setDoc(earningsRef, {
+          agentEmail: agentEmail,
+          totalChargesEarned: 0,
+          referralBonuses: 0,
+          totalEarnings: 0,
+          bookingsThisMonth: 0,
+          monthKey: '',
+          lastUpdated: serverTimestamp()
+        });
+      }
+
+      // 7. Reset agent booking rotation
+      const rotationRef = doc(db, 'agent_booking_rotation', agentEmail);
+      const rotationSnap = await getDoc(rotationRef);
+      if (rotationSnap.exists()) {
+        await setDoc(rotationRef, {
+          agentEmail: agentEmail,
+          currentAccountIndex: 0,
+          totalBookingsThisMonth: 0,
+          lastBookingType: null,
+          monthKey: '',
           lastUpdated: serverTimestamp()
         });
       }
 
       toast({
         title: 'History Cleared',
-        description: `Task history and points reset for ${agentEmail}`,
+        description: `Complete account reset done for ${agentEmail}`,
       });
       return true;
     } catch (error) {
@@ -388,14 +443,74 @@ export const useAgentTasks = (agentEmail?: string, isAdmin: boolean = false) => 
         updateDoc(doc(db, 'agent_wallets', docSnap.id), {
           balance: 0,
           totalEarned: 0,
+          totalSpent: 0,
           lastUpdated: serverTimestamp()
         })
       );
       await Promise.all(resetWalletPromises);
 
+      // 4. Delete all daily wallet entries
+      const dailyWalletRef = collection(db, 'agent_daily_wallet');
+      const dailyWalletSnapshot = await getDocs(dailyWalletRef);
+      
+      const deleteDailyPromises = dailyWalletSnapshot.docs.map(docSnap => 
+        deleteDoc(doc(db, 'agent_daily_wallet', docSnap.id))
+      );
+      await Promise.all(deleteDailyPromises);
+
+      // 5. Reset all wallet summaries
+      const summariesRef = collection(db, 'agent_wallet_summary');
+      const summariesSnapshot = await getDocs(summariesRef);
+      
+      const resetSummaryPromises = summariesSnapshot.docs.map(docSnap => 
+        setDoc(doc(db, 'agent_wallet_summary', docSnap.id), {
+          agentEmail: docSnap.id,
+          totalReceived: 0,
+          totalTicketFare: 0,
+          totalCharges: 0,
+          currentBalance: 0,
+          entryCount: 0,
+          lastUpdated: serverTimestamp()
+        })
+      );
+      await Promise.all(resetSummaryPromises);
+
+      // 6. Reset all agent earnings
+      const earningsRef = collection(db, 'agent_earnings');
+      const earningsSnapshot = await getDocs(earningsRef);
+      
+      const resetEarningsPromises = earningsSnapshot.docs.map(docSnap => 
+        setDoc(doc(db, 'agent_earnings', docSnap.id), {
+          agentEmail: docSnap.id,
+          totalChargesEarned: 0,
+          referralBonuses: 0,
+          totalEarnings: 0,
+          bookingsThisMonth: 0,
+          monthKey: '',
+          lastUpdated: serverTimestamp()
+        })
+      );
+      await Promise.all(resetEarningsPromises);
+
+      // 7. Reset all booking rotations
+      const rotationsRef = collection(db, 'agent_booking_rotation');
+      const rotationsSnapshot = await getDocs(rotationsRef);
+      
+      const resetRotationPromises = rotationsSnapshot.docs.map(docSnap => 
+        setDoc(doc(db, 'agent_booking_rotation', docSnap.id), {
+          agentEmail: docSnap.id,
+          currentAccountIndex: 0,
+          totalBookingsThisMonth: 0,
+          lastBookingType: null,
+          monthKey: '',
+          lastUpdated: serverTimestamp()
+        })
+      );
+      await Promise.all(resetRotationPromises);
+
       toast({
         title: 'All History Cleared',
-        description: 'Task history and points reset for all agents',
+        description: 'Complete account reset done for all agents',
       });
       return true;
     } catch (error) {

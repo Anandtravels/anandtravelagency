@@ -1,32 +1,43 @@
 {
   "indexes": [
     {
+      "collectionGroup": "agent_daily_wallet",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "agentEmail", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "agent_booking_credentials",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "agentEmail", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "agent_tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedTo", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "task_completion_history",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "agentEmail", "order": "ASCENDING" },
+        { "fieldPath": "completedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "whatsapp_messages",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "conversationId", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "whatsapp_conversations",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "customerPhone", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "whatsapp_conversations",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "lastMessageTime", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "whatsapp_messages",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "whatsappMessageId", "order": "ASCENDING" }
       ]
     }
   ],
