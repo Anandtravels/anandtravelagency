@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { collection, getDocs, orderBy, query, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp, addDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { TrashIcon, PencilIcon, KeyIcon, Copy, Eye, EyeOff, CheckCircle2, X } from "lucide-react";
+import { TrashIcon, PencilIcon, KeyIcon, Copy, Eye, EyeOff, CheckCircle2, X, Wallet, IndianRupee, Calendar, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DailyWalletEntry } from "@/hooks/useAgentDailyWallet";
 
 interface AgentManagementTabProps {
   user: any;
@@ -279,6 +280,81 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
     };
   }, [toast]);
 
+  // --- Wallet data for all agents ---
+  const [walletSummaries, setWalletSummaries] = useState<Record<string, any>>({});
+  const [todayEntriesMap, setTodayEntriesMap] = useState<Record<string, DailyWalletEntry[]>>({});
+  const [walletViewAgent, setWalletViewAgent] = useState<string | null>(null);
+  const [walletHistory, setWalletHistory] = useState<DailyWalletEntry[]>([]);
+  const [walletHistoryLoading, setWalletHistoryLoading] = useState(false);
+
+  const getTodayKey = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+
+  // Real-time listener for wallet summaries
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'agent_wallet_summary'),
+      (snapshot) => {
+        const map: Record<string, any> = {};
+        snapshot.docs.forEach(d => {
+          map[d.id] = { id: d.id, ...d.data() };
+        });
+        setWalletSummaries(map);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // Real-time listener for today's entries (multiple per agent)
+  useEffect(() => {
+    const today = getTodayKey();
+    const q = query(
+      collection(db, 'agent_daily_wallet'),
+      where('date', '==', today)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const map: Record<string, DailyWalletEntry[]> = {};
+      snapshot.docs.forEach(d => {
+        const data = { id: d.id, ...d.data() } as DailyWalletEntry;
+        if (!map[data.agentEmail]) map[data.agentEmail] = [];
+        map[data.agentEmail].push(data);
+      });
+      setTodayEntriesMap(map);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Load wallet history for a specific agent
+  const openWalletHistory = (agentEmail: string) => {
+    setWalletViewAgent(agentEmail);
+    setWalletHistoryLoading(true);
+    setWalletHistory([]);
+  };
+
+  // Real-time listener for selected agent's wallet history
+  useEffect(() => {
+    if (!walletViewAgent) return;
+
+    const q = query(
+      collection(db, 'agent_daily_wallet'),
+      where('agentEmail', '==', walletViewAgent.toLowerCase()),
+      orderBy('createdAt', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      })) as DailyWalletEntry[];
+      setWalletHistory(list);
+      setWalletHistoryLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [walletViewAgent]);
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -468,21 +544,180 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
               <p><span className="font-medium">Phone:</span> {agent.phone}</p>
               <p><span className="font-medium">Address:</span> {agent.address}</p>
             </div>
-            {/* View Booking IDs Button */}
-            <div className="mt-4 pt-3 border-t">
+
+            {/* Wallet Balance & Today's Entries */}
+            {(() => {
+              const email = agent.email?.toLowerCase();
+              const agentSummary = walletSummaries[email];
+              const todayList = todayEntriesMap[email] || [];
+              const currentBalance = agentSummary?.currentBalance ?? 0;
+              const todayReceived = todayList.reduce((s: number, e: DailyWalletEntry) => s + (e.receivedAmount || 0), 0);
+              const todayCharges = todayList.reduce((s: number, e: DailyWalletEntry) => s + (e.charges || 0), 0);
+
+              return (
+                <div className="mt-3 pt-3 border-t space-y-2">
+                  {/* Current Balance */}
+                  <div className={`flex items-center justify-between p-2.5 rounded-lg ${currentBalance >= 0 ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                      <Wallet size={14} className={currentBalance >= 0 ? 'text-green-600' : 'text-red-600'} />
+                      Wallet Balance
+                    </span>
+                    <span className={`text-base font-bold ${currentBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                      ₹{currentBalance.toLocaleString()}
+                    </span>
+                  </div>
+
+                  {/* Today's Entries Summary */}
+                  {todayList.length > 0 ? (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
+                      <p className="text-[10px] font-medium text-blue-600 mb-1.5">Today ({todayList.length} entr{todayList.length === 1 ? 'y' : 'ies'})</p>
+                      <div className="grid grid-cols-3 gap-1.5 text-xs">
+                        <div className="text-center">
+                          <p className="text-gray-500">Received</p>
+                          <p className="font-semibold text-blue-700">₹{todayReceived.toLocaleString()}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-gray-500">Charges</p>
+                          <p className="font-semibold text-orange-600">₹{todayCharges.toLocaleString()}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-gray-500">Types</p>
+                          <div className="flex justify-center gap-1 flex-wrap">
+                            {todayList.map((e: DailyWalletEntry, i: number) => (
+                              <span key={i} className={`text-[9px] px-1 py-0.5 rounded ${e.bookingType === 'AC' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {e.bookingType || '?'}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 text-center">
+                      <p className="text-[10px] text-gray-400">No entry today</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Action Buttons */}
+            <div className="mt-3 pt-3 border-t flex gap-2">
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={() => handleViewCredentials(agent)}
-                className="w-full gap-2 text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300"
+                className="flex-1 gap-1.5 text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300 text-xs"
               >
-                <KeyIcon size={14} />
-                View Booking IDs
+                <KeyIcon size={13} />
+                Booking IDs
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => openWalletHistory(agent.email?.toLowerCase())}
+                className="flex-1 gap-1.5 text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300 text-xs"
+              >
+                <Wallet size={13} />
+                View Wallet
               </Button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* View Wallet History Dialog */}
+      <Dialog open={!!walletViewAgent} onOpenChange={(open) => { if (!open) setWalletViewAgent(null); }}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Wallet className="w-5 h-5 text-green-600" />
+              Wallet History — {walletViewAgent}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Summary */}
+          {(() => {
+            const totalReceived = walletHistory.reduce((s, e) => s + (e.receivedAmount || 0), 0);
+            const totalTicketFare = walletHistory.reduce((s, e) => s + (e.ticketFare || 0), 0);
+            const totalCharges = walletHistory.reduce((s, e) => s + (e.charges || 0), 0);
+            const latestBalance = walletHistory.length > 0 ? (walletHistory[walletHistory.length - 1].balance || 0) : 0;
+
+            return (
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
+                  <p className="text-[10px] text-blue-500">Total Received</p>
+                  <p className="text-sm font-bold text-blue-700">₹{totalReceived.toLocaleString()}</p>
+                </div>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 text-center">
+                  <p className="text-[10px] text-purple-500">Ticket Fare</p>
+                  <p className="text-sm font-bold text-purple-700">₹{totalTicketFare.toLocaleString()}</p>
+                </div>
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 text-center">
+                  <p className="text-[10px] text-orange-500">Charges</p>
+                  <p className="text-sm font-bold text-orange-700">₹{totalCharges.toLocaleString()}</p>
+                </div>
+                <div className={`border rounded-lg p-2 text-center ${latestBalance >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                  <p className={`text-[10px] ${latestBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}>Balance</p>
+                  <p className={`text-sm font-bold ${latestBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>₹{latestBalance.toLocaleString()}</p>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Entries list (newest first for display) */}
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+            {walletHistoryLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              </div>
+            ) : walletHistory.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">
+                <Calendar className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                <p className="text-sm">No entries yet.</p>
+              </div>
+            ) : (
+              [...walletHistory].reverse().map((entry) => (
+                <div key={entry.id} className="bg-gray-50 border border-gray-100 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-800">
+                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                        {entry.date}
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                        entry.bookingType === 'AC' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {entry.bookingType || 'N/A'}
+                      </span>
+                    </div>
+                    <span className={`text-sm font-bold ${(entry.balance ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      Bal: ₹{(entry.balance ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="flex justify-between bg-white p-1.5 rounded border border-gray-100">
+                      <span className="text-gray-500">Received</span>
+                      <span className="font-medium text-blue-600">₹{(entry.receivedAmount || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between bg-white p-1.5 rounded border border-gray-100">
+                      <span className="text-gray-500">Fare</span>
+                      <span className="font-medium text-purple-600">₹{(entry.ticketFare || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between bg-white p-1.5 rounded border border-gray-100">
+                      <span className="text-gray-500">Charges</span>
+                      <span className="font-medium text-orange-600">₹{(entry.charges || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                  {entry.notes && (
+                    <p className="text-[10px] text-gray-400 mt-1.5 italic">📝 {entry.notes}</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* View Agent Booking IDs Modal */}
       <Dialog open={viewCredentialsModal} onOpenChange={setViewCredentialsModal}>

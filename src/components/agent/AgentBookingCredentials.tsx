@@ -7,13 +7,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Plus, Copy, Eye, EyeOff, Pencil, Trash2, Key, CheckCircle2 } from "lucide-react";
+import { Plus, Copy, Eye, EyeOff, Pencil, Trash2, Key, CheckCircle2, BarChart3, RotateCcw } from "lucide-react";
+
+const MAX_BOOKINGS_PER_MONTH = 8;
+
+/** Returns current month key like "2026-04" */
+const getCurrentMonthKey = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
 
 interface BookingCredential {
   id: string;
   bookingId: string;
   password: string;
   label?: string;
+  bookingCount: number;
+  lastResetMonth: string;
   createdAt: any;
   updatedAt: any;
 }
@@ -38,8 +48,11 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
   const [submitting, setSubmitting] = useState(false);
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [editCountModal, setEditCountModal] = useState(false);
+  const [editCountCredential, setEditCountCredential] = useState<BookingCredential | null>(null);
+  const [editCountValue, setEditCountValue] = useState(0);
 
-  // Fetch credentials for this agent
+  // Fetch credentials for this agent + auto-reset monthly counts
   useEffect(() => {
     if (!agentEmail) return;
 
@@ -51,10 +64,33 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const credentialsList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as BookingCredential[];
+      const currentMonth = getCurrentMonthKey();
+      const credentialsList = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        const cred: BookingCredential = {
+          id: docSnap.id,
+          bookingId: data.bookingId,
+          password: data.password,
+          label: data.label,
+          bookingCount: data.bookingCount || 0,
+          lastResetMonth: data.lastResetMonth || '',
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+        };
+
+        // Auto-reset if month changed
+        if (cred.lastResetMonth !== currentMonth) {
+          updateDoc(doc(db, 'agent_booking_credentials', cred.id), {
+            bookingCount: 0,
+            lastResetMonth: currentMonth,
+            updatedAt: serverTimestamp()
+          });
+          cred.bookingCount = 0;
+          cred.lastResetMonth = currentMonth;
+        }
+
+        return cred;
+      });
       setCredentials(credentialsList);
       setLoading(false);
     }, (error) => {
@@ -167,6 +203,30 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
       }
       return newSet;
     });
+  };
+
+  const handleEditCount = (credential: BookingCredential) => {
+    setEditCountCredential(credential);
+    setEditCountValue(credential.bookingCount);
+    setEditCountModal(true);
+  };
+
+  const handleSaveCount = async () => {
+    if (!editCountCredential) return;
+    const val = Math.max(0, Math.min(MAX_BOOKINGS_PER_MONTH, editCountValue));
+    try {
+      await updateDoc(doc(db, 'agent_booking_credentials', editCountCredential.id), {
+        bookingCount: val,
+        lastResetMonth: getCurrentMonthKey(),
+        updatedAt: serverTimestamp()
+      });
+      toast({ title: "Updated", description: `Booking count set to ${val}` });
+      setEditCountModal(false);
+      setEditCountCredential(null);
+    } catch (error) {
+      console.error("Error updating count:", error);
+      toast({ title: "Error", description: "Failed to update booking count", variant: "destructive" });
+    }
   };
 
   const copyToClipboard = async (text: string, field: string) => {
@@ -295,6 +355,47 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
                     </div>
                   </div>
 
+                  {/* Booking Count - Monthly Usage */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs text-gray-500 flex items-center gap-1">
+                        <BarChart3 className="w-3 h-3" />
+                        Monthly Bookings
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <span className={`text-xs font-bold ${credential.bookingCount >= MAX_BOOKINGS_PER_MONTH ? 'text-red-600' : 'text-green-600'}`}>
+                          {credential.bookingCount}/{MAX_BOOKINGS_PER_MONTH}
+                        </span>
+                        {!readOnly && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditCount(credential)}
+                            className="h-5 w-5 p-0 shrink-0"
+                            title="Edit booking count"
+                          >
+                            <Pencil className="w-3 h-3 text-gray-400 hover:text-blue-600" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          credential.bookingCount >= MAX_BOOKINGS_PER_MONTH
+                            ? 'bg-red-500'
+                            : credential.bookingCount >= 6
+                            ? 'bg-amber-500'
+                            : 'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.min(100, (credential.bookingCount / MAX_BOOKINGS_PER_MONTH) * 100)}%` }}
+                      />
+                    </div>
+                    {credential.bookingCount >= MAX_BOOKINGS_PER_MONTH && (
+                      <p className="text-[10px] text-red-500 mt-0.5">Limit reached — resets next month</p>
+                    )}
+                  </div>
+
                   {/* Actions */}
                   {!readOnly && (
                     <div className="flex justify-end gap-2 pt-2 border-t">
@@ -392,6 +493,41 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Booking Count Modal */}
+      <Dialog open={editCountModal} onOpenChange={setEditCountModal}>
+        <DialogContent className="sm:max-w-[350px]">
+          <DialogHeader>
+            <DialogTitle className="text-base">Edit Booking Count</DialogTitle>
+          </DialogHeader>
+          {editCountCredential && (
+            <div className="space-y-4 my-2">
+              <div className="bg-gray-50 p-3 rounded-lg text-sm">
+                <p><span className="font-medium">Booking ID:</span> {editCountCredential.bookingId}</p>
+                {editCountCredential.label && <p><span className="font-medium">Label:</span> {editCountCredential.label}</p>}
+              </div>
+              <div>
+                <Label htmlFor="editCount" className="text-sm font-medium">
+                  Current Month Booking Count (max {MAX_BOOKINGS_PER_MONTH})
+                </Label>
+                <Input
+                  id="editCount"
+                  type="number"
+                  min={0}
+                  max={MAX_BOOKINGS_PER_MONTH}
+                  value={editCountValue}
+                  onChange={(e) => setEditCountValue(parseInt(e.target.value) || 0)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditCountModal(false)}>Cancel</Button>
+            <Button onClick={handleSaveCount}>Save</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

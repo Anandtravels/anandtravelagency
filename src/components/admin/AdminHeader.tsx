@@ -48,9 +48,9 @@ const AdminHeader = ({ userEmail, onSignOut }: AdminHeaderProps) => {
           </div>
           <div className="flex items-center gap-3">
             {/* Live IST Clock */}
-            <div className="hidden md:flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
-              <Clock className="w-3.5 h-3.5 text-travel-blue-dark" />
-              <span className="text-xs font-mono text-travel-blue-dark font-medium">{istTime}</span>
+            <div className="hidden md:flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
+              <Clock className="w-5 h-5 text-travel-blue-dark" />
+              <span className="text-base sm:text-lg font-mono text-travel-blue-dark font-semibold">{istTime}</span>
             </div>
             {/* Live visitor count */}
             <div className="flex items-center gap-2">

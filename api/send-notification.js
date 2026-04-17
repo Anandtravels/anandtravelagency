@@ -135,6 +135,25 @@ export default async function handler(req, res) {
         email = p.agentEmail;
         break;
       }
+      case "booking_assigned": {
+        const p = payload || {};
+        if (!p.agentEmail) {
+          return res.status(400).json({ error: "Missing agentEmail for booking assignment notification" });
+        }
+        title = "📋 New Booking Assigned";
+        body = `New booking assigned: ${p.customerName || "Customer"} — ${p.from || ""} to ${p.to || ""}. Please check your dashboard.`;
+        data = { type: "booking_assigned", bookingId: p.bookingId || "" };
+        role = "agent";
+        email = p.agentEmail;
+        break;
+      }
+      case "wallet_reminder": {
+        title = "💰 ATA Wallet Reminder";
+        body = "Please update your ATA Wallet (AC / Sleeper entry). ⚠️ If you ignore this, ₹20 may be deducted from your wallet.";
+        data = { type: "wallet_reminder" };
+        role = "agent";
+        break;
+      }
       default:
         return res.status(400).json({ error: `Unknown notification type: ${type}` });
     }

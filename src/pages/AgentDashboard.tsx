@@ -4,10 +4,10 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp, increment, getDoc, setDoc, getDocs, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Mail, MessageSquare, ClipboardList, Wallet, BookOpen, Calendar, Star, Sparkles, User, Key, Clock } from "lucide-react";
+import { Phone, Mail, MessageSquare, ClipboardList, Wallet, BookOpen, Calendar, Star, Sparkles, User, Key, Clock, BarChart3 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,11 @@ import AgentTaskList from "@/components/agent/AgentTaskList";
 import AgentWalletCard from "@/components/agent/AgentWalletCard";
 import AgentRulesRegulations from "@/components/agent/AgentRulesRegulations";
 import AgentBookingCredentials from "@/components/agent/AgentBookingCredentials";
+import AgentBookingAccountsPanel from "@/components/agent/AgentBookingAccountsPanel";
+import { useAgentBookingAccounts } from "@/hooks/useAgentBookingAccounts";
+import { calculateBookingCharge } from "@/types/agent-tasks";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useWalletReminder } from "@/hooks/useWalletReminder";
 
 const AgentDashboard = () => {
   const { user, isAgent, signOut, loading } = useAuth();
@@ -52,11 +56,13 @@ const AgentDashboard = () => {
     ticketPnr: '',
     bookingAccountId: ''
   });
+  const [pnrBookingType, setPnrBookingType] = useState<'ac' | 'sleeper'>('ac');
+  const [pnrIsReferral, setPnrIsReferral] = useState(false);
   const [pnrSubmitting, setPnrSubmitting] = useState(false);
   const [useManualEntry, setUseManualEntry] = useState(false);
 
   // Saved booking credentials for dropdown
-  const [savedCredentials, setSavedCredentials] = useState<{id: string, bookingId: string, label?: string}[]>([]);
+  const [savedCredentials, setSavedCredentials] = useState<{id: string, bookingId: string, label?: string, bookingCount: number, lastResetMonth: string}[]>([]);
 
   // Agent Tasks Hook
   const { 
@@ -68,11 +74,25 @@ const AgentDashboard = () => {
     getPendingTasksCount
   } = useAgentTasks(user?.email || undefined);
 
+  // Agent Booking Accounts Hook
+  const {
+    accounts: bookingAccounts,
+    rotationState,
+    earnings: agentEarnings,
+    getNextBookingAccount,
+    completeBooking,
+    maxTicketsPerAccount,
+    totalAccounts: totalBookingAccounts,
+  } = useAgentBookingAccounts(user?.email || undefined);
+
   // Task status filter for agent view
   const [taskStatusFilter, setTaskStatusFilter] = useState<string>('all');
 
   // Web Push Notifications
   const { permission: notifPermission, requestPermission: requestNotifPermission } = useNotifications(user?.email, 'agent');
+
+  // Wallet reminder notifications at 10:15 AM and 11:10 AM IST
+  useWalletReminder(user?.email);
 
   // Live IST clock
   useEffect(() => {
@@ -137,11 +157,18 @@ const AgentDashboard = () => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const credentialsList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        bookingId: doc.data().bookingId,
-        label: doc.data().label
-      }));
+      const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      const credentialsList = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        const count = data.lastResetMonth === currentMonth ? (data.bookingCount || 0) : 0;
+        return {
+          id: docSnap.id,
+          bookingId: data.bookingId,
+          label: data.label,
+          bookingCount: count,
+          lastResetMonth: data.lastResetMonth || ''
+        };
+      });
       setSavedCredentials(credentialsList);
     });
 
@@ -274,7 +301,10 @@ const AgentDashboard = () => {
     // If agent is trying to mark as completed, show the PNR modal instead
     if (status === 'completed' && booking) {
       setPnrBooking(booking);
-      setPnrDetails({ ticketPnr: '', bookingAccountId: '' });
+      const { account, bookingType } = getNextBookingAccount();
+      setPnrDetails({ ticketPnr: '', bookingAccountId: account?.bookingId || '' });
+      setPnrBookingType(bookingType);
+      setPnrIsReferral(false);
       setPnrModalOpen(true);
       return;
     }
@@ -315,23 +345,27 @@ const AgentDashboard = () => {
 
     setPnrSubmitting(true);
     try {
-      await updateDoc(doc(db, 'bookings', pnrBooking.id), { 
-        status: 'agent_done',
-        agentPnr: pnrDetails.ticketPnr.trim(),
-        agentBookingAccountId: pnrDetails.bookingAccountId.trim(),
-        agentCompletedAt: serverTimestamp(),
-        updated_at: serverTimestamp(),
-        updated_by: user?.email
-      });
+      const result = await completeBooking(
+        pnrBooking.id,
+        pnrDetails.bookingAccountId.trim(),
+        pnrBookingType,
+        pnrDetails.ticketPnr.trim(),
+        agentName,
+        pnrBooking,
+        pnrIsReferral
+      );
       
+      const bonusText = result.referralBonus > 0 ? ` + ₹${result.referralBonus} referral bonus` : '';
       toast({
-        title: "Booking Completed",
-        description: "PNR details submitted successfully. Status updated to Agent Done.",
+        title: "🎉 Booking Completed!",
+        description: `PNR submitted. Earned ${result.pointsEarned} ATA points + ₹${result.charge} charges${bonusText}.`,
+        duration: 5000,
       });
       
       setPnrModalOpen(false);
       setPnrBooking(null);
       setPnrDetails({ ticketPnr: '', bookingAccountId: '' });
+      setPnrIsReferral(false);
       setUseManualEntry(false);
     } catch (error) {
       console.error("Error updating booking with PNR:", error);
@@ -578,9 +612,9 @@ Thank you for choosing Anand Travels!`;
           </div>
           <Button variant="outline" size="sm" onClick={handleSignOut} className="text-xs sm:text-sm">Sign Out</Button>
         </div>
-        <div className="container px-3 sm:px-4 pb-2 flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5 text-travel-blue-dark flex-shrink-0" />
-          <span className="text-xs font-mono text-travel-blue-dark font-medium">{istTime}</span>
+        <div className="container px-3 sm:px-4 pb-2 flex items-center gap-2">
+          <Clock className="w-5 h-5 text-travel-blue-dark flex-shrink-0" />
+          <span className="text-base sm:text-lg font-mono text-travel-blue-dark font-semibold">{istTime}</span>
         </div>
       </header>
 
@@ -625,14 +659,14 @@ Thank you for choosing Anand Travels!`;
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 gap-0.5 bg-gray-100 shadow-sm rounded-lg p-0.5 h-auto">
+          <TabsList className="grid w-full grid-cols-6 gap-0.5 bg-gray-100 shadow-sm rounded-lg p-0.5 h-auto">
             <TabsTrigger value="tasks" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-blue-dark data-[state=active]:text-white rounded-md">
               <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden xs:inline">Tasks</span>
             </TabsTrigger>
-            <TabsTrigger value="wallet" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-orange data-[state=active]:text-white rounded-md">
-              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden xs:inline">Wallet</span>
+            <TabsTrigger value="accounts" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white rounded-md">
+              <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Accounts</span>
             </TabsTrigger>
             <TabsTrigger value="credentials" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white rounded-md">
               <Key className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -641,6 +675,10 @@ Thank you for choosing Anand Travels!`;
             <TabsTrigger value="bookings" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-teal data-[state=active]:text-white rounded-md">
               <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden xs:inline">Bookings</span>
+            </TabsTrigger>
+            <TabsTrigger value="wallet" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-orange data-[state=active]:text-white rounded-md">
+              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Wallet</span>
             </TabsTrigger>
             <TabsTrigger value="rules" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-blue-medium data-[state=active]:text-white rounded-md">
               <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -679,15 +717,25 @@ Thank you for choosing Anand Travels!`;
                 />
               </div>
               <div className="order-1 lg:order-2">
-                <AgentWalletCard wallet={wallet} recentHistory={taskHistory.slice(0, 5)} />
+                <AgentWalletCard wallet={wallet} recentHistory={taskHistory.slice(0, 5)} agentEmail={user?.email || ''} />
               </div>
             </div>
+          </TabsContent>
+
+          {/* Accounts Tab - Rotation, Charges, Earnings */}
+          <TabsContent value="accounts" className="mt-4">
+            <AgentBookingAccountsPanel
+              accounts={bookingAccounts}
+              rotationState={rotationState}
+              earnings={agentEarnings}
+              maxTicketsPerAccount={maxTicketsPerAccount}
+            />
           </TabsContent>
 
           {/* Wallet Tab */}
           <TabsContent value="wallet" className="mt-4">
             <div className="max-w-md mx-auto">
-              <AgentWalletCard wallet={wallet} recentHistory={taskHistory} />
+              <AgentWalletCard wallet={wallet} recentHistory={taskHistory} agentEmail={user?.email || ''} showDailyWallet />
             </div>
           </TabsContent>
 
@@ -957,7 +1005,7 @@ Thank you for choosing Anand Travels!`;
 
       {/* PNR Completion Modal */}
       <Dialog open={pnrModalOpen} onOpenChange={setPnrModalOpen}>
-        <DialogContent className="sm:max-w-[450px] w-[95%]">
+        <DialogContent className="sm:max-w-[480px] w-[95%] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold text-gray-900">
               Complete Booking - Enter Ticket Details
@@ -973,6 +1021,32 @@ Thank you for choosing Anand Travels!`;
                   <p><span className="font-medium text-blue-700">Customer:</span> {pnrBooking.name}</p>
                   <p><span className="font-medium text-blue-700">Journey:</span> {pnrBooking.from} → {pnrBooking.to}</p>
                   <p><span className="font-medium text-blue-700">Date:</span> {pnrBooking.journey_date}</p>
+                  <p><span className="font-medium text-blue-700">Passengers:</span> {
+                    Array.isArray(pnrBooking.passengers) 
+                      ? pnrBooking.passengers.filter((p: any) => p && (p.name || p.age || p.gender)).length 
+                      : pnrBooking.passengers
+                  }</p>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div className="bg-green-50 border border-green-200 rounded-md px-3 py-1.5">
+                    <p className="text-xs font-medium text-green-700 flex items-center gap-1">
+                      <Star className="w-3 h-3" />
+                      Points: +{(() => {
+                        let count = 0;
+                        if (Array.isArray(pnrBooking.passengers)) {
+                          count = pnrBooking.passengers.filter((p: any) => p && (p.name || p.age || p.gender)).length;
+                        } else if (typeof pnrBooking.passengers === 'number') count = pnrBooking.passengers;
+                        else if (typeof pnrBooking.passengers === 'string') count = parseInt(pnrBooking.passengers) || 1;
+                        if (count < 1) count = 1;
+                        return count * 80;
+                      })()} ATA
+                    </p>
+                  </div>
+                  <div className={`border rounded-md px-3 py-1.5 ${pnrBookingType === 'ac' ? 'bg-purple-50 border-purple-200' : 'bg-amber-50 border-amber-200'}`}>
+                    <p className={`text-xs font-medium flex items-center gap-1 ${pnrBookingType === 'ac' ? 'text-purple-700' : 'text-amber-700'}`}>
+                      ₹ Charge: ₹{calculateBookingCharge(totalBookingAccounts, pnrBookingType)}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -994,6 +1068,40 @@ Thank you for choosing Anand Travels!`;
                   <p className="text-xs text-gray-500 mt-1">Enter the 10-digit PNR number from the booked ticket</p>
                 </div>
 
+                {/* Booking Type Selector */}
+                <div>
+                  <Label className="text-sm font-medium">
+                    Booking Type <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setPnrBookingType('ac')}
+                      disabled={pnrSubmitting}
+                      className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
+                        pnrBookingType === 'ac'
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-md'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-purple-300'
+                      }`}
+                    >
+                      AC
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPnrBookingType('sleeper')}
+                      disabled={pnrSubmitting}
+                      className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
+                        pnrBookingType === 'sleeper'
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-md'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-amber-300'
+                      }`}
+                    >
+                      Sleeper (SL)
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Suggested by rotation: <strong>{pnrBookingType.toUpperCase()}</strong></p>
+                </div>
+
                 <div>
                   <Label htmlFor="bookingAccountId" className="text-sm font-medium">
                     Booking Account ID <span className="text-red-500">*</span>
@@ -1011,8 +1119,12 @@ Thank you for choosing Anand Travels!`;
                       >
                         <option value="">Select a saved booking ID</option>
                         {savedCredentials.map((cred) => (
-                          <option key={cred.id} value={cred.bookingId}>
-                            {cred.label ? `${cred.label} (${cred.bookingId})` : cred.bookingId}
+                          <option 
+                            key={cred.id} 
+                            value={cred.bookingId}
+                            disabled={cred.bookingCount >= 8}
+                          >
+                            {cred.label ? `${cred.label} (${cred.bookingId})` : cred.bookingId} — {cred.bookingCount}/8 used{cred.bookingCount >= 8 ? ' ⛔' : ''}
                           </option>
                         ))}
                       </select>
@@ -1057,11 +1169,26 @@ Thank you for choosing Anand Travels!`;
                     }
                   </p>
                 </div>
+
+                {/* Referral Checkbox */}
+                <div className="flex items-center gap-2 bg-green-50 p-3 rounded-lg border border-green-200">
+                  <input
+                    type="checkbox"
+                    id="referralCheckbox"
+                    checked={pnrIsReferral}
+                    onChange={(e) => setPnrIsReferral(e.target.checked)}
+                    disabled={pnrSubmitting}
+                    className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
+                  />
+                  <label htmlFor="referralCheckbox" className="text-sm text-green-800 cursor-pointer">
+                    This is a <strong>referral booking</strong> (earns ₹{100} bonus)
+                  </label>
+                </div>
               </div>
 
               <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
                 <p className="text-xs text-amber-800">
-                  <strong>Note:</strong> After submitting, the booking status will be changed to "Agent Done" and the admin will be notified to complete the process.
+                  <strong>Note:</strong> After submitting, the booking status will be changed to "Agent Done", charges & points will be credited automatically, and rotation will advance.
                 </p>
               </div>
             </div>
@@ -1074,6 +1201,7 @@ Thank you for choosing Anand Travels!`;
                 setPnrModalOpen(false);
                 setPnrBooking(null);
                 setPnrDetails({ ticketPnr: '', bookingAccountId: '' });
+                setPnrIsReferral(false);
                 setUseManualEntry(false);
               }}
               disabled={pnrSubmitting}

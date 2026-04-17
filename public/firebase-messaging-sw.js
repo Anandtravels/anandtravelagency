@@ -57,6 +57,10 @@ self.addEventListener('notificationclick', (event) => {
     urlPath = '/admin#visa-applications';
   } else if (data.type === 'new_agent_task') {
     urlPath = '/agent-dashboard';
+  } else if (data.type === 'booking_assigned') {
+    urlPath = '/agent-dashboard';
+  } else if (data.type === 'wallet_reminder') {
+    urlPath = '/agent-dashboard';
   } else if (data.url) {
     urlPath = data.url;
   }

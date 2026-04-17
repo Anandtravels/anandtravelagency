@@ -22,7 +22,8 @@ import {
   ClipboardList,
   Briefcase,
   Handshake,
-  FolderOpen
+  FolderOpen,
+  Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -165,6 +166,12 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
       href: '/admin#agent-tasks',
       icon: ClipboardList,
       description: 'Task & Rewards'
+    },
+    {
+      title: 'Agent Wallets',
+      href: '/admin#agent-wallets',
+      icon: Wallet,
+      description: 'Daily Payments'
     },
     {
       title: 'Team Management',

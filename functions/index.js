@@ -1,4 +1,6 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { initializeApp, cert } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
@@ -259,4 +261,122 @@ exports.onNewAgentTask = onDocumentCreated("agent_tasks/{taskId}", async (event)
   );
 
   logger.info(`Task notification sent to agent ${agentName} (${agentEmail})`);
+});
+
+// ═══════════════════════════════════════════════════════════
+// SCHEDULED WALLET REMINDERS - Sent to all agents
+// ═══════════════════════════════════════════════════════════
+
+// Helper: Send wallet reminder to all agents
+async function sendWalletReminderToAllAgents() {
+  const title = "💰 ATA Wallet Reminder";
+  const body = "Please update your ATA Wallet (AC / Sleeper entry). ⚠️ If you ignore this, ₹20 may be deducted from your wallet.";
+
+  try {
+    const tokensSnap = await firestore
+      .collection("fcm_tokens")
+      .where("role", "==", "agent")
+      .get();
+
+    if (tokensSnap.empty) {
+      logger.info("No agent FCM tokens found for wallet reminder");
+      return;
+    }
+
+    const invalidTokenIds = [];
+
+    const results = await Promise.allSettled(
+      tokensSnap.docs.map(async (tokenDoc) => {
+        const token = tokenDoc.data().token;
+        const agentEmail = tokenDoc.data().email;
+        try {
+          await messaging.send({
+            token,
+            notification: { title, body },
+            data: { type: "wallet_reminder", title, body },
+            webpush: {
+              headers: { Urgency: "high" },
+              notification: {
+                title,
+                body,
+                icon: "/logo.png",
+                badge: "/logo.png",
+                requireInteraction: true,
+              },
+            },
+          });
+          logger.info(`Wallet reminder sent to ${agentEmail}`);
+        } catch (err) {
+          if (
+            err.code === "messaging/registration-token-not-registered" ||
+            err.code === "messaging/invalid-registration-token"
+          ) {
+            invalidTokenIds.push(tokenDoc.id);
+          }
+          throw err;
+        }
+      })
+    );
+
+    for (const id of invalidTokenIds) {
+      await firestore.collection("fcm_tokens").doc(id).delete();
+      logger.info(`Removed invalid FCM token: ${id}`);
+    }
+
+    const sent = results.filter((r) => r.status === "fulfilled").length;
+    logger.info(`Wallet reminder sent to ${sent}/${tokensSnap.size} agents`);
+  } catch (err) {
+    logger.error("Failed to send wallet reminder:", err);
+  }
+}
+
+// 8. Scheduled: Wallet reminder at 10:15 AM IST
+exports.walletReminder1015 = onSchedule(
+  { schedule: "15 10 * * *", timeZone: "Asia/Kolkata" },
+  async () => {
+    logger.info("Running wallet reminder at 10:15 AM IST");
+    await sendWalletReminderToAllAgents();
+  }
+);
+
+// 9. Scheduled: Wallet reminder at 11:10 AM IST
+exports.walletReminder1110 = onSchedule(
+  { schedule: "10 11 * * *", timeZone: "Asia/Kolkata" },
+  async () => {
+    logger.info("Running wallet reminder at 11:10 AM IST");
+    await sendWalletReminderToAllAgents();
+  }
+);
+
+// ═══════════════════════════════════════════════════════════
+// BOOKING ASSIGNMENT NOTIFICATION - When admin assigns booking to agent
+// ═══════════════════════════════════════════════════════════
+
+// 10. Booking assigned to agent (detect assignedAgent field change)
+exports.onBookingAssigned = onDocumentUpdated("bookings/{bookingId}", async (event) => {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+  if (!before || !after) return;
+
+  const prevAgent = before.assignedAgent;
+  const newAgent = after.assignedAgent;
+
+  // Only notify if agent was newly assigned (not unassigned or unchanged)
+  if (!newAgent || newAgent === prevAgent) return;
+
+  const customerName = after.name || after.passengerName || "Customer";
+  const from = after.from || "";
+  const to = after.to || "";
+  const bookingId = event.params.bookingId;
+
+  logger.info(`Booking ${bookingId} assigned to agent ${newAgent} — sending FCM notification`);
+
+  await sendToAgent(
+    newAgent,
+    "📋 New Booking Assigned",
+    `New booking assigned: ${customerName} — ${from} to ${to}. Please check your dashboard.`,
+    { type: "booking_assigned", bookingId }
+  );
+
+  logger.info(`Booking assignment notification sent to ${newAgent} for booking ${bookingId}`);
 });

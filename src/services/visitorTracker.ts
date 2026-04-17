@@ -240,13 +240,18 @@ class VisitorTracker {
     try {
       if (this.heartbeatInterval) {
         clearInterval(this.heartbeatInterval);
+        this.heartbeatInterval = null;
       }
 
       if (this.sessionRef) {
         await deleteDoc(this.sessionRef);
       }
-    } catch (error) {
-      console.error('Error ending session:', error);
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        console.warn('Visitor session cleanup skipped (permission denied)');
+      } else {
+        console.error('Error ending session:', error);
+      }
     }
   }
 

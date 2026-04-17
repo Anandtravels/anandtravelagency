@@ -51,6 +51,33 @@ export const useTicketAssignment = (bookings: Booking[], agents: Agent[]) => {
       if (booking && selectedAgent) {
         toast({ title: "Booking Assigned", description: `Booking for ${booking.name} has been assigned to ${selectedAgent.name}.` });
         
+        // Send FCM push notification to the agent
+        try {
+          const res = await fetch('/api/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'booking_assigned',
+              payload: {
+                agentEmail,
+                bookingId,
+                customerName: booking.name || 'Customer',
+                from: booking.from || '',
+                to: booking.to || '',
+              }
+            })
+          });
+          const result = await res.json();
+          console.log(`[BookingAssignment] FCM notification result for ${agentEmail}:`, result);
+          if (result.success) {
+            console.log(`[BookingAssignment] ✅ Push notification sent to ${selectedAgent.name} (${agentEmail}) — ${result.sent}/${result.total} devices`);
+          } else {
+            console.warn(`[BookingAssignment] ⚠️ Push notification may have failed:`, result);
+          }
+        } catch (notifErr) {
+          console.error(`[BookingAssignment] ❌ Failed to send push notification to ${agentEmail}:`, notifErr);
+        }
+
         // Send WhatsApp notification to the agent
         setTimeout(() => {
           const notificationSent = sendBookingAssignmentNotification(selectedAgent, booking);

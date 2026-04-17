@@ -31,6 +31,7 @@ import TeamManagementTab from "@/components/admin/TeamManagementTab";
 import UPISettingsTab from "@/components/admin/UPISettingsTab";
 import BillsManagementTab from "@/components/admin/BillsManagementTab";
 import AgentTaskManagementTab from "@/components/admin/AgentTaskManagementTab";
+import AdminAgentWalletsTab from "@/components/admin/AdminAgentWalletsTab";
 import CareersManagementTab from "@/components/admin/CareersManagementTab";
 import CollaborationsManagementTab from "@/components/admin/CollaborationsManagementTab";
 import DocumentsManagementTab from "@/components/admin/DocumentsManagementTab";
@@ -196,6 +197,10 @@ const Admin = () => {
             <AgentTaskManagementTab 
               user={user}
             />
+          </TabsContent>
+
+          <TabsContent value="agent-wallets" className="space-y-6">
+            <AdminAgentWalletsTab user={user} />
           </TabsContent>
 
           <TabsContent value="eservices" className="space-y-6">
