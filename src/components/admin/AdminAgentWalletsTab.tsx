@@ -1,18 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Wallet, IndianRupee, Users, ChevronRight, Calendar, TrendingUp, ArrowLeft, Loader2 } from 'lucide-react';
 import { useAllAgentWalletSummaries, useAgentDailyEntries, DailyWalletEntry } from '@/hooks/useAgentDailyWallet';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AdminAgentWalletsTabProps {
   user: any;
 }
 
+interface AgentInfo {
+  id: string;
+  name: string;
+  email: string;
+}
+
 const AdminAgentWalletsTab: React.FC<AdminAgentWalletsTabProps> = ({ user }) => {
-  const { summaries, loading } = useAllAgentWalletSummaries();
+  const { summaries, loading: walletsLoading } = useAllAgentWalletSummaries();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [agents, setAgents] = useState<AgentInfo[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(true);
+
+  // Fetch agents list so we can show all agents even if they have no wallet entries
+  useEffect(() => {
+    const q = query(collection(db, 'agents'), orderBy('created_at', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map(d => ({
+        id: d.id,
+        name: d.data().name || d.data().email?.split('@')[0] || 'Unknown',
+        email: (d.data().email || '').toLowerCase(),
+      }));
+      setAgents(list);
+      setAgentsLoading(false);
+    }, () => setAgentsLoading(false));
+    return () => unsubscribe();
+  }, []);
+
+  const loading = walletsLoading || agentsLoading;
+
+  // Merge agents with wallet summaries — show all agents, use wallet data where available
+  const mergedAgents = agents.map(agent => {
+    const wallet = summaries.find(s => s.agentEmail?.toLowerCase() === agent.email);
+    return {
+      name: agent.name,
+      email: agent.email,
+      totalReceived: wallet?.totalReceived || 0,
+      totalCharges: wallet?.totalCharges || 0,
+      currentBalance: wallet?.currentBalance || 0,
+      entryCount: wallet?.entryCount || 0,
+    };
+  });
+  // Also add wallet entries for emails not in agents list
+  summaries.forEach(s => {
+    if (!agents.find(a => a.email === s.agentEmail?.toLowerCase())) {
+      mergedAgents.push({
+        name: s.agentEmail?.split('@')[0] || 'Unknown',
+        email: s.agentEmail || '',
+        totalReceived: s.totalReceived || 0,
+        totalCharges: s.totalCharges || 0,
+        currentBalance: s.currentBalance || 0,
+        entryCount: s.entryCount || 0,
+      });
+    }
+  });
 
   if (loading) {
     return (
@@ -23,20 +76,20 @@ const AdminAgentWalletsTab: React.FC<AdminAgentWalletsTabProps> = ({ user }) => 
     );
   }
 
-  if (summaries.length === 0) {
+  if (mergedAgents.length === 0) {
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-16">
           <Wallet className="w-12 h-12 text-gray-300 mb-3" />
-          <h3 className="text-lg font-medium text-gray-600 mb-1">No Agent Wallets</h3>
-          <p className="text-sm text-gray-400">Agent wallet data will appear here once agents start adding daily entries.</p>
+          <h3 className="text-lg font-medium text-gray-600 mb-1">No Agents Found</h3>
+          <p className="text-sm text-gray-400">Add agents first. Wallet data will appear here once agents start adding daily entries.</p>
         </CardContent>
       </Card>
     );
   }
 
   // Calculate overall totals
-  const overallTotals = summaries.reduce((acc, s) => ({
+  const overallTotals = mergedAgents.reduce((acc, s) => ({
     totalReceived: acc.totalReceived + (s.totalReceived || 0),
     totalCharges: acc.totalCharges + (s.totalCharges || 0),
     totalBalance: acc.totalBalance + (s.currentBalance || 0),
@@ -51,7 +104,7 @@ const AdminAgentWalletsTab: React.FC<AdminAgentWalletsTabProps> = ({ user }) => 
         </div>
         <div>
           <h2 className="text-xl font-bold text-gray-900">Agent Wallets</h2>
-          <p className="text-sm text-gray-500">{summaries.length} agent{summaries.length !== 1 ? 's' : ''} with wallet data</p>
+          <p className="text-sm text-gray-500">{mergedAgents.length} agent{mergedAgents.length !== 1 ? 's' : ''}</p>
         </div>
       </div>
 
@@ -94,25 +147,25 @@ const AdminAgentWalletsTab: React.FC<AdminAgentWalletsTabProps> = ({ user }) => 
 
       {/* Agent Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {summaries.map((agent) => (
+        {mergedAgents.map((agent) => (
           <motion.div
-            key={agent.agentEmail}
+            key={agent.email}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
           >
             <Card
               className="cursor-pointer hover:shadow-md transition-shadow border-gray-200"
-              onClick={() => setSelectedAgent(agent.agentEmail)}
+              onClick={() => setSelectedAgent(agent.email)}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <Users className="w-4 h-4 text-green-600" />
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-sm">
+                      {agent.name?.charAt(0)?.toUpperCase() || 'A'}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-800 truncate max-w-[180px]">{agent.agentEmail}</p>
-                      <p className="text-[10px] text-gray-400">{agent.entryCount || 0} entries</p>
+                      <p className="text-sm font-semibold text-gray-800 truncate max-w-[180px]">{agent.name}</p>
+                      <p className="text-[10px] text-gray-400 truncate max-w-[180px]">{agent.email}</p>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -132,6 +185,10 @@ const AdminAgentWalletsTab: React.FC<AdminAgentWalletsTabProps> = ({ user }) => 
                     <p className={`text-xs font-bold ${(agent.currentBalance || 0) >= 0 ? 'text-green-700' : 'text-red-700'}`}>₹{(agent.currentBalance || 0).toLocaleString()}</p>
                   </div>
                 </div>
+
+                {agent.entryCount > 0 && (
+                  <p className="text-[10px] text-gray-400 mt-2 text-right">{agent.entryCount} entries</p>
+                )}
               </CardContent>
             </Card>
           </motion.div>

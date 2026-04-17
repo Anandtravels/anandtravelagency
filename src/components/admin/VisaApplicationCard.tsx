@@ -8,7 +8,9 @@ import {
   Globe, 
   Eye, 
   User,
-  Trash2
+  Trash2,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,6 +55,8 @@ interface VisaApplicationCardProps {
   updateStatus: (applicationId: string, newStatus: string) => void;
   viewDetails: (application: VisaApplication) => void;
   deleteApplication: (applicationId: string, applicantName: string) => void;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 const STATUS_CONFIG = {
@@ -78,7 +82,9 @@ const VisaApplicationCard = ({
   formatFirebaseTimestamp, 
   updateStatus, 
   viewDetails,
-  deleteApplication 
+  deleteApplication,
+  isSelected = false,
+  onToggleSelect
 }: VisaApplicationCardProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -95,10 +101,23 @@ const VisaApplicationCard = ({
       transition={{ duration: 0.3, delay: index * 0.1 }}
       className="h-full"
     >
-      <Card className="h-full hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500">
+      <Card className={`h-full hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500 ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50/30' : ''}`}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0 flex-1">
+              {onToggleSelect && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggleSelect(application.id); }}
+                  className="flex-shrink-0 p-0.5 rounded hover:bg-gray-100 transition-colors"
+                  title={isSelected ? 'Deselect' : 'Select'}
+                >
+                  {isSelected ? (
+                    <CheckSquare className="h-4 w-4 text-blue-600" />
+                  ) : (
+                    <Square className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+              )}
               <User className="h-4 w-4 text-gray-500 flex-shrink-0" />
               <CardTitle 
                 className="text-lg font-semibold truncate min-w-0" 

@@ -23,8 +23,13 @@ import {
   Briefcase,
   Handshake,
   FolderOpen,
-  Wallet
+  Wallet,
+  GripVertical,
+  RotateCcw
 } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -48,6 +53,43 @@ interface MenuItem {
   children?: MenuItem[];
   isOpen?: boolean;
 }
+
+const MENU_ORDER_KEY = 'admin-sidebar-menu-order';
+
+const SortableMenuItemWrapper = ({ id, children, isCollapsed }: { id: string; children: React.ReactNode; isCollapsed: boolean }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={cn('relative group/sortable', isDragging && 'opacity-50 bg-blue-50 rounded-lg shadow-lg')}>
+      {!isCollapsed && (
+        <button
+          {...attributes}
+          {...listeners}
+          className="absolute -left-0.5 top-3 z-10 opacity-0 group-hover/sortable:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-gray-200"
+          title="Drag to reorder"
+          type="button"
+          style={{ touchAction: 'none' }}
+        >
+          <GripVertical className="w-3.5 h-3.5 text-gray-400" />
+        </button>
+      )}
+      {children}
+    </div>
+  );
+};
 
 const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: AdminSidebarProps) => {
   const location = useLocation();
@@ -217,6 +259,58 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
     }
   ];
 
+  // --- Drag-and-drop menu reordering ---
+  const [menuOrder, setMenuOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(MENU_ORDER_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const getOrderedMenuItems = () => {
+    if (menuOrder.length === 0) return menuItems;
+    const ordered: MenuItem[] = [];
+    const remaining = [...menuItems];
+    for (const title of menuOrder) {
+      const idx = remaining.findIndex(item => item.title === title);
+      if (idx !== -1) {
+        ordered.push(remaining[idx]);
+        remaining.splice(idx, 1);
+      }
+    }
+    return [...ordered, ...remaining];
+  };
+
+  const orderedMenuItems = getOrderedMenuItems();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = orderedMenuItems.findIndex(item => item.title === active.id);
+    const newIndex = orderedMenuItems.findIndex(item => item.title === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newOrder = arrayMove(
+      orderedMenuItems.map(item => item.title),
+      oldIndex,
+      newIndex
+    );
+    setMenuOrder(newOrder);
+    localStorage.setItem(MENU_ORDER_KEY, JSON.stringify(newOrder));
+  };
+
+  const resetMenuOrder = () => {
+    setMenuOrder([]);
+    localStorage.removeItem(MENU_ORDER_KEY);
+  };
+
+  const isCustomOrder = menuOrder.length > 0;
+
   const isActive = (href: string) => {
     if (href === '#') return false; // Parent dropdown items are never "active"
     if (href === '/admin') {
@@ -347,15 +441,29 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
 
       {/* Navigation Menu */}
       <nav className="flex-1 overflow-y-auto py-4">
+        {!isCollapsed && isCustomOrder && (
+          <div className="px-3 mb-2 flex justify-end">
+            <button
+              onClick={resetMenuOrder}
+              className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
+              title="Reset menu order to default"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset order
+            </button>
+          </div>
+        )}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={orderedMenuItems.map(item => item.title)} strategy={verticalListSortingStrategy}>
         <div className="space-y-1 px-2">
-          {menuItems.map((item, index) => {
+          {orderedMenuItems.map((item, index) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             const hasChildren = item.children && item.children.length > 0;
             const isOpen = item.isOpen;
             
             return (
-              <div key={item.title}>
+              <SortableMenuItemWrapper key={item.title} id={item.title} isCollapsed={isCollapsed}>
                 <motion.div
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -542,10 +650,12 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
                     })}
                   </div>
                 )}
-              </div>
+              </SortableMenuItemWrapper>
             );
           })}
         </div>
+        </SortableContext>
+        </DndContext>
       </nav>
 
       <Separator />

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { 
-  FileCheck
+  FileCheck,
+  Trash2,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { collection, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -11,6 +14,16 @@ import VisaApplicationFilters from './VisaApplicationFilters';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface VisaApplication {
   id: string;
@@ -38,6 +51,9 @@ const VisaApplicationsTab = ({ user, formatFirebaseTimestamp }: VisaApplications
   const [selectedApplication, setSelectedApplication] = useState<VisaApplication | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [agents, setAgents] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const { toast } = useToast();
 
   // Set up real-time listeners for visa applications and agents
@@ -160,6 +176,52 @@ const VisaApplicationsTab = ({ user, formatFirebaseTimestamp }: VisaApplications
     }
   };
 
+  // Selection handlers
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredApplications.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredApplications.map(app => app.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id => deleteDoc(doc(db, 'visa-services', id)))
+      );
+      toast({
+        title: "Deleted Successfully",
+        description: `${selectedIds.size} visa application${selectedIds.size > 1 ? 's' : ''} deleted`,
+      });
+      setSelectedIds(new Set());
+      setShowBulkDeleteDialog(false);
+    } catch (error) {
+      console.error('Error bulk deleting:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete some applications",
+        variant: "destructive"
+      });
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   // Filter applications
   const filteredApplications = applications.filter(app => {
     const matchesSearch = 
@@ -208,14 +270,26 @@ const VisaApplicationsTab = ({ user, formatFirebaseTimestamp }: VisaApplications
           </div>
         </div>
         
-        <Button 
-          onClick={refreshApplications} 
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <FileCheck className="h-4 w-4" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <Button
+              onClick={() => setShowBulkDeleteDialog(true)}
+              variant="destructive"
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete ({selectedIds.size})
+            </Button>
+          )}
+          <Button 
+            onClick={refreshApplications} 
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <FileCheck className="h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -241,20 +315,48 @@ const VisaApplicationsTab = ({ user, formatFirebaseTimestamp }: VisaApplications
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredApplications.map((application, index) => (
-            <VisaApplicationCard
-              key={application.id}
-              application={application}
-              index={index}
-              agents={agents}
-              formatFirebaseTimestamp={formatFirebaseTimestamp}
-              updateStatus={updateStatus}
-              viewDetails={viewDetails}
-              deleteApplication={deleteApplication}
-            />
-          ))}
-        </div>
+        <>
+          {/* Select All Bar */}
+          <div className="flex items-center justify-between bg-gray-50 border rounded-lg px-4 py-2.5">
+            <button
+              onClick={handleSelectAll}
+              className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
+            >
+              {selectedIds.size === filteredApplications.length && filteredApplications.length > 0 ? (
+                <CheckSquare className="h-4 w-4 text-blue-600" />
+              ) : (
+                <Square className="h-4 w-4 text-gray-400" />
+              )}
+              {selectedIds.size === filteredApplications.length && filteredApplications.length > 0
+                ? 'Deselect All'
+                : 'Select All'
+              }
+            </button>
+            <span className="text-xs text-gray-500">
+              {selectedIds.size > 0
+                ? `${selectedIds.size} of ${filteredApplications.length} selected`
+                : `${filteredApplications.length} application${filteredApplications.length !== 1 ? 's' : ''}`
+              }
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredApplications.map((application, index) => (
+              <VisaApplicationCard
+                key={application.id}
+                application={application}
+                index={index}
+                agents={agents}
+                formatFirebaseTimestamp={formatFirebaseTimestamp}
+                updateStatus={updateStatus}
+                viewDetails={viewDetails}
+                deleteApplication={deleteApplication}
+                isSelected={selectedIds.has(application.id)}
+                onToggleSelect={handleToggleSelect}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {/* Details Modal */}
@@ -265,6 +367,29 @@ const VisaApplicationsTab = ({ user, formatFirebaseTimestamp }: VisaApplications
         agents={agents}
         formatFirebaseTimestamp={formatFirebaseTimestamp}
       />
+
+      {/* Bulk Delete Confirmation */}
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} Visa Application{selectedIds.size > 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{selectedIds.size}</strong> selected visa application{selectedIds.size > 1 ? 's' : ''}.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={bulkDeleting}
+            >
+              {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.size} Application${selectedIds.size > 1 ? 's' : ''}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
