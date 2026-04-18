@@ -25,6 +25,7 @@ import { useAgentBookingAccounts } from "@/hooks/useAgentBookingAccounts";
 import { calculateBookingCharge } from "@/types/agent-tasks";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useWalletReminder } from "@/hooks/useWalletReminder";
+import { usePdfReminder } from "@/hooks/usePdfReminder";
 
 const AgentDashboard = () => {
   const { user, isAgent, signOut, loading } = useAuth();
@@ -93,6 +94,9 @@ const AgentDashboard = () => {
 
   // Wallet reminder notifications at 10:15 AM and 11:10 AM IST
   useWalletReminder(user?.email);
+
+  // PDF reminder notification at 12:00 PM IST
+  usePdfReminder(user?.email);
 
   // Live IST clock
   useEffect(() => {

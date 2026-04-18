@@ -3,9 +3,17 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { collection, getDocs, orderBy, query, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp, addDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { TrashIcon, PencilIcon, KeyIcon, Copy, Eye, EyeOff, CheckCircle2, X, Wallet, IndianRupee, Calendar, Loader2 } from "lucide-react";
+import { TrashIcon, PencilIcon, KeyIcon, Copy, Eye, EyeOff, CheckCircle2, X, Wallet, IndianRupee, Calendar, Loader2, BarChart3 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DailyWalletEntry } from "@/hooks/useAgentDailyWallet";
+
+const MAX_BOOKINGS_PER_MONTH = 8;
+
+/** Returns current month key like "2026-04" */
+const getCurrentMonthKey = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
 
 interface AgentManagementTabProps {
   user: any;
@@ -280,6 +288,31 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
     };
   }, [toast]);
 
+  // --- Monthly booking credentials aggregation for all agents ---
+  const [allCredentialsByAgent, setAllCredentialsByAgent] = useState<Record<string, { total: number; count: number; credentials: any[] }>>({});
+
+  // Real-time listener for all agent_booking_credentials (aggregated per agent)
+  useEffect(() => {
+    const currentMonth = getCurrentMonthKey();
+    const unsubscribe = onSnapshot(
+      collection(db, 'agent_booking_credentials'),
+      (snapshot) => {
+        const map: Record<string, { total: number; count: number; credentials: any[] }> = {};
+        snapshot.docs.forEach(d => {
+          const data = d.data();
+          const email = (data.agentEmail || '').toLowerCase();
+          if (!map[email]) map[email] = { total: 0, count: 0, credentials: [] };
+          const bookingCount = data.lastResetMonth === currentMonth ? (data.bookingCount || 0) : 0;
+          map[email].total += MAX_BOOKINGS_PER_MONTH;
+          map[email].count += bookingCount;
+          map[email].credentials.push({ id: d.id, ...data, bookingCount });
+        });
+        setAllCredentialsByAgent(map);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
   // --- Wallet data for all agents ---
   const [walletSummaries, setWalletSummaries] = useState<Record<string, any>>({});
   const [todayEntriesMap, setTodayEntriesMap] = useState<Record<string, DailyWalletEntry[]>>({});
@@ -363,6 +396,53 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
           Add New Agent
         </Button>
       </div>
+
+      {/* Total Wallet Balance Summary */}
+      {(() => {
+        const totalBalance = Object.values(walletSummaries).reduce((sum: number, s: any) => sum + (s.currentBalance || 0), 0);
+        const positiveCount = Object.values(walletSummaries).filter((s: any) => (s.currentBalance || 0) > 0).length;
+        const negativeCount = Object.values(walletSummaries).filter((s: any) => (s.currentBalance || 0) < 0).length;
+        const totalPositive = Object.values(walletSummaries).reduce((sum: number, s: any) => {
+          const bal = s.currentBalance || 0;
+          return bal > 0 ? sum + bal : sum;
+        }, 0);
+        const totalNegative = Object.values(walletSummaries).reduce((sum: number, s: any) => {
+          const bal = s.currentBalance || 0;
+          return bal < 0 ? sum + bal : sum;
+        }, 0);
+
+        return (
+          <div className={`mb-6 p-4 rounded-xl border-2 ${totalBalance >= 0 ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' : 'bg-gradient-to-r from-red-50 to-orange-50 border-red-200'}`}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-lg ${totalBalance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <Wallet className={`w-6 h-6 ${totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Wallet Balance</p>
+                  <p className={`text-2xl font-bold ${totalBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                    ₹{totalBalance.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                {totalPositive > 0 && (
+                  <div className="bg-white/70 border border-green-200 rounded-lg px-3 py-1.5 text-center">
+                    <p className="text-[10px] text-green-600 font-medium">{positiveCount} agent{positiveCount !== 1 ? 's' : ''} positive</p>
+                    <p className="text-sm font-bold text-green-700">+₹{totalPositive.toLocaleString()}</p>
+                  </div>
+                )}
+                {totalNegative < 0 && (
+                  <div className="bg-white/70 border border-red-200 rounded-lg px-3 py-1.5 text-center">
+                    <p className="text-[10px] text-red-600 font-medium">{negativeCount} agent{negativeCount !== 1 ? 's' : ''} negative</p>
+                    <p className="text-sm font-bold text-red-700">-₹{Math.abs(totalNegative).toLocaleString()}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Warning for agents without phone numbers */}
       {(() => {
@@ -612,6 +692,34 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
                 <KeyIcon size={13} />
                 Booking IDs
               </Button>
+
+              {/* Monthly Bookings Summary on Agent Card */}
+              {(() => {
+                const email = agent.email?.toLowerCase();
+                const credData = allCredentialsByAgent[email];
+                if (!credData || credData.credentials.length === 0) return null;
+                const { count, total } = credData;
+                const pct = total > 0 ? Math.min(100, (count / total) * 100) : 0;
+                return (
+                  <div className="flex-1 flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-gray-200 bg-gray-50">
+                    <BarChart3 size={13} className={count >= total ? 'text-red-500' : 'text-green-500'} />
+                    <div className="flex-1 min-w-0">
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${
+                            count >= total ? 'bg-red-500' : count >= total * 0.75 ? 'bg-amber-500' : 'bg-green-500'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-bold whitespace-nowrap ${count >= total ? 'text-red-600' : 'text-green-600'}`}>
+                      {count}/{total}
+                    </span>
+                  </div>
+                );
+              })()}
+
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -741,6 +849,44 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
               </div>
             ) : (
               <div className="space-y-3">
+                {/* Monthly Bookings Summary */}
+                {(() => {
+                  const currentMonth = getCurrentMonthKey();
+                  const totalUsed = agentCredentials.reduce((sum, cred) => {
+                    const count = cred.lastResetMonth === currentMonth ? (cred.bookingCount || 0) : 0;
+                    return sum + count;
+                  }, 0);
+                  const totalLimit = agentCredentials.length * MAX_BOOKINGS_PER_MONTH;
+                  const pct = totalLimit > 0 ? Math.min(100, (totalUsed / totalLimit) * 100) : 0;
+                  const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+                  return (
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 mb-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-semibold text-purple-800 flex items-center gap-1.5">
+                          <BarChart3 className="w-4 h-4" />
+                          This Month's Bookings — {monthLabel}
+                        </h4>
+                        <span className={`text-lg font-bold ${totalUsed >= totalLimit ? 'text-red-600' : 'text-purple-700'}`}>
+                          {totalUsed}/{totalLimit}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div
+                          className={`h-2.5 rounded-full transition-all duration-300 ${
+                            totalUsed >= totalLimit ? 'bg-red-500' : totalUsed >= totalLimit * 0.75 ? 'bg-amber-500' : 'bg-purple-500'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between mt-1.5">
+                        <span className="text-[10px] text-gray-500">{agentCredentials.length} account{agentCredentials.length !== 1 ? 's' : ''}</span>
+                        {totalUsed >= totalLimit && (
+                          <span className="text-[10px] text-red-500 font-medium">All limits reached</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
                 {agentCredentials.map((credential) => (
                   <div 
                     key={credential.id} 
@@ -804,6 +950,41 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
                         </button>
                       </div>
                     </div>
+
+                    {/* Monthly Booking Count */}
+                    {(() => {
+                      const currentMonth = getCurrentMonthKey();
+                      const bookingCount = credential.lastResetMonth === currentMonth ? (credential.bookingCount || 0) : 0;
+                      const pct = Math.min(100, (bookingCount / MAX_BOOKINGS_PER_MONTH) * 100);
+                      return (
+                        <div className="mt-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-xs text-gray-500 flex items-center gap-1">
+                              <BarChart3 className="w-3 h-3" />
+                              Monthly Bookings
+                            </label>
+                            <span className={`text-xs font-bold ${bookingCount >= MAX_BOOKINGS_PER_MONTH ? 'text-red-600' : 'text-green-600'}`}>
+                              {bookingCount}/{MAX_BOOKINGS_PER_MONTH}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full transition-all duration-300 ${
+                                bookingCount >= MAX_BOOKINGS_PER_MONTH
+                                  ? 'bg-red-500'
+                                  : bookingCount >= 6
+                                  ? 'bg-amber-500'
+                                  : 'bg-green-500'
+                              }`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          {bookingCount >= MAX_BOOKINGS_PER_MONTH && (
+                            <p className="text-[10px] text-red-500 mt-0.5">Limit reached — resets next month</p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>
