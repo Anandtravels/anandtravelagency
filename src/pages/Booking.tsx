@@ -90,6 +90,13 @@ const Booking = () => {
   const getMinDate = useCallback((): string => {
     return formatDateForInput(new Date());
   }, [formatDateForInput]);
+
+  // Get tomorrow's date
+  const getTomorrowDate = useCallback((): string => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return formatDateForInput(tomorrow);
+  }, [formatDateForInput]);
   
   // Toggle advance booking with touch support
   const handleAdvanceBookingToggle = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -795,15 +802,24 @@ const Booking = () => {
                         <label className="block text-gray-700 font-medium mb-2">
                           Journey Date <span className="text-rose-500">*</span>
                         </label>
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
-                          <input
-                            type="date"
-                            {...register("journey_date", { required: "Journey date is required" })}
-                            min={getMinDate()}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark appearance-none"
-                            style={{ WebkitAppearance: 'none' }}
-                          />
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+                            <input
+                              type="date"
+                              {...register("journey_date", { required: "Journey date is required" })}
+                              min={getMinDate()}
+                              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-travel-blue-dark appearance-none"
+                              style={{ WebkitAppearance: 'none' }}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setValue("journey_date", getTomorrowDate(), { shouldValidate: true })}
+                            className="px-3 py-2 text-xs font-semibold bg-travel-orange text-white rounded-md hover:bg-orange-600 transition-colors whitespace-nowrap shadow-sm"
+                          >
+                            Tomorrow
+                          </button>
                         </div>
                         {errors.journey_date && <p className="text-red-500 text-sm mt-1">{String(errors.journey_date.message)}</p>}
                       </div>
