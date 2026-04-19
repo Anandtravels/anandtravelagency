@@ -36,7 +36,7 @@ const AgentDashboard = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [whatsappModal, setWhatsappModal] = useState(false);
   const [currentBooking, setCurrentBooking] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState("tasks");
+  const [activeTab, setActiveTab] = useState("wallet");
   const [agentName, setAgentName] = useState<string>("");
   const [istTime, setIstTime] = useState('');
   const [messageDetails, setMessageDetails] = useState({
@@ -664,13 +664,9 @@ Thank you for choosing Anand Travels!`;
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-6 gap-0.5 bg-gray-100 shadow-sm rounded-lg p-0.5 h-auto">
-            <TabsTrigger value="tasks" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-blue-dark data-[state=active]:text-white rounded-md">
-              <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden xs:inline">Tasks</span>
-            </TabsTrigger>
-            <TabsTrigger value="accounts" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white rounded-md">
-              <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden xs:inline">Accounts</span>
+            <TabsTrigger value="wallet" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-orange data-[state=active]:text-white rounded-md">
+              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Wallet</span>
             </TabsTrigger>
             <TabsTrigger value="credentials" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white rounded-md">
               <Key className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -680,13 +676,17 @@ Thank you for choosing Anand Travels!`;
               <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden xs:inline">Bookings</span>
             </TabsTrigger>
-            <TabsTrigger value="wallet" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-orange data-[state=active]:text-white rounded-md">
-              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden xs:inline">Wallet</span>
+            <TabsTrigger value="accounts" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white rounded-md">
+              <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Rotation</span>
             </TabsTrigger>
             <TabsTrigger value="rules" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-blue-medium data-[state=active]:text-white rounded-md">
               <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden xs:inline">Rules</span>
+            </TabsTrigger>
+            <TabsTrigger value="tasks" className="flex items-center justify-center gap-1 py-2 px-1 text-xs sm:text-sm data-[state=active]:bg-travel-blue-dark data-[state=active]:text-white rounded-md">
+              <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Tasks</span>
             </TabsTrigger>
           </TabsList>
 
