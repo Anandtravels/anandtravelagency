@@ -321,8 +321,11 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
   const [walletHistoryLoading, setWalletHistoryLoading] = useState(false);
 
   const getTodayKey = () => {
+    // Use IST consistently (UTC+5:30)
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(now.getTime() + (istOffset + now.getTimezoneOffset() * 60 * 1000));
+    return `${istDate.getFullYear()}-${String(istDate.getMonth() + 1).padStart(2, '0')}-${String(istDate.getDate()).padStart(2, '0')}`;
   };
 
   // Real-time listener for wallet summaries

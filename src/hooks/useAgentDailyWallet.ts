@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { collection, query, where, onSnapshot, doc, setDoc, addDoc, deleteDoc, updateDoc, serverTimestamp, orderBy, limit, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -25,8 +25,11 @@ export interface DailyWalletSummary {
 }
 
 const getTodayKey = () => {
+  // Use IST consistently (UTC+5:30)
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istDate = new Date(now.getTime() + (istOffset + now.getTimezoneOffset() * 60 * 1000));
+  return `${istDate.getFullYear()}-${String(istDate.getMonth() + 1).padStart(2, '0')}-${String(istDate.getDate()).padStart(2, '0')}`;
 };
 
 export const useAgentDailyWallet = (agentEmail?: string) => {
@@ -89,8 +92,16 @@ export const useAgentDailyWallet = (agentEmail?: string) => {
     if (!email) throw new Error('No agent email');
 
     const today = getTodayKey();
-    // Get previous balance from latest entry
-    const prevBalance = entries.length > 0 ? (entries[entries.length - 1].balance || 0) : 0;
+    
+    // Fetch fresh latest balance from Firestore to avoid stale state race conditions
+    const freshQuery = query(
+      collection(db, 'agent_daily_wallet'),
+      where('agentEmail', '==', email),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+    const freshSnapshot = await getDocs(freshQuery);
+    const prevBalance = freshSnapshot.empty ? 0 : (freshSnapshot.docs[0].data().balance || 0);
     const newBalance = prevBalance + receivedAmount - ticketFare - charges;
 
     const docRef = await addDoc(collection(db, 'agent_daily_wallet'), {
@@ -106,7 +117,7 @@ export const useAgentDailyWallet = (agentEmail?: string) => {
     });
 
     return { balance: newBalance, docId: docRef.id };
-  }, [email, entries]);
+  }, [email]);
 
   /** Delete an entry and recalculate all subsequent balances */
   const deleteDailyEntry = useCallback(async (entryId: string) => {
@@ -145,22 +156,45 @@ export const useAgentDailyWallet = (agentEmail?: string) => {
     await batch.commit();
   }, [email]);
 
-  /** Update aggregate summary in Firestore (called when entries change) */
+  // Track whether initial load has completed to skip first summary write
+  const isInitialLoad = useRef(true);
+  const summaryDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Update aggregate summary in Firestore (called when entries change) — debounced & skips initial load */
   useEffect(() => {
     if (!email || loading) return;
 
-    const summaryRef = doc(db, 'agent_wallet_summary', email);
-    setDoc(summaryRef, {
-      agentEmail: email,
-      totalReceived: summary.totalReceived,
-      totalTicketFare: summary.totalTicketFare,
-      totalCharges: summary.totalCharges,
-      currentBalance: summary.currentBalance,
-      entryCount: entries.length,
-      lastUpdated: serverTimestamp()
-    }, { merge: true }).catch(err => {
-      console.error('Error updating wallet summary:', err);
-    });
+    // Skip writing summary on initial data load — only write when agent makes a change
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
+
+    // Debounce to prevent rapid successive serverTimestamp() writes
+    if (summaryDebounceTimer.current) {
+      clearTimeout(summaryDebounceTimer.current);
+    }
+
+    summaryDebounceTimer.current = setTimeout(() => {
+      const summaryRef = doc(db, 'agent_wallet_summary', email);
+      setDoc(summaryRef, {
+        agentEmail: email,
+        totalReceived: summary.totalReceived,
+        totalTicketFare: summary.totalTicketFare,
+        totalCharges: summary.totalCharges,
+        currentBalance: summary.currentBalance,
+        entryCount: entries.length,
+        lastUpdated: serverTimestamp()
+      }, { merge: true }).catch(err => {
+        console.error('Error updating wallet summary:', err);
+      });
+    }, 1000); // 1 second debounce
+
+    return () => {
+      if (summaryDebounceTimer.current) {
+        clearTimeout(summaryDebounceTimer.current);
+      }
+    };
   }, [email, summary.totalReceived, summary.totalTicketFare, summary.totalCharges, summary.currentBalance, entries.length, loading]);
 
   // Today's entries (multiple per day)
