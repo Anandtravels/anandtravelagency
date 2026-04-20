@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { collection, query, where, onSnapshot, doc, setDoc, addDoc, deleteDoc, updateDoc, serverTimestamp, orderBy, limit, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, setDoc, addDoc, serverTimestamp, orderBy, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export type BookingType = 'AC' | 'Sleeper';
@@ -44,6 +44,9 @@ export const useAgentDailyWallet = (agentEmail?: string) => {
 
   const email = agentEmail?.toLowerCase() || '';
 
+  // Ref to always have the latest entries — avoids stale closure in callbacks
+  const entriesRef = useRef<DailyWalletEntry[]>([]);
+
   // Listen to all entries for this agent, ordered by createdAt ascending
   useEffect(() => {
     if (!email) { setLoading(false); return; }
@@ -61,6 +64,7 @@ export const useAgentDailyWallet = (agentEmail?: string) => {
       } as DailyWalletEntry));
 
       setEntries(list);
+      entriesRef.current = list;
 
       // Calculate summary: totals are sums, balance is latest entry's balance
       const totals = list.reduce((acc, entry) => ({
@@ -93,15 +97,9 @@ export const useAgentDailyWallet = (agentEmail?: string) => {
 
     const today = getTodayKey();
     
-    // Fetch fresh latest balance from Firestore to avoid stale state race conditions
-    const freshQuery = query(
-      collection(db, 'agent_daily_wallet'),
-      where('agentEmail', '==', email),
-      orderBy('createdAt', 'desc'),
-      limit(1)
-    );
-    const freshSnapshot = await getDocs(freshQuery);
-    const prevBalance = freshSnapshot.empty ? 0 : (freshSnapshot.docs[0].data().balance || 0);
+    // Use ref for latest entries — always current, no stale closure, no extra Firestore query
+    const currentEntries = entriesRef.current;
+    const prevBalance = currentEntries.length > 0 ? (currentEntries[currentEntries.length - 1].balance || 0) : 0;
     const newBalance = prevBalance + receivedAmount - ticketFare - charges;
 
     const docRef = await addDoc(collection(db, 'agent_daily_wallet'), {
