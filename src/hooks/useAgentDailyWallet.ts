@@ -66,16 +66,17 @@ export const useAgentDailyWallet = (agentEmail?: string) => {
       setEntries(list);
       entriesRef.current = list;
 
-      // Calculate summary: totals are sums, balance is latest entry's balance
+      // Calculate summary: totals are sums, balance is computed from totals (self-healing)
       const totals = list.reduce((acc, entry) => ({
         totalReceived: acc.totalReceived + (entry.receivedAmount || 0),
         totalTicketFare: acc.totalTicketFare + (entry.ticketFare || 0),
         totalCharges: acc.totalCharges + (entry.charges || 0),
       }), { totalReceived: 0, totalTicketFare: 0, totalCharges: 0 });
 
-      const latestBalance = list.length > 0 ? (list[list.length - 1].balance || 0) : 0;
+      // Compute balance from totals — always accurate even if stored running balances drifted
+      const computedBalance = totals.totalReceived - totals.totalTicketFare - totals.totalCharges;
 
-      setSummary({ ...totals, currentBalance: latestBalance });
+      setSummary({ ...totals, currentBalance: computedBalance });
       setLoading(false);
     }, (error) => {
       console.error('Error fetching daily wallet:', error);
@@ -97,9 +98,19 @@ export const useAgentDailyWallet = (agentEmail?: string) => {
 
     const today = getTodayKey();
     
-    // Use ref for latest entries — always current, no stale closure, no extra Firestore query
-    const currentEntries = entriesRef.current;
-    const prevBalance = currentEntries.length > 0 ? (currentEntries[currentEntries.length - 1].balance || 0) : 0;
+    // Fetch fresh entries from Firestore to avoid race conditions with stale ref
+    const freshQuery = query(
+      collection(db, 'agent_daily_wallet'),
+      where('agentEmail', '==', email),
+      orderBy('createdAt', 'asc')
+    );
+    const freshSnapshot = await getDocs(freshQuery);
+    const freshEntries = freshSnapshot.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    })) as DailyWalletEntry[];
+
+    const prevBalance = freshEntries.length > 0 ? (freshEntries[freshEntries.length - 1].balance || 0) : 0;
     const newBalance = prevBalance + receivedAmount - ticketFare - charges;
 
     const docRef = await addDoc(collection(db, 'agent_daily_wallet'), {
@@ -113,6 +124,26 @@ export const useAgentDailyWallet = (agentEmail?: string) => {
       notes: notes || '',
       createdAt: serverTimestamp(),
     });
+
+    // Immediately sync summary to Firestore so admin sees accurate data right away
+    try {
+      const totalReceived = freshEntries.reduce((s, e) => s + (e.receivedAmount || 0), 0) + receivedAmount;
+      const totalTicketFare = freshEntries.reduce((s, e) => s + (e.ticketFare || 0), 0) + ticketFare;
+      const totalCharges = freshEntries.reduce((s, e) => s + (e.charges || 0), 0) + charges;
+      const computedBalance = totalReceived - totalTicketFare - totalCharges;
+
+      await setDoc(doc(db, 'agent_wallet_summary', email), {
+        agentEmail: email,
+        totalReceived,
+        totalTicketFare,
+        totalCharges,
+        currentBalance: computedBalance,
+        entryCount: freshEntries.length + 1,
+        lastUpdated: serverTimestamp()
+      }, { merge: true });
+    } catch (err) {
+      console.error('Error syncing wallet summary after save:', err);
+    }
 
     return { balance: newBalance, docId: docRef.id };
   }, [email]);
@@ -152,21 +183,40 @@ export const useAgentDailyWallet = (agentEmail?: string) => {
     }
 
     await batch.commit();
+
+    // Immediately sync summary to Firestore so admin sees accurate data right away
+    try {
+      const remaining = freshEntries.filter(e => e.id !== entryId);
+      const totalReceived = remaining.reduce((s, e) => s + (e.receivedAmount || 0), 0);
+      const totalTicketFare = remaining.reduce((s, e) => s + (e.ticketFare || 0), 0);
+      const totalCharges = remaining.reduce((s, e) => s + (e.charges || 0), 0);
+      const computedBalance = totalReceived - totalTicketFare - totalCharges;
+
+      await setDoc(doc(db, 'agent_wallet_summary', email), {
+        agentEmail: email,
+        totalReceived,
+        totalTicketFare,
+        totalCharges,
+        currentBalance: computedBalance,
+        entryCount: remaining.length,
+        lastUpdated: serverTimestamp()
+      }, { merge: true });
+    } catch (err) {
+      console.error('Error syncing wallet summary after delete:', err);
+    }
   }, [email]);
 
-  // Track whether initial load has completed to skip first summary write
-  const isInitialLoad = useRef(true);
   const summaryDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSummaryRef = useRef<string>('');
 
-  /** Update aggregate summary in Firestore (called when entries change) — debounced & skips initial load */
+  /** Update aggregate summary in Firestore (called when entries change) — debounced, skips if unchanged */
   useEffect(() => {
     if (!email || loading) return;
 
-    // Skip writing summary on initial data load — only write when agent makes a change
-    if (isInitialLoad.current) {
-      isInitialLoad.current = false;
-      return;
-    }
+    // Build a fingerprint of current summary to skip redundant writes
+    const fingerprint = `${summary.totalReceived}|${summary.totalTicketFare}|${summary.totalCharges}|${summary.currentBalance}|${entries.length}`;
+    if (fingerprint === lastSummaryRef.current) return;
+    lastSummaryRef.current = fingerprint;
 
     // Debounce to prevent rapid successive serverTimestamp() writes
     if (summaryDebounceTimer.current) {

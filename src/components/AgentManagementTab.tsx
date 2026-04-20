@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { collection, getDocs, orderBy, query, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp, addDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { TrashIcon, PencilIcon, KeyIcon, Copy, Eye, EyeOff, CheckCircle2, X, Wallet, IndianRupee, Calendar, Loader2, BarChart3 } from "lucide-react";
+import { TrashIcon, PencilIcon, KeyIcon, Copy, Eye, EyeOff, CheckCircle2, X, Wallet, IndianRupee, Calendar, Loader2, BarChart3, Phone, MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DailyWalletEntry } from "@/hooks/useAgentDailyWallet";
 
@@ -328,37 +328,56 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
     return `${istDate.getFullYear()}-${String(istDate.getMonth() + 1).padStart(2, '0')}-${String(istDate.getDate()).padStart(2, '0')}`;
   };
 
-  // Real-time listener for wallet summaries
-  useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, 'agent_wallet_summary'),
-      (snapshot) => {
-        const map: Record<string, any> = {};
-        snapshot.docs.forEach(d => {
-          map[d.id] = { id: d.id, ...d.data() };
-        });
-        setWalletSummaries(map);
-      }
-    );
-    return () => unsubscribe();
-  }, []);
-
-  // Real-time listener for today's entries (multiple per agent)
+  // Single real-time listener on ALL agent_daily_wallet entries (source of truth)
+  // Computes per-agent wallet summaries AND today's entries from one snapshot
   useEffect(() => {
     const today = getTodayKey();
-    const q = query(
+
+    const unsubscribe = onSnapshot(
       collection(db, 'agent_daily_wallet'),
-      where('date', '==', today)
+      (snapshot) => {
+        // Accumulate per-agent totals and today's entries in one pass
+        const perAgent: Record<string, { totalReceived: number; totalTicketFare: number; totalCharges: number; entryCount: number }> = {};
+        const todayMap: Record<string, DailyWalletEntry[]> = {};
+
+        snapshot.docs.forEach(d => {
+          const data = d.data();
+          const email = (data.agentEmail || '').toLowerCase();
+
+          // Accumulate totals
+          if (!perAgent[email]) {
+            perAgent[email] = { totalReceived: 0, totalTicketFare: 0, totalCharges: 0, entryCount: 0 };
+          }
+          perAgent[email].totalReceived += (data.receivedAmount || 0);
+          perAgent[email].totalTicketFare += (data.ticketFare || 0);
+          perAgent[email].totalCharges += (data.charges || 0);
+          perAgent[email].entryCount += 1;
+
+          // Collect today's entries
+          if (data.date === today) {
+            const entry = { id: d.id, ...data } as DailyWalletEntry;
+            if (!todayMap[email]) todayMap[email] = [];
+            todayMap[email].push(entry);
+          }
+        });
+
+        // Compute currentBalance from totals (always accurate)
+        const walletMap: Record<string, any> = {};
+        Object.entries(perAgent).forEach(([email, totals]) => {
+          walletMap[email] = {
+            agentEmail: email,
+            totalReceived: totals.totalReceived,
+            totalTicketFare: totals.totalTicketFare,
+            totalCharges: totals.totalCharges,
+            currentBalance: totals.totalReceived - totals.totalTicketFare - totals.totalCharges,
+            entryCount: totals.entryCount,
+          };
+        });
+
+        setWalletSummaries(walletMap);
+        setTodayEntriesMap(todayMap);
+      }
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const map: Record<string, DailyWalletEntry[]> = {};
-      snapshot.docs.forEach(d => {
-        const data = { id: d.id, ...d.data() } as DailyWalletEntry;
-        if (!map[data.agentEmail]) map[data.agentEmail] = [];
-        map[data.agentEmail].push(data);
-      });
-      setTodayEntriesMap(map);
-    });
     return () => unsubscribe();
   }, []);
 
@@ -402,15 +421,27 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
 
       {/* Total Wallet Balance Summary */}
       {(() => {
-        const totalBalance = Object.values(walletSummaries).reduce((sum: number, s: any) => sum + (s.currentBalance || 0), 0);
-        const positiveCount = Object.values(walletSummaries).filter((s: any) => (s.currentBalance || 0) > 0).length;
-        const negativeCount = Object.values(walletSummaries).filter((s: any) => (s.currentBalance || 0) < 0).length;
-        const totalPositive = Object.values(walletSummaries).reduce((sum: number, s: any) => {
-          const bal = s.currentBalance || 0;
+        // Compute total ONLY from active agents displayed below (ensures total = sum of card balances)
+        const totalBalance = agents.reduce((sum: number, agent: any) => {
+          const email = agent.email?.toLowerCase();
+          return sum + (walletSummaries[email]?.currentBalance || 0);
+        }, 0);
+        const positiveCount = agents.filter((agent: any) => {
+          const email = agent.email?.toLowerCase();
+          return (walletSummaries[email]?.currentBalance || 0) > 0;
+        }).length;
+        const negativeCount = agents.filter((agent: any) => {
+          const email = agent.email?.toLowerCase();
+          return (walletSummaries[email]?.currentBalance || 0) < 0;
+        }).length;
+        const totalPositive = agents.reduce((sum: number, agent: any) => {
+          const email = agent.email?.toLowerCase();
+          const bal = walletSummaries[email]?.currentBalance || 0;
           return bal > 0 ? sum + bal : sum;
         }, 0);
-        const totalNegative = Object.values(walletSummaries).reduce((sum: number, s: any) => {
-          const bal = s.currentBalance || 0;
+        const totalNegative = agents.reduce((sum: number, agent: any) => {
+          const email = agent.email?.toLowerCase();
+          const bal = walletSummaries[email]?.currentBalance || 0;
           return bal < 0 ? sum + bal : sum;
         }, 0);
 
@@ -624,7 +655,34 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
             <div className="space-y-2 text-sm">
               <p><span className="font-medium">Age:</span> {agent.age}</p>
               <p><span className="font-medium">Gender:</span> {agent.gender}</p>
-              <p><span className="font-medium">Phone:</span> {agent.phone}</p>
+              <div className="flex items-center justify-between">
+                <p><span className="font-medium">Phone:</span> {agent.phone}</p>
+                {agent.phone && (() => {
+                  const digits = agent.phone.replace(/\D/g, '');
+                  const phoneForCall = digits.startsWith('91') ? `+${digits}` : `+91${digits}`;
+                  const phoneForWA = digits.startsWith('91') ? digits : `91${digits}`;
+                  return (
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={`tel:${phoneForCall}`}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
+                        title={`Call ${agent.name}`}
+                      >
+                        <Phone size={14} className="text-blue-600" />
+                      </a>
+                      <a
+                        href={`https://wa.me/${phoneForWA}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-50 hover:bg-green-100 border border-green-200 transition-colors"
+                        title={`WhatsApp ${agent.name}`}
+                      >
+                        <MessageCircle size={14} className="text-green-600" />
+                      </a>
+                    </div>
+                  );
+                })()}
+              </div>
               <p><span className="font-medium">Address:</span> {agent.address}</p>
             </div>
 
@@ -752,7 +810,7 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
             const totalReceived = walletHistory.reduce((s, e) => s + (e.receivedAmount || 0), 0);
             const totalTicketFare = walletHistory.reduce((s, e) => s + (e.ticketFare || 0), 0);
             const totalCharges = walletHistory.reduce((s, e) => s + (e.charges || 0), 0);
-            const latestBalance = walletHistory.length > 0 ? (walletHistory[walletHistory.length - 1].balance || 0) : 0;
+            const latestBalance = totalReceived - totalTicketFare - totalCharges;
 
             return (
               <div className="grid grid-cols-4 gap-2 mb-2">
