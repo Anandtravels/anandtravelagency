@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { collection, query, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, doc, updateDoc, deleteDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { TrashIcon, PencilIcon, Check, X, Phone, Mail, MessageSquare, Download, CalendarIcon, Search } from "lucide-react";
 import { debounce } from 'lodash';
@@ -54,6 +54,54 @@ const BookingsTab = ({
   useEffect(() => {
     preloadStationData();
   }, []);
+
+  // Wallet summaries for agents (for sorting by balance)
+  const [walletSummaries, setWalletSummaries] = useState<Record<string, any>>({});
+
+  // Real-time listener for wallet summaries
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'agent_daily_wallet'),
+      (snapshot) => {
+        const perAgent: Record<string, { totalReceived: number; totalTicketFare: number; totalCharges: number }> = {};
+
+        snapshot.docs.forEach(d => {
+          const data = d.data();
+          const email = (data.agentEmail || '').toLowerCase();
+
+          if (!perAgent[email]) {
+            perAgent[email] = { totalReceived: 0, totalTicketFare: 0, totalCharges: 0 };
+          }
+
+          perAgent[email].totalReceived += (data.receivedAmount || 0);
+          perAgent[email].totalTicketFare += (data.ticketFare || 0);
+          perAgent[email].totalCharges += (data.charges || 0);
+        });
+
+        const walletMap: Record<string, any> = {};
+        Object.entries(perAgent).forEach(([email, totals]) => {
+          walletMap[email] = {
+            currentBalance: totals.totalReceived - totals.totalTicketFare - totals.totalCharges,
+          };
+        });
+
+        setWalletSummaries(walletMap);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // Compute agents with assigned bookings (for highlighting)
+  const agentBookingCount = useMemo(() => {
+    const map: Record<string, number> = {};
+    bookings.forEach(booking => {
+      if (booking.assignedAgent && booking.assignedAgent.trim() !== '') {
+        const email = booking.assignedAgent.toLowerCase();
+        map[email] = (map[email] || 0) + 1;
+      }
+    });
+    return map;
+  }, [bookings]);
 
   // State declarations
   const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
@@ -801,15 +849,34 @@ const BookingsTab = ({
                     onChange={(e) => assignTicket(booking.id, e.target.value)}
                   >
                     <option value="">Select Agent</option>
-                    {agents.map((agent: any) => {
-                      const hasValidPhone = agent.phone && agent.phone.replace(/\D/g, '').length >= 10;
-                      return (
-                        <option key={agent.id} value={agent.email} className="truncate">
-                          {agent.name.length > 15 ? agent.name.substring(0, 15) + '...' : agent.name}
-                          {!hasValidPhone ? ' ⚠️ (No WhatsApp)' : ''}
-                        </option>
-                      );
-                    })}
+                    {agents
+                      .sort((a: any, b: any) => {
+                        const emailA = a.email?.toLowerCase();
+                        const emailB = b.email?.toLowerCase();
+                        const balanceA = walletSummaries[emailA]?.currentBalance || 0;
+                        const balanceB = walletSummaries[emailB]?.currentBalance || 0;
+                        return balanceB - balanceA; // Sort high to low
+                      })
+                      .map((agent: any) => {
+                        const hasValidPhone = agent.phone && agent.phone.replace(/\D/g, '').length >= 10;
+                        const isCurrentAgent = booking.assignedAgent === agent.email;
+                        const email = agent.email?.toLowerCase();
+                        const balance = walletSummaries[email]?.currentBalance || 0;
+                        const bookingCount = agentBookingCount[email] || 0;
+                        const hasBookings = bookingCount > 0;
+                        return (
+                          <option 
+                            key={agent.id} 
+                            value={agent.email} 
+                            className={`${isCurrentAgent ? 'bg-blue-100 text-blue-900 font-semibold' : hasBookings ? 'bg-amber-50 text-amber-900' : ''}`}
+                          >
+                            {agent.name.length > 15 ? agent.name.substring(0, 15) + '...' : agent.name}
+                            {!hasValidPhone ? ' ⚠️ (No WhatsApp)' : ''}
+                            {isCurrentAgent ? ' ✓ (Assigned)' : hasBookings ? ` (${bookingCount} active)` : ''}
+                            {' (₹' + balance.toLocaleString() + ')'}
+                          </option>
+                        );
+                      })}
                   </select>
                 </div>
               </div>
@@ -1181,14 +1248,33 @@ const BookingsTab = ({
                       onChange={(e) => assignTicket(booking.id, e.target.value)}
                     >
                       <option value="">Select Agent</option>
-                      {agents.map((agent: any) => {
-                        const hasValidPhone = agent.phone && agent.phone.replace(/\D/g, '').length >= 10;
-                        return (
-                          <option key={agent.id} value={agent.email}>
-                            {agent.name} ({agent.email}){!hasValidPhone ? ' ⚠️ (No WhatsApp)' : ''}
-                          </option>
-                        );
-                      })}
+                      {agents
+                        .sort((a: any, b: any) => {
+                          const emailA = a.email?.toLowerCase();
+                          const emailB = b.email?.toLowerCase();
+                          const balanceA = walletSummaries[emailA]?.currentBalance || 0;
+                          const balanceB = walletSummaries[emailB]?.currentBalance || 0;
+                          return balanceB - balanceA; // Sort high to low
+                        })
+                        .map((agent: any) => {
+                          const hasValidPhone = agent.phone && agent.phone.replace(/\D/g, '').length >= 10;
+                          const isCurrentAgent = booking.assignedAgent === agent.email;
+                          const email = agent.email?.toLowerCase();
+                          const balance = walletSummaries[email]?.currentBalance || 0;
+                          const bookingCount = agentBookingCount[email] || 0;
+                          const hasBookings = bookingCount > 0;
+                          return (
+                            <option 
+                              key={agent.id} 
+                              value={agent.email}
+                              className={`${isCurrentAgent ? 'bg-blue-100 text-blue-900 font-semibold' : hasBookings ? 'bg-amber-50 text-amber-900' : ''}`}
+                            >
+                              {agent.name} ({agent.email}){!hasValidPhone ? ' ⚠️ (No WhatsApp)' : ''}
+                              {isCurrentAgent ? ' ✓ (Assigned)' : hasBookings ? ` (${bookingCount} active)` : ''}
+                              {' (₹' + balance.toLocaleString() + ')'}
+                            </option>
+                          );
+                        })}
                     </select>
                   </div>
                 </div>

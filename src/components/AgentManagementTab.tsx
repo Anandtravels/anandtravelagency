@@ -459,7 +459,7 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-3 items-center flex-wrap">
                 {totalPositive > 0 && (
                   <div className="bg-white/70 border border-green-200 rounded-lg px-3 py-1.5 text-center">
                     <p className="text-[10px] text-green-600 font-medium">{positiveCount} agent{positiveCount !== 1 ? 's' : ''} positive</p>
@@ -472,6 +472,35 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
                     <p className="text-sm font-bold text-red-700">-₹{Math.abs(totalNegative).toLocaleString()}</p>
                   </div>
                 )}
+                <Button
+                  onClick={() => {
+                    const walletText = agents
+                      .map((agent: any) => {
+                        const email = agent.email?.toLowerCase();
+                        const balance = walletSummaries[email]?.currentBalance || 0;
+                        return `${agent.name}: ₹${balance.toLocaleString()}`;
+                      })
+                      .join('\n');
+                    navigator.clipboard.writeText(walletText).then(() => {
+                      toast({
+                        title: "Copied!",
+                        description: "All wallet balances copied to clipboard"
+                      });
+                    }).catch(() => {
+                      toast({
+                        title: "Error",
+                        description: "Failed to copy to clipboard",
+                        variant: "destructive"
+                      });
+                    });
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs gap-1.5"
+                >
+                  <Copy size={14} />
+                  Copy All
+                </Button>
               </div>
             </div>
           </div>
@@ -629,7 +658,15 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
 
       {/* Agents List */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {agents.map((agent: any) => (
+        {agents
+          .sort((a: any, b: any) => {
+            const emailA = a.email?.toLowerCase();
+            const emailB = b.email?.toLowerCase();
+            const balanceA = walletSummaries[emailA]?.currentBalance || 0;
+            const balanceB = walletSummaries[emailB]?.currentBalance || 0;
+            return balanceB - balanceA; // Sort high to low (descending)
+          })
+          .map((agent: any) => (
           <div key={agent.id} className="bg-white border rounded-lg p-4">
             <div className="flex justify-between items-start mb-4">
               <div>
