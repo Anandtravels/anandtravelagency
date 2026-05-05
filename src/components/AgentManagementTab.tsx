@@ -5,7 +5,8 @@ import { collection, getDocs, orderBy, query, onSnapshot, updateDoc, doc, delete
 import { db } from '@/lib/firebase';
 import { TrashIcon, PencilIcon, KeyIcon, Copy, Eye, EyeOff, CheckCircle2, X, Wallet, IndianRupee, Calendar, Loader2, BarChart3, Phone, MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DailyWalletEntry } from "@/hooks/useAgentDailyWallet";
+import { DailyWalletEntry, saveAdminWalletEntry } from "@/hooks/useAgentDailyWallet";
+import AdminWalletEditDialog from "@/components/admin/AdminWalletEditDialog";
 
 const MAX_BOOKINGS_PER_MONTH = 8;
 
@@ -319,6 +320,10 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
   const [walletViewAgent, setWalletViewAgent] = useState<string | null>(null);
   const [walletHistory, setWalletHistory] = useState<DailyWalletEntry[]>([]);
   const [walletHistoryLoading, setWalletHistoryLoading] = useState(false);
+  
+  // Admin wallet edit dialog state
+  const [adminWalletEditOpen, setAdminWalletEditOpen] = useState(false);
+  const [adminWalletEditAgent, setAdminWalletEditAgent] = useState<any>(null);
 
   const getTodayKey = () => {
     // Use IST consistently (UTC+5:30)
@@ -386,6 +391,25 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
     setWalletViewAgent(agentEmail);
     setWalletHistoryLoading(true);
     setWalletHistory([]);
+  };
+
+  // Open admin wallet edit dialog
+  const handleAdminWalletEdit = (agent: any) => {
+    setAdminWalletEditAgent(agent);
+    setAdminWalletEditOpen(true);
+  };
+
+  // Handle admin wallet entry save
+  const handleAdminWalletSave = async (entry: any) => {
+    if (!adminWalletEditAgent?.email) return;
+    await saveAdminWalletEntry(
+      adminWalletEditAgent.email,
+      entry.receivedAmount,
+      entry.ticketFare,
+      entry.charges,
+      entry.bookingType,
+      entry.notes
+    );
   };
 
   // Real-time listener for selected agent's wallet history
@@ -735,7 +759,11 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
               return (
                 <div className="mt-3 pt-3 border-t space-y-2">
                   {/* Current Balance */}
-                  <div className={`flex items-center justify-between p-2.5 rounded-lg ${currentBalance >= 0 ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                  <div
+                    className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all hover:shadow-md ${currentBalance >= 0 ? 'bg-green-50 border border-green-200 hover:border-green-400' : 'bg-red-50 border border-red-200 hover:border-red-400'}`}
+                    onDoubleClick={() => handleAdminWalletEdit(agent)}
+                    title="Double-click to edit wallet (Admin)"
+                  >
                     <span className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
                       <Wallet size={14} className={currentBalance >= 0 ? 'text-green-600' : 'text-red-600'} />
                       Wallet Balance
@@ -1090,6 +1118,21 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Admin Wallet Edit Dialog */}
+      {adminWalletEditAgent && (
+        <AdminWalletEditDialog
+          open={adminWalletEditOpen}
+          agentEmail={adminWalletEditAgent.email}
+          agentName={adminWalletEditAgent.name}
+          currentBalance={walletSummaries[adminWalletEditAgent.email?.toLowerCase()]?.currentBalance ?? 0}
+          onClose={() => {
+            setAdminWalletEditOpen(false);
+            setAdminWalletEditAgent(null);
+          }}
+          onSave={handleAdminWalletSave}
+        />
+      )}
     </div>
   );
 };

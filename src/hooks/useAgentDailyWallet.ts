@@ -293,6 +293,76 @@ export const useAllAgentWalletSummaries = () => {
   return { summaries, loading };
 };
 
+/** Function to save admin wallet entry (called by admin to update agent balance) */
+export const saveAdminWalletEntry = async (
+  agentEmail: string,
+  receivedAmount: number,
+  ticketFare: number,
+  charges: number,
+  bookingType: BookingType,
+  notes?: string
+) => {
+  const email = agentEmail.toLowerCase();
+
+  // Fetch fresh entries from Firestore to avoid race conditions
+  const freshQuery = query(
+    collection(db, 'agent_daily_wallet'),
+    where('agentEmail', '==', email),
+    orderBy('createdAt', 'asc')
+  );
+  const freshSnapshot = await getDocs(freshQuery);
+  const freshEntries = freshSnapshot.docs.map(d => ({
+    id: d.id,
+    ...d.data()
+  })) as DailyWalletEntry[];
+
+  const prevBalance = freshEntries.length > 0 ? (freshEntries[freshEntries.length - 1].balance || 0) : 0;
+  const newBalance = prevBalance + receivedAmount - ticketFare - charges;
+
+  // Get today's date in IST
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istDate = new Date(now.getTime() + (istOffset + now.getTimezoneOffset() * 60 * 1000));
+  const today = `${istDate.getFullYear()}-${String(istDate.getMonth() + 1).padStart(2, '0')}-${String(istDate.getDate()).padStart(2, '0')}`;
+
+  // Add admin entry to wallet
+  const docRef = await addDoc(collection(db, 'agent_daily_wallet'), {
+    agentEmail: email,
+    date: today,
+    bookingType,
+    receivedAmount,
+    ticketFare,
+    charges,
+    balance: newBalance,
+    notes: notes || '',
+    entryType: 'admin', // Mark as admin entry
+    createdBy: 'admin', // Admin flag
+    createdAt: serverTimestamp(),
+  });
+
+  // Immediately sync summary to Firestore so admin sees accurate data right away
+  try {
+    const totalReceived = freshEntries.reduce((s, e) => s + (e.receivedAmount || 0), 0) + receivedAmount;
+    const totalTicketFare = freshEntries.reduce((s, e) => s + (e.ticketFare || 0), 0) + ticketFare;
+    const totalCharges = freshEntries.reduce((s, e) => s + (e.charges || 0), 0) + charges;
+    const computedBalance = totalReceived - totalTicketFare - totalCharges;
+
+    await setDoc(doc(db, 'agent_wallet_summary', email), {
+      agentEmail: email,
+      totalReceived,
+      totalTicketFare,
+      totalCharges,
+      currentBalance: computedBalance,
+      entryCount: freshEntries.length + 1,
+      lastUpdated: serverTimestamp()
+    }, { merge: true });
+  } catch (err) {
+    console.error('Error syncing wallet summary after admin save:', err);
+  }
+
+  return { balance: newBalance, docId: docRef.id };
+};
+
 /** Hook for admin to view a specific agent's entries */
 export const useAgentDailyEntries = (agentEmail?: string) => {
   const [entries, setEntries] = useState<DailyWalletEntry[]>([]);

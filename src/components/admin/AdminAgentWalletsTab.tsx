@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Wallet, IndianRupee, Users, ChevronRight, Calendar, TrendingUp, ArrowLeft, Loader2 } from 'lucide-react';
-import { useAllAgentWalletSummaries, useAgentDailyEntries, DailyWalletEntry } from '@/hooks/useAgentDailyWallet';
+import { useAllAgentWalletSummaries, useAgentDailyEntries, DailyWalletEntry, saveAdminWalletEntry } from '@/hooks/useAgentDailyWallet';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
+import AdminWalletEditDialog from './AdminWalletEditDialog';
 
 interface AdminAgentWalletsTabProps {
   user: any;
@@ -23,6 +24,10 @@ const AdminAgentWalletsTab: React.FC<AdminAgentWalletsTabProps> = ({ user }) => 
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(true);
+  
+  // Admin wallet edit dialog state
+  const [adminWalletEditOpen, setAdminWalletEditOpen] = useState(false);
+  const [adminWalletEditAgent, setAdminWalletEditAgent] = useState<any>(null);
 
   // Fetch agents list so we can show all agents even if they have no wallet entries
   useEffect(() => {
@@ -66,6 +71,25 @@ const AdminAgentWalletsTab: React.FC<AdminAgentWalletsTabProps> = ({ user }) => 
       });
     }
   });
+
+  // Open admin wallet edit dialog
+  const handleAdminWalletEdit = (agent: any) => {
+    setAdminWalletEditAgent(agent);
+    setAdminWalletEditOpen(true);
+  };
+
+  // Handle admin wallet entry save
+  const handleAdminWalletSave = async (entry: any) => {
+    if (!adminWalletEditAgent?.email) return;
+    await saveAdminWalletEntry(
+      adminWalletEditAgent.email,
+      entry.receivedAmount,
+      entry.ticketFare,
+      entry.charges,
+      entry.bookingType,
+      entry.notes
+    );
+  };
 
   if (loading) {
     return (
@@ -180,7 +204,13 @@ const AdminAgentWalletsTab: React.FC<AdminAgentWalletsTabProps> = ({ user }) => 
                     <p className="text-[10px] text-orange-500">Charges</p>
                     <p className="text-xs font-bold text-orange-700">₹{(agent.totalCharges || 0).toLocaleString()}</p>
                   </div>
-                  <div className={`rounded-lg p-2 text-center ${(agent.currentBalance || 0) >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div className={`rounded-lg p-2 text-center cursor-pointer transition-all hover:shadow-md border ${(agent.currentBalance || 0) >= 0 ? 'bg-green-50 border-green-200 hover:border-green-400' : 'bg-red-50 border-red-200 hover:border-red-400'}`}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      handleAdminWalletEdit(agent);
+                    }}
+                    title="Double-click to edit wallet (Admin)"
+                  >
                     <p className={`text-[10px] ${(agent.currentBalance || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>Balance</p>
                     <p className={`text-xs font-bold ${(agent.currentBalance || 0) >= 0 ? 'text-green-700' : 'text-red-700'}`}>₹{(agent.currentBalance || 0).toLocaleString()}</p>
                   </div>
@@ -200,6 +230,21 @@ const AdminAgentWalletsTab: React.FC<AdminAgentWalletsTabProps> = ({ user }) => 
         <AgentWalletDetailDialog
           agentEmail={selectedAgent}
           onClose={() => setSelectedAgent(null)}
+        />
+      )}
+
+      {/* Admin Wallet Edit Dialog */}
+      {adminWalletEditAgent && (
+        <AdminWalletEditDialog
+          open={adminWalletEditOpen}
+          agentEmail={adminWalletEditAgent.email}
+          agentName={adminWalletEditAgent.name}
+          currentBalance={adminWalletEditAgent.currentBalance ?? 0}
+          onClose={() => {
+            setAdminWalletEditOpen(false);
+            setAdminWalletEditAgent(null);
+          }}
+          onSave={handleAdminWalletSave}
         />
       )}
     </div>
