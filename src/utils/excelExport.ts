@@ -155,3 +155,46 @@ export const exportFilteredBookings = (
   
   exportBookingsToExcel(bookings, filename, agents);
 };
+
+// Quick Export specific to 'Booked' status and specific columns
+export const exportQuickBookingsToExcel = (bookings: Booking[], agents?: any[]) => {
+  const excelData = bookings.map((booking) => {
+    const bookedBy = getBookedBy(booking, agents);
+    return {
+      'CUS NUMBER': booking.phone || '',
+      'Date of Tatkal': booking.tatkal_booking_date ? formatDate(booking.tatkal_booking_date) : 
+                        (booking.train_booking_type === 'tatkal' || booking.train_booking_type === 'premium_tatkal') 
+                        ? formatDate(booking.created_at) : '',
+      'Date of Journey': formatDate(booking.journey_date),
+      'From & To': `${booking.from || ''} to ${booking.to || ''}`,
+      'CLASS': booking.train_class || booking.travel_class || booking.class_preference || '',
+      'Train No': booking.train_number || booking.preferred_trains || '',
+      'PERSON': getPassengerCount(booking.passengers),
+      'STATUS': booking.status || 'pending',
+      'Assigned To': bookedBy
+    };
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  const colWidths = [
+    { wch: 15 }, // CUS NUMBER
+    { wch: 15 }, // Date of Tatkal
+    { wch: 15 }, // Date of Journey
+    { wch: 25 }, // From & To
+    { wch: 10 }, // CLASS
+    { wch: 15 }, // Train No
+    { wch: 8 },  // PERSON
+    { wch: 12 }, // STATUS
+    { wch: 20 }  // Assigned To
+  ];
+  worksheet['!cols'] = colWidths;
+  
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Quick Export');
+  
+  const filename = `quick_export_booked_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array', compression: true });
+  const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  
+  saveAs(data, filename);
+};

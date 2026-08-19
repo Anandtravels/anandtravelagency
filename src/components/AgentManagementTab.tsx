@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { collection, getDocs, orderBy, query, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp, addDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { TrashIcon, PencilIcon, KeyIcon, Copy, Eye, EyeOff, CheckCircle2, X, Wallet, IndianRupee, Calendar, Loader2, BarChart3, Phone, MessageCircle } from "lucide-react";
+import { TrashIcon, Trash2, PencilIcon, KeyIcon, Copy, Eye, EyeOff, CheckCircle2, X, Wallet, IndianRupee, Calendar, Loader2, BarChart3, Phone, MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DailyWalletEntry, saveAdminWalletEntry } from "@/hooks/useAgentDailyWallet";
+import { DailyWalletEntry, saveAdminWalletEntry, useAgentDailyWallet } from "@/hooks/useAgentDailyWallet";
 import AdminWalletEditDialog from "@/components/admin/AdminWalletEditDialog";
 
-const MAX_BOOKINGS_PER_MONTH = 8;
+const DEFAULT_MONTHLY_LIMIT = 8;
 
 /** Returns current month key like "2026-04" */
 const getCurrentMonthKey = () => {
@@ -45,6 +45,48 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
   const [loadingCredentials, setLoadingCredentials] = useState(false);
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // Edit Count/Limit Modal
+  const [editCountModal, setEditCountModal] = useState(false);
+  const [editCountCredential, setEditCountCredential] = useState<any>(null);
+  const [editCountValue, setEditCountValue] = useState(0);
+  const [editLimitValue, setEditLimitValue] = useState(DEFAULT_MONTHLY_LIMIT);
+
+  const handleEditCount = (credential: any) => {
+    setEditCountCredential(credential);
+    const currentMonth = getCurrentMonthKey();
+    const count = credential.lastResetMonth === currentMonth ? (credential.bookingCount || 0) : 0;
+    setEditCountValue(count);
+    setEditLimitValue(credential.monthlyLimit || DEFAULT_MONTHLY_LIMIT);
+    setEditCountModal(true);
+  };
+
+  const handleSaveCount = async () => {
+    if (!editCountCredential) return;
+    const val = Math.max(0, editCountValue);
+    const limit = Math.max(1, editLimitValue);
+    try {
+      await updateDoc(doc(db, 'agent_booking_credentials', editCountCredential.id), {
+        bookingCount: val,
+        monthlyLimit: limit,
+        lastResetMonth: getCurrentMonthKey(),
+        updatedAt: serverTimestamp()
+      });
+      toast({ title: "Updated", description: `Booking count set to ${val}, Limit: ${limit}` });
+      setEditCountModal(false);
+      setEditCountCredential(null);
+      
+      // Update local state so it reflects immediately in the modal
+      setAgentCredentials(prev => prev.map(c => 
+        c.id === editCountCredential.id 
+          ? { ...c, bookingCount: val, monthlyLimit: limit, lastResetMonth: getCurrentMonthKey() } 
+          : c
+      ));
+    } catch (error) {
+      console.error("Error updating count:", error);
+      toast({ title: "Error", description: "Failed to update booking count/limit", variant: "destructive" });
+    }
+  };
 
   // View agent booking credentials
   const handleViewCredentials = async (agent: any) => {
@@ -304,7 +346,8 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
           const email = (data.agentEmail || '').toLowerCase();
           if (!map[email]) map[email] = { total: 0, count: 0, credentials: [] };
           const bookingCount = data.lastResetMonth === currentMonth ? (data.bookingCount || 0) : 0;
-          map[email].total += MAX_BOOKINGS_PER_MONTH;
+          const limit = data.monthlyLimit || DEFAULT_MONTHLY_LIMIT;
+          map[email].total += limit;
           map[email].count += bookingCount;
           map[email].credentials.push({ id: d.id, ...data, bookingCount });
         });
@@ -318,8 +361,22 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
   const [walletSummaries, setWalletSummaries] = useState<Record<string, any>>({});
   const [todayEntriesMap, setTodayEntriesMap] = useState<Record<string, DailyWalletEntry[]>>({});
   const [walletViewAgent, setWalletViewAgent] = useState<string | null>(null);
-  const [walletHistory, setWalletHistory] = useState<DailyWalletEntry[]>([]);
-  const [walletHistoryLoading, setWalletHistoryLoading] = useState(false);
+  const { entries: walletHistory, loading: walletHistoryLoading, deleteDailyEntry } = useAgentDailyWallet(walletViewAgent || undefined);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+
+  const handleDeleteWalletEntry = async (entryId: string) => {
+    if (!window.confirm("Are you sure you want to delete this entry? Balances will be recalculated.")) return;
+    setDeletingEntryId(entryId);
+    try {
+      await deleteDailyEntry(entryId);
+      toast({ title: "Deleted", description: "Entry removed and balances recalculated." });
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      toast({ title: "Error", description: "Failed to delete entry", variant: "destructive" });
+    } finally {
+      setDeletingEntryId(null);
+    }
+  };
   
   // Admin wallet edit dialog state
   const [adminWalletEditOpen, setAdminWalletEditOpen] = useState(false);
@@ -389,8 +446,6 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
   // Load wallet history for a specific agent
   const openWalletHistory = (agentEmail: string) => {
     setWalletViewAgent(agentEmail);
-    setWalletHistoryLoading(true);
-    setWalletHistory([]);
   };
 
   // Open admin wallet edit dialog
@@ -412,27 +467,7 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
     );
   };
 
-  // Real-time listener for selected agent's wallet history
-  useEffect(() => {
-    if (!walletViewAgent) return;
-
-    const q = query(
-      collection(db, 'agent_daily_wallet'),
-      where('agentEmail', '==', walletViewAgent.toLowerCase()),
-      orderBy('createdAt', 'asc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      })) as DailyWalletEntry[];
-      setWalletHistory(list);
-      setWalletHistoryLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [walletViewAgent]);
+  // The useAgentDailyWallet hook now handles the real-time listener for the selected agent.
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
@@ -925,9 +960,21 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
                         {entry.bookingType || 'N/A'}
                       </span>
                     </div>
-                    <span className={`text-sm font-bold ${(entry.balance ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      Bal: ₹{(entry.balance ?? 0).toLocaleString()}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-bold ${(entry.balance ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        Bal: ₹{(entry.balance ?? 0).toLocaleString()}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDeleteWalletEntry(entry.id)}
+                        disabled={deletingEntryId === entry.id}
+                        title="Delete Entry"
+                      >
+                        {deletingEntryId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="flex justify-between bg-white p-1.5 rounded border border-gray-100">
@@ -982,7 +1029,7 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
                     const count = cred.lastResetMonth === currentMonth ? (cred.bookingCount || 0) : 0;
                     return sum + count;
                   }, 0);
-                  const totalLimit = agentCredentials.length * MAX_BOOKINGS_PER_MONTH;
+                  const totalLimit = agentCredentials.reduce((sum, cred) => sum + (cred.monthlyLimit || DEFAULT_MONTHLY_LIMIT), 0);
                   const pct = totalLimit > 0 ? Math.min(100, (totalUsed / totalLimit) * 100) : 0;
                   const monthLabel = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
                   return (
@@ -1077,11 +1124,11 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
                       </div>
                     </div>
 
-                    {/* Monthly Booking Count */}
                     {(() => {
                       const currentMonth = getCurrentMonthKey();
                       const bookingCount = credential.lastResetMonth === currentMonth ? (credential.bookingCount || 0) : 0;
-                      const pct = Math.min(100, (bookingCount / MAX_BOOKINGS_PER_MONTH) * 100);
+                      const limit = credential.monthlyLimit || DEFAULT_MONTHLY_LIMIT;
+                      const pct = Math.min(100, (bookingCount / limit) * 100);
                       return (
                         <div className="mt-3">
                           <div className="flex items-center justify-between mb-1">
@@ -1089,23 +1136,34 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
                               <BarChart3 className="w-3 h-3" />
                               Monthly Bookings
                             </label>
-                            <span className={`text-xs font-bold ${bookingCount >= MAX_BOOKINGS_PER_MONTH ? 'text-red-600' : 'text-green-600'}`}>
-                              {bookingCount}/{MAX_BOOKINGS_PER_MONTH}
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className={`text-xs font-bold ${bookingCount >= limit ? 'text-red-600' : 'text-green-600'}`}>
+                                {bookingCount}/{limit}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditCount(credential)}
+                                className="h-5 w-5 p-0 shrink-0"
+                                title="Edit booking count/limit"
+                              >
+                                <PencilIcon className="w-3 h-3 text-gray-400 hover:text-blue-600" />
+                              </Button>
+                            </div>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
                               className={`h-2 rounded-full transition-all duration-300 ${
-                                bookingCount >= MAX_BOOKINGS_PER_MONTH
+                                bookingCount >= limit
                                   ? 'bg-red-500'
-                                  : bookingCount >= 6
+                                  : bookingCount >= limit * 0.75
                                   ? 'bg-amber-500'
                                   : 'bg-green-500'
                               }`}
                               style={{ width: `${pct}%` }}
                             />
                           </div>
-                          {bookingCount >= MAX_BOOKINGS_PER_MONTH && (
+                          {bookingCount >= limit && (
                             <p className="text-[10px] text-red-500 mt-0.5">Limit reached — resets next month</p>
                           )}
                         </div>
@@ -1115,6 +1173,53 @@ const AgentManagementTab = ({ user, formatFirebaseTimestamp }: AgentManagementTa
                 ))}
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Booking Count/Limit Modal */}
+      <Dialog open={editCountModal} onOpenChange={setEditCountModal}>
+        <DialogContent className="sm:max-w-[350px]">
+          <DialogHeader>
+            <DialogTitle className="text-base">Edit Booking Count & Limit</DialogTitle>
+          </DialogHeader>
+          {editCountCredential && (
+            <div className="space-y-4 my-2">
+              <div className="bg-gray-50 p-3 rounded-lg text-sm">
+                <p><span className="font-medium">Booking ID:</span> {editCountCredential.bookingId}</p>
+                {editCountCredential.label && <p><span className="font-medium">Label:</span> {editCountCredential.label}</p>}
+              </div>
+              <div>
+                <label htmlFor="editCount" className="block text-sm font-medium mb-1">
+                  Current Month Booking Count
+                </label>
+                <input
+                  id="editCount"
+                  type="number"
+                  min={0}
+                  value={editCountValue}
+                  onChange={(e) => setEditCountValue(parseInt(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div>
+                <label htmlFor="editLimit" className="block text-sm font-medium mb-1">
+                  Monthly Limit
+                </label>
+                <input
+                  id="editLimit"
+                  type="number"
+                  min={1}
+                  value={editLimitValue}
+                  onChange={(e) => setEditLimitValue(parseInt(e.target.value) || DEFAULT_MONTHLY_LIMIT)}
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setEditCountModal(false)}>Cancel</Button>
+            <Button onClick={handleSaveCount}>Save</Button>
           </div>
         </DialogContent>
       </Dialog>

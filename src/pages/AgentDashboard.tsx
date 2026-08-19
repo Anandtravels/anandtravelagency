@@ -442,7 +442,12 @@ const AgentDashboard = () => {
       case 'Premium Booking':
         return 400; // Map Premium to Tatkal 2AC rate
       case 'Advance Reservation':
-        return 150;
+      case 'Advance Booking':
+      case 'advance': {
+        const cls = currentBooking?.train_class || currentBooking?.class_preference || '';
+        const isAC = ['3A', '2A', '1A', '3E', 'CC', 'EC', '3AC', '3AC/3E', '2AC'].includes(cls);
+        return isAC ? 200 : 150;
+      }
       case 'General Booking':
       default:
         return 100;

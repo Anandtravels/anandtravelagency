@@ -36,6 +36,7 @@ import CareersManagementTab from "@/components/admin/CareersManagementTab";
 import CollaborationsManagementTab from "@/components/admin/CollaborationsManagementTab";
 import DocumentsManagementTab from "@/components/admin/DocumentsManagementTab";
 import WhatsAppTab from "@/components/admin/WhatsAppTab";
+import AdvanceReservationTab from "@/components/AdvanceReservationTab";
 import { BarChart3 } from "lucide-react";
 
 const Admin = () => {
@@ -152,6 +153,12 @@ const Admin = () => {
               handleEmail={handleEmail}
               handleWhatsapp={handleWhatsapp}
               assignTicket={assignTicket}
+            />
+          </TabsContent>
+
+          <TabsContent value="advance-calendar" className="space-y-6">
+            <AdvanceReservationTab
+              bookings={bookings}
             />
           </TabsContent>
 

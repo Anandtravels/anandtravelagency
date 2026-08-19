@@ -11,6 +11,7 @@ export const useAdminNavigation = () => {
     const hash = location.hash.replace('#', '');
     if (hash && [
       'bookings',
+      'advance-calendar',
       'package-bookings',
       'package-management',
       'hotel-bookings',

@@ -9,9 +9,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, Download, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { exportBookingsToExcel, exportFilteredBookings } from '@/utils/excelExport';
+import { exportBookingsToExcel, exportFilteredBookings, exportQuickBookingsToExcel } from '@/utils/excelExport';
 import { Booking } from '@/types/admin';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
 
 interface ExcelExportButtonProps {
   bookings: Booking[];
@@ -38,6 +39,10 @@ const ExcelExportButton = ({ bookings, filteredBookings, agents, className }: Ex
     from: undefined,
     to: undefined
   });
+
+  const [isQuickExportOpen, setIsQuickExportOpen] = useState(false);
+  const [quickExportPeriod, setQuickExportPeriod] = useState('today');
+  const [quickExportDays, setQuickExportDays] = useState('7');
 
   const handleExport = () => {
     try {
@@ -112,15 +117,52 @@ const ExcelExportButton = ({ bookings, filteredBookings, agents, className }: Ex
     }
   };
 
-  const quickExport = () => {
+  const executeQuickExport = () => {
     try {
-      const bookingsToExport = filteredBookings || bookings;
-      exportBookingsToExcel(bookingsToExport, undefined, agents);
+      // 1. Filter only 'booked' status
+      let bookingsToExport = (filteredBookings || bookings).filter(b => b.status === 'booked');
+      
+      // 2. Filter by period
+      const now = new Date();
+      now.setHours(23, 59, 59, 999); // End of today
+      let startDate = new Date();
+      startDate.setHours(0, 0, 0, 0); // Start of today
+
+      if (quickExportPeriod === 'this_week') {
+        const day = startDate.getDay();
+        const diff = startDate.getDate() - day + (day === 0 ? -6 : 1); // Monday as start of week
+        startDate = new Date(startDate.setDate(diff));
+      } else if (quickExportPeriod === 'this_month') {
+        startDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      } else if (quickExportPeriod === 'custom_days') {
+        const days = parseInt(quickExportDays) || 7;
+        startDate.setDate(startDate.getDate() - days + 1);
+      }
+      
+      bookingsToExport = bookingsToExport.filter(booking => {
+        // Find a valid date field, preferably created_at or journey_date
+        const dateString = booking.created_at || booking.journey_date;
+        if (!dateString) return false;
+        const d = new Date(dateString);
+        return d >= startDate && d <= now;
+      });
+
+      if (bookingsToExport.length === 0) {
+        toast({
+          title: "No Data to Export",
+          description: "No booked tickets found for the selected period.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      exportQuickBookingsToExcel(bookingsToExport, agents);
       
       toast({
         title: "Export Successful",
-        description: `Exported ${bookingsToExport.length} bookings to Excel file.`,
+        description: `Exported ${bookingsToExport.length} booked tickets to Excel file.`,
       });
+      setIsQuickExportOpen(false);
     } catch (error) {
       console.error('Quick export error:', error);
       toast({
@@ -133,16 +175,72 @@ const ExcelExportButton = ({ bookings, filteredBookings, agents, className }: Ex
 
   return (
     <div className="flex gap-2">
-      {/* Quick Export Button */}
-      <Button
-        onClick={quickExport}
-        variant="outline"
-        size="sm"
-        className={cn("flex items-center gap-2", className)}
-      >
-        <Download className="h-4 w-4" />
-        Quick Export
-      </Button>
+      {/* Quick Export Dialog */}
+      <Dialog open={isQuickExportOpen} onOpenChange={setIsQuickExportOpen}>
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn("flex items-center gap-2", className)}
+          >
+            <Download className="h-4 w-4" />
+            Quick Export
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5 text-blue-600" />
+              Quick Export (Booked Only)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Export Period</Label>
+              <Select 
+                value={quickExportPeriod} 
+                onValueChange={(value) => setQuickExportPeriod(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="custom_days">Number of days</SelectItem>
+                  <SelectItem value="this_week">This Week</SelectItem>
+                  <SelectItem value="this_month">This Month</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {quickExportPeriod === 'custom_days' && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Number of Days</Label>
+                <Input 
+                  type="number" 
+                  min={1} 
+                  value={quickExportDays} 
+                  onChange={(e) => setQuickExportDays(e.target.value)}
+                  placeholder="e.g. 7"
+                />
+              </div>
+            )}
+            
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-700 leading-tight">
+                <strong>Format:</strong> CUS NUMBER, Date of Tatkal, Date of Journey, From & To, CLASS, Train No, PERSON, STATUS, Assigned To.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsQuickExportOpen(false)}>Cancel</Button>
+            <Button onClick={executeQuickExport} className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Advanced Export Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>

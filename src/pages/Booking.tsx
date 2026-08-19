@@ -138,7 +138,7 @@ const Booking = () => {
     return true;
   }, [passengers, toast]);
   
-  const { register, handleSubmit, reset, formState: { errors }, setValue, getValues } = useForm({
+  const { register, handleSubmit, reset, formState: { errors }, setValue, getValues, watch } = useForm({
     defaultValues: {
       phone: "",
       name: "",
@@ -326,17 +326,41 @@ const Booking = () => {
     setPassengers(updatedPassengers);
   };
   
-  // Calculate booking charge based on booking type
-  const calculateBookingCharge = (type: string) => {
+  // Calculate booking charge based on booking type and class
+  const calculateBookingCharge = (type: string, trainClass?: string) => {
     switch(type) {
       case 'tatkal':
         return 200;
       case 'premium_tatkal':
         return 250;
+      case 'advance':
+        const isAC = ['3A', '2A', '1A', '3E', 'CC', 'EC', '3AC', '3AC/3E', '2AC'].includes(trainClass || getValues('train_class'));
+        return isAC ? 200 : 150;
       default:
         return 50;
     }
   };
+
+  // Watch for class changes to update charge if needed
+  const watchTrainClass = watch('train_class');
+  const watchTrainBookingType = watch('train_booking_type');
+  
+  useEffect(() => {
+    if (watchTrainBookingType === 'advance' && appliedCoupon) {
+      const newOriginalAmount = calculateBookingCharge('advance', watchTrainClass);
+      const discountAmount = appliedCoupon.type === 'percentage' 
+        ? (newOriginalAmount * appliedCoupon.discount / 100) 
+        : appliedCoupon.discount;
+      const finalAmount = Math.max(0, newOriginalAmount - discountAmount);
+
+      setAppliedCoupon(prev => prev ? {
+        ...prev,
+        originalAmount: newOriginalAmount,
+        discountAmount,
+        finalAmount
+      } : null);
+    }
+  }, [watchTrainClass, watchTrainBookingType]);
 
   // Function to handle booking type change and refresh coupon
   const handleBookingTypeSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -412,7 +436,7 @@ const Booking = () => {
     const attemptSubmission = async (useServerTimestamp: boolean, retryCount = 0): Promise<any> => {
       try {
         // Calculate final booking charge
-        const baseCharge = calculateBookingCharge(data.train_booking_type || 'general');
+        const baseCharge = calculateBookingCharge(data.train_booking_type || 'general', data.train_class);
         const finalCharge = appliedCoupon ? appliedCoupon.finalAmount : baseCharge;
         
         // Use serverTimestamp on first try, fallback to client timestamp on retry
@@ -912,6 +936,7 @@ const Booking = () => {
                               <option value="general">General Booking</option>
                               <option value="tatkal">Tatkal Booking</option>
                               <option value="premium_tatkal">Premium Tatkal</option>
+                              <option value="advance">Advance Booking</option>
                             </select>
                             {errors.train_booking_type && <p className="text-red-500 text-sm mt-1">{String(errors.train_booking_type.message)}</p>}
                           </div>

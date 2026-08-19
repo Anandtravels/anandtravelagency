@@ -57,6 +57,7 @@ const BookingPriceModal = ({
             case 'general': return 'General Booking';
             case 'tatkal': return 'Tatkal Booking';
             case 'premium_tatkal': return 'Premium Booking';
+            case 'advance': return 'Advance Booking';
             default: return booking.train_booking_type;
           }
         }
@@ -259,6 +260,7 @@ const BookingPriceModal = ({
                   >
                     <option value="General Booking">General Booking</option>
                     <option value="Tatkal Booking">Tatkal Booking</option>
+                    <option value="Advance Booking">Advance Booking</option>
                   </select>
                 </div>
                 

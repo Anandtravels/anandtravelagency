@@ -27,12 +27,12 @@ export const formatFirebaseTimestamp = (timestamp: any) => {
 
 export const calculateBookingCharge = (bookingType: string, classPreference?: string): number => {
   // For General booking, always return 100 regardless of class
-  if (bookingType === 'General Booking' || bookingType === 'General') {
+  if (bookingType === 'General Booking' || bookingType === 'General' || bookingType === 'general') {
     return 100;
   }
   
   // For Tatkal bookings, charge depends on class preference
-  if (bookingType === 'Tatkal Booking' || bookingType === 'Tatkal') {
+  if (bookingType === 'Tatkal Booking' || bookingType === 'Tatkal' || bookingType === 'tatkal') {
     switch(classPreference) {
       case 'SL': // Sleeper
       case 'Sleeper':
@@ -49,6 +49,12 @@ export const calculateBookingCharge = (bookingType: string, classPreference?: st
         return 250; // Default to Sleeper rate
     }
   }
+
+  // For Advance Booking
+  if (bookingType === 'Advance Booking' || bookingType === 'Advance Reservation' || bookingType === 'advance') {
+    const isAC = classPreference && ['3A', '2A', '1A', '3E', 'CC', 'EC', '3AC', '3AC/3E', '2AC'].includes(classPreference);
+    return isAC ? 200 : 150;
+  }
   
   // Legacy support for old booking type names
   switch(bookingType) {
@@ -59,9 +65,8 @@ export const calculateBookingCharge = (bookingType: string, classPreference?: st
     case 'Tatkal 2AC':
       return 400;
     case 'Premium Booking':
+    case 'premium_tatkal':
       return 400;
-    case 'Advance Reservation':
-      return 150;
     default:
       return 100;
   }

@@ -433,6 +433,9 @@ const CouponManager = () => {
     else if (bookingType.toLowerCase().includes('tatkal')) {
       return 200;
     }
+    else if (bookingType.toLowerCase().includes('advance')) {
+      return 150; // Defaulting to Sleeper since class isn't known here
+    }
     // Default is general booking
     else {
       return 50;
@@ -446,6 +449,8 @@ const CouponManager = () => {
       return 'Premium Booking';
     } else if (bookingType.toLowerCase().includes('tatkal')) {
       return 'Tatkal Booking';  
+    } else if (bookingType.toLowerCase().includes('advance')) {
+      return 'Advance Booking';
     } else if (bookingType.toLowerCase() === 'train' || 
               bookingType.toLowerCase() === 'bus' || 
               bookingType.toLowerCase() === 'flight') {

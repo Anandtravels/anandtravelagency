@@ -78,7 +78,7 @@ const SortableMenuItemWrapper = ({ id, children, isCollapsed }: { id: string; ch
         <button
           {...attributes}
           {...listeners}
-          className="absolute -left-0.5 top-3 z-10 opacity-0 group-hover/sortable:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-gray-200"
+          className="absolute left-1 top-1/2 -translate-y-1/2 z-10 text-gray-400 hover:text-gray-600 transition-colors duration-200 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-gray-200"
           title="Drag to reorder"
           type="button"
           style={{ touchAction: 'none' }}
@@ -86,7 +86,9 @@ const SortableMenuItemWrapper = ({ id, children, isCollapsed }: { id: string; ch
           <GripVertical className="w-3.5 h-3.5 text-gray-400" />
         </button>
       )}
-      {children}
+      <div className={!isCollapsed ? "pl-5" : ""}>
+        {children}
+      </div>
     </div>
   );
 };
@@ -117,6 +119,12 @@ const AdminSidebar = ({ isCollapsed, onToggleCollapse, onSignOut, userEmail }: A
       icon: Calendar,
       description: 'Manage Bookings',
       badge: counts.bookings > 0 ? counts.bookings : undefined
+    },
+    {
+      title: 'Advance Calendar',
+      href: '/admin#advance-calendar',
+      icon: Calendar,
+      description: 'Advance Booking Calendar'
     },
     {
       title: 'Packages',

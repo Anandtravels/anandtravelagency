@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Wallet, IndianRupee, Users, ChevronRight, Calendar, TrendingUp, ArrowLeft, Loader2 } from 'lucide-react';
-import { useAllAgentWalletSummaries, useAgentDailyEntries, DailyWalletEntry, saveAdminWalletEntry } from '@/hooks/useAgentDailyWallet';
+import { Wallet, IndianRupee, Users, ChevronRight, Calendar, TrendingUp, ArrowLeft, Loader2, Trash2 } from 'lucide-react';
+import { useAllAgentWalletSummaries, useAgentDailyWallet, DailyWalletEntry, saveAdminWalletEntry } from '@/hooks/useAgentDailyWallet';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminWalletEditDialog from './AdminWalletEditDialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface AdminAgentWalletsTabProps {
   user: any;
@@ -251,12 +252,29 @@ const AdminAgentWalletsTab: React.FC<AdminAgentWalletsTabProps> = ({ user }) => 
   );
 };
 
-/** Dialog showing full daily payment history for one agent */
 const AgentWalletDetailDialog: React.FC<{
   agentEmail: string;
   onClose: () => void;
 }> = ({ agentEmail, onClose }) => {
-  const { entries, loading } = useAgentDailyEntries(agentEmail);
+  // Use useAgentDailyWallet instead of useAgentDailyEntries so we get deleteDailyEntry
+  const { entries, loading, deleteDailyEntry } = useAgentDailyWallet(agentEmail);
+  const { toast } = useToast();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteEntry = async (entryId: string) => {
+    if (!window.confirm("Are you sure you want to delete this entry? Balances will be recalculated.")) return;
+    
+    setDeletingId(entryId);
+    try {
+      await deleteDailyEntry(entryId);
+      toast({ title: "Deleted", description: "Entry removed and balances recalculated." });
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      toast({ title: "Error", description: "Failed to delete entry", variant: "destructive" });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const totalReceived = entries.reduce((s, e) => s + (e.receivedAmount || 0), 0);
   const totalTicketFare = entries.reduce((s, e) => s + (e.ticketFare || 0), 0);
@@ -319,9 +337,21 @@ const AgentWalletDetailDialog: React.FC<{
                       {entry.bookingType || 'N/A'}
                     </span>
                   </div>
-                  <span className={`text-sm font-bold ${(entry.balance ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    Bal: ₹{(entry.balance ?? 0).toLocaleString()}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-sm font-bold ${(entry.balance ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      Bal: ₹{(entry.balance ?? 0).toLocaleString()}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleDeleteEntry(entry.id)}
+                      disabled={deletingId === entry.id}
+                      title="Delete Entry"
+                    >
+                      {deletingId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="flex justify-between bg-white p-1.5 rounded border border-gray-100">

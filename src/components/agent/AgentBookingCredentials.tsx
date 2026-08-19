@@ -9,7 +9,7 @@ import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc
 import { db } from "@/lib/firebase";
 import { Plus, Copy, Eye, EyeOff, Pencil, Trash2, Key, CheckCircle2, BarChart3, RotateCcw } from "lucide-react";
 
-const MAX_BOOKINGS_PER_MONTH = 8;
+const DEFAULT_MONTHLY_LIMIT = 8;
 
 /** Returns current month key like "2026-04" */
 const getCurrentMonthKey = () => {
@@ -26,6 +26,7 @@ interface BookingCredential {
   lastResetMonth: string;
   createdAt: any;
   updatedAt: any;
+  monthlyLimit?: number;
 }
 
 interface AgentBookingCredentialsProps {
@@ -51,6 +52,7 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
   const [editCountModal, setEditCountModal] = useState(false);
   const [editCountCredential, setEditCountCredential] = useState<BookingCredential | null>(null);
   const [editCountValue, setEditCountValue] = useState(0);
+  const [editLimitValue, setEditLimitValue] = useState(DEFAULT_MONTHLY_LIMIT);
 
   // Fetch credentials for this agent + auto-reset monthly counts
   useEffect(() => {
@@ -73,6 +75,7 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
           password: data.password,
           label: data.label,
           bookingCount: data.bookingCount || 0,
+          monthlyLimit: data.monthlyLimit,
           lastResetMonth: data.lastResetMonth || '',
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
@@ -169,6 +172,7 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
           bookingId: formData.bookingId.trim(),
           password: formData.password.trim(),
           label: formData.label.trim() || null,
+          monthlyLimit: DEFAULT_MONTHLY_LIMIT,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
@@ -208,24 +212,27 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
   const handleEditCount = (credential: BookingCredential) => {
     setEditCountCredential(credential);
     setEditCountValue(credential.bookingCount);
+    setEditLimitValue(credential.monthlyLimit || DEFAULT_MONTHLY_LIMIT);
     setEditCountModal(true);
   };
 
   const handleSaveCount = async () => {
     if (!editCountCredential) return;
-    const val = Math.max(0, Math.min(MAX_BOOKINGS_PER_MONTH, editCountValue));
+    const val = Math.max(0, editCountValue);
+    const limit = Math.max(1, editLimitValue);
     try {
       await updateDoc(doc(db, 'agent_booking_credentials', editCountCredential.id), {
         bookingCount: val,
+        monthlyLimit: limit,
         lastResetMonth: getCurrentMonthKey(),
         updatedAt: serverTimestamp()
       });
-      toast({ title: "Updated", description: `Booking count set to ${val}` });
+      toast({ title: "Updated", description: `Booking count set to ${val}, Limit: ${limit}` });
       setEditCountModal(false);
       setEditCountCredential(null);
     } catch (error) {
       console.error("Error updating count:", error);
-      toast({ title: "Error", description: "Failed to update booking count", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to update booking count/limit", variant: "destructive" });
     }
   };
 
@@ -363,8 +370,8 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
                         Monthly Bookings
                       </label>
                       <div className="flex items-center gap-1">
-                        <span className={`text-xs font-bold ${credential.bookingCount >= MAX_BOOKINGS_PER_MONTH ? 'text-red-600' : 'text-green-600'}`}>
-                          {credential.bookingCount}/{MAX_BOOKINGS_PER_MONTH}
+                        <span className={`text-xs font-bold ${credential.bookingCount >= (credential.monthlyLimit || DEFAULT_MONTHLY_LIMIT) ? 'text-red-600' : 'text-green-600'}`}>
+                          {credential.bookingCount}/{credential.monthlyLimit || DEFAULT_MONTHLY_LIMIT}
                         </span>
                         {!readOnly && (
                           <Button
@@ -372,7 +379,7 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
                             size="sm"
                             onClick={() => handleEditCount(credential)}
                             className="h-5 w-5 p-0 shrink-0"
-                            title="Edit booking count"
+                            title="Edit booking count/limit"
                           >
                             <Pencil className="w-3 h-3 text-gray-400 hover:text-blue-600" />
                           </Button>
@@ -382,16 +389,16 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className={`h-2 rounded-full transition-all duration-300 ${
-                          credential.bookingCount >= MAX_BOOKINGS_PER_MONTH
+                          credential.bookingCount >= (credential.monthlyLimit || DEFAULT_MONTHLY_LIMIT)
                             ? 'bg-red-500'
-                            : credential.bookingCount >= 6
+                            : credential.bookingCount >= (credential.monthlyLimit || DEFAULT_MONTHLY_LIMIT) * 0.75
                             ? 'bg-amber-500'
                             : 'bg-green-500'
                         }`}
-                        style={{ width: `${Math.min(100, (credential.bookingCount / MAX_BOOKINGS_PER_MONTH) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (credential.bookingCount / (credential.monthlyLimit || DEFAULT_MONTHLY_LIMIT)) * 100)}%` }}
                       />
                     </div>
-                    {credential.bookingCount >= MAX_BOOKINGS_PER_MONTH && (
+                    {credential.bookingCount >= (credential.monthlyLimit || DEFAULT_MONTHLY_LIMIT) && (
                       <p className="text-[10px] text-red-500 mt-0.5">Limit reached — resets next month</p>
                     )}
                   </div>
@@ -500,7 +507,7 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
       <Dialog open={editCountModal} onOpenChange={setEditCountModal}>
         <DialogContent className="sm:max-w-[350px]">
           <DialogHeader>
-            <DialogTitle className="text-base">Edit Booking Count</DialogTitle>
+            <DialogTitle className="text-base">Edit Booking Count & Limit</DialogTitle>
           </DialogHeader>
           {editCountCredential && (
             <div className="space-y-4 my-2">
@@ -510,15 +517,27 @@ const AgentBookingCredentials = ({ agentEmail, agentName, readOnly = false }: Ag
               </div>
               <div>
                 <Label htmlFor="editCount" className="text-sm font-medium">
-                  Current Month Booking Count (max {MAX_BOOKINGS_PER_MONTH})
+                  Current Month Booking Count
                 </Label>
                 <Input
                   id="editCount"
                   type="number"
                   min={0}
-                  max={MAX_BOOKINGS_PER_MONTH}
                   value={editCountValue}
                   onChange={(e) => setEditCountValue(parseInt(e.target.value) || 0)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editLimit" className="text-sm font-medium">
+                  Monthly Limit
+                </Label>
+                <Input
+                  id="editLimit"
+                  type="number"
+                  min={1}
+                  value={editLimitValue}
+                  onChange={(e) => setEditLimitValue(parseInt(e.target.value) || DEFAULT_MONTHLY_LIMIT)}
                   className="mt-1"
                 />
               </div>

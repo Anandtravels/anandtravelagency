@@ -215,6 +215,7 @@ const EditBookingModal = ({ isOpen, onOpenChange, booking, formData, onFormChang
                                 <option value="general">General</option>
                                 <option value="tatkal">Tatkal</option>
                                 <option value="premium_tatkal">Premium Tatkal</option>
+                                <option value="advance">Advance Booking</option>
                             </select>
                         </div>
                         <div>

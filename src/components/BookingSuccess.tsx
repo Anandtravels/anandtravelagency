@@ -28,6 +28,8 @@ const BookingSuccess = ({ show, onClose, bookingDetails }: BookingSuccessProps) 
         return 200;
       case 'Premium Booking':
         return 250;
+      case 'Advance Booking':
+        return 150;
       case 'General Booking':
       default:
         return 50;

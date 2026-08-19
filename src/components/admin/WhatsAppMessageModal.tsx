@@ -113,6 +113,7 @@ const WhatsAppMessageModal = ({
                   <select id="bookingType" className="w-full px-3 py-2 text-sm border rounded-md mt-1" value={messageDetails.bookingType} onChange={(e) => handleBookingTypeChange(e.target.value)}>
                     <option value="General Booking">General Booking</option>
                     <option value="Tatkal Booking">Tatkal Booking</option>
+                    <option value="Advance Booking">Advance Booking</option>
                   </select>
                 </div>
                 

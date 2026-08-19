@@ -6,6 +6,7 @@ import { collection, doc, getDoc } from 'firebase/firestore';
 import { generateUPIQRCode } from '@/utils/qrCodeUtils';
 import { uploadQRCodeToCloudinary } from '@/utils/cloudinaryUpload';
 import { useToast } from '@/hooks/use-toast';
+import { calculateBookingCharge } from '@/utils/adminHelpers';
 
 export const useEnhancedWhatsAppModal = (userEmail?: string) => {
   const [whatsappModal, setWhatsappModal] = useState(false);
@@ -30,6 +31,7 @@ export const useEnhancedWhatsAppModal = (userEmail?: string) => {
             case 'general': return 'General Booking';
             case 'tatkal': return 'Tatkal Booking';
             case 'premium_tatkal': return 'Premium Booking';
+            case 'advance': return 'Advance Booking';
             default: return booking.train_booking_type;
           }
         }
@@ -92,35 +94,6 @@ export const useEnhancedWhatsAppModal = (userEmail?: string) => {
     } else {
       window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
     }
-  };
-
-  const calculateBookingCharge = (bookingType: string, classPreference?: string): number => {
-    // For General booking, always return 100 regardless of class
-    if (bookingType === 'General Booking' || bookingType === 'General') {
-      return 100;
-    }
-    
-    // For Tatkal bookings, charge depends on class preference
-    if (bookingType === 'Tatkal Booking' || bookingType === 'Tatkal') {
-      switch(classPreference) {
-        case 'SL': // Sleeper
-        case 'Sleeper':
-          return 250;
-        case '3A': // 3AC
-        case '3E': // 3E
-        case '3AC':
-        case '3AC/3E':
-          return 350;
-        case '2A': // 2AC
-        case '2AC':
-          return 400;
-        default:
-          return 250; // Default to Sleeper rate
-      }
-    }
-    
-    // Legacy support
-    return 100;
   };
 
   const calculateTotalAmount = (): number => {
